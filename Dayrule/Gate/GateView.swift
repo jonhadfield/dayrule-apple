@@ -18,7 +18,7 @@ struct GateView: View {
             case .needsRecovery:
                 recoveryForm(colors: colors)
             case .unlocked:
-                VaultBrowserView(model: model)
+                ListsBrowserView(model: model)
             }
         }
         .task { await model.tryDeviceUnlock() }
@@ -162,71 +162,5 @@ struct GateView: View {
             .padding(14)
             .background(colors.sidebar)
             .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
-    }
-}
-
-struct VaultBrowserView: View {
-    @Bindable var model: AppModel
-    @Environment(\.colorScheme) private var colorScheme
-
-    var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
-            List {
-                if model.vaultLoading && model.vault == nil {
-                    Text("Pulling vault…")
-                        .foregroundStyle(colors.textSecondary)
-                }
-                if let vault = model.vault {
-                    Section("Counts") {
-                        ForEach(vault.counts.keys.sorted(), id: \.self) { key in
-                            HStack {
-                                Text(key)
-                                Spacer()
-                                Text("\(vault.counts[key] ?? 0)")
-                                    .foregroundStyle(colors.textSecondary)
-                            }
-                        }
-                        Text("\(vault.recordCount) wire records · \(vault.skippedUnknownAlg) skipped")
-                            .font(.footnote)
-                            .foregroundStyle(colors.textSecondary)
-                    }
-                    Section("Titles") {
-                        ForEach(vault.entities) { entity in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(entity.title)
-                                    .foregroundStyle(colors.text)
-                                Text("\(entity.type) · \(entity.key)")
-                                    .font(.caption)
-                                    .foregroundStyle(colors.textSecondary)
-                            }
-                        }
-                    }
-                } else if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .foregroundStyle(Tokens.Light.deadline)
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle("Dayrule")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Lock") { model.lock() }
-                        .foregroundStyle(colors.accent)
-                }
-                ToolbarItem(placement: .primaryAction) {
-                    Button("Refresh") {
-                        Task { await model.refreshVault() }
-                    }
-                    .foregroundStyle(colors.accent)
-                }
-            }
-        }
-        #if os(iOS)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0).onChanged { _ in model.bumpIdle() }
-        )
-        #endif
     }
 }

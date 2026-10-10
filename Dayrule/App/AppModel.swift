@@ -18,6 +18,7 @@ final class AppModel {
     var email = ""
     var apiBaseURLString = "http://127.0.0.1:8080"
     var vault: VaultSnapshot?
+    var entities = Entities.empty()
     var vaultLoading = false
     var accountEmail: String?
 
@@ -197,7 +198,9 @@ final class AppModel {
         vaultLoading = true
         defer { vaultLoading = false }
         do {
-            vault = try await VaultPull.pullAll(api: api, crypto: crypto)
+            let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
+            vault = snap
+            entities = VaultToEntities.build(from: snap)
             errorMessage = nil
         } catch {
             if vault == nil {
@@ -210,6 +213,7 @@ final class AppModel {
         idleTask?.cancel()
         idleTask = nil
         vault = nil
+        entities = .empty()
         Task {
             try? await api.logout()
             await api.setToken(nil)

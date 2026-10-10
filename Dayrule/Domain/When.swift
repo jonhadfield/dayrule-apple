@@ -41,6 +41,11 @@ enum When {
         return calendar.date(from: comp)
     }
 
+    static func addLocalDays(_ s: LocalDate, _ days: Int, calendar: Calendar = calendar) -> LocalDate {
+        guard let d = fromLocalDate(s, calendar: calendar) else { return s }
+        return toLocalDate(calendar.date(byAdding: .day, value: days, to: d)!, calendar: calendar)
+    }
+
     /// Parse When field input. `today` is a local calendar day (time ignored).
     static func parseWhen(_ input: String, today: Date, calendar: Calendar = calendar) -> WhenResult? {
         let s = input.trimmingCharacters(in: .whitespacesAndNewlines)
