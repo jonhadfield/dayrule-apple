@@ -353,6 +353,146 @@ enum Commands {
         }
     }
 
+    @discardableResult
+    static func addChecklistItem(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        todoId: ID,
+        title: String
+    ) throws -> ChecklistItem {
+        let ts = ISOStamp.format(env.now)
+        let siblings = d.allChecklistItems().filter { $0.todoId == todoId }
+        let item = ChecklistItem(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            todoId: todoId,
+            title: title,
+            done: false,
+            order: try Order.keyAfterLast(siblings.map(\.order))
+        )
+        d.putChecklistItem(item)
+        return item
+    }
+
+    struct ImportCounts: Equatable, Sendable {
+        var areas: Int
+        var projects: Int
+        var headings: Int
+        var todos: Int
+        var checklistItems: Int
+        var tags: Int
+    }
+
+    /// Copy an export's records in with new ids, remapping references
+    /// (web `importData`). Never overwrites existing data.
+    @discardableResult
+    static func importData(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        _ data: Exchange.ExportData
+    ) -> ImportCounts {
+        let now = ISOStamp.format(env.now)
+        var map: [ID: ID] = [:]
+        func fresh(_ old: ID) -> ID {
+            let id = env.newId()
+            map[old] = id
+            return id
+        }
+        for x in data.areas { _ = fresh(x.id) }
+        for x in data.projects { _ = fresh(x.id) }
+        for x in data.headings { _ = fresh(x.id) }
+        for x in data.todos { _ = fresh(x.id) }
+        for x in data.checklistItems { _ = fresh(x.id) }
+        for x in data.tags { _ = fresh(x.id) }
+
+        func ref(_ old: ID?) -> ID? {
+            guard let old else { return nil }
+            return map[old]
+        }
+        func refs(_ olds: [ID]) -> [ID] {
+            olds.compactMap { map[$0] }
+        }
+
+        for t in data.tags {
+            var copy = t
+            copy.id = map[t.id]!
+            copy.parentId = ref(t.parentId)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putTag(copy)
+        }
+        for a in data.areas {
+            var copy = a
+            copy.id = map[a.id]!
+            copy.tagIds = refs(a.tagIds)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putArea(copy)
+        }
+        for p in data.projects {
+            var copy = p
+            copy.id = map[p.id]!
+            copy.areaId = ref(p.areaId)
+            copy.tagIds = refs(p.tagIds)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putProject(copy)
+        }
+        var headingProjects: [ID: ID] = [:]
+        var headingCount = 0
+        for h in data.headings {
+            guard let projectId = ref(h.projectId) else { continue }
+            let newId = map[h.id]!
+            headingProjects[newId] = projectId
+            headingCount += 1
+            var copy = h
+            copy.id = newId
+            copy.projectId = projectId
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putHeading(copy)
+        }
+        for t in data.todos {
+            let projectId = ref(t.projectId)
+            let headingId = ref(t.headingId)
+            var copy = t
+            copy.id = map[t.id]!
+            copy.projectId = projectId
+            if let headingId, let projectId, headingProjects[headingId] == projectId {
+                copy.headingId = headingId
+            } else {
+                copy.headingId = nil
+            }
+            copy.areaId = projectId != nil ? nil : ref(t.areaId)
+            copy.tagIds = refs(t.tagIds)
+            copy.repeatTemplateId = ref(t.repeatTemplateId)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putTodo(copy)
+        }
+        var checklist = 0
+        for c in data.checklistItems {
+            guard let todoId = ref(c.todoId) else { continue }
+            checklist += 1
+            var copy = c
+            copy.id = map[c.id]!
+            copy.todoId = todoId
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putChecklistItem(copy)
+        }
+        return ImportCounts(
+            areas: data.areas.count,
+            projects: data.projects.count,
+            headings: headingCount,
+            todos: data.todos.count,
+            checklistItems: checklist,
+            tags: data.tags.count
+        )
+    }
+
     /// Permanently delete trashed items and everything inside them (web `emptyTrash`).
     static func emptyTrash(_ d: Draft) {
         let areaIds = Set(d.allAreas().filter { $0.trashedAt != nil }.map(\.id))

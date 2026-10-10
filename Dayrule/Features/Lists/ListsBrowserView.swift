@@ -37,7 +37,12 @@ struct ListsBrowserView: View {
                         .listRowBackground(colors.sidebar)
                 }
                 ForEach(ListName.allCases, id: \.self) { name in
-                    HStack {
+                    HStack(spacing: 0) {
+                        // Regular-width (iPad) active mark — PLAN §6.5.
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill(selection == name ? colors.accent : .clear)
+                            .frame(width: 3)
+                            .padding(.trailing, 8)
                         Text(name.title)
                         Spacer()
                         if let badge = badge(for: name) {
@@ -51,9 +56,11 @@ struct ListsBrowserView: View {
                     }
                     .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
                     .tag(Optional(name))
+                    .listRowBackground(colors.sidebar)
                 }
             }
             .navigationTitle("Dayrule")
+            .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Lock") { model.lock() }
