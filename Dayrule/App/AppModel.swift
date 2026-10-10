@@ -191,12 +191,11 @@ final class AppModel {
     /// Derive keys and show the recovery phrase; `finishSignup` registers after confirm.
     func signupPrepareAccount(password: String, confirm: String) async {
         errorMessage = nil
-        guard password.count >= 10 else {
-            errorMessage = "Use at least 10 characters."
-            return
-        }
-        guard password == confirm else {
-            errorMessage = "Passwords don’t match."
+        if let problem = await PasswordValidation.newPasswordProblem(
+            password: password,
+            confirm: confirm
+        ) {
+            errorMessage = problem
             return
         }
         guard let token = signupToken else {
