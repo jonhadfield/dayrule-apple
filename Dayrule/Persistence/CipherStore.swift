@@ -194,6 +194,45 @@ actor CipherStore {
         return out
     }
 
+    /// Keep an unknown-`alg` wire record without decrypting (PLAN §10.2).
+    func holdOpaque(_ rec: WireRecord) throws {
+        try dbQueue.write { db in
+            try db.execute(
+                sql: """
+                INSERT INTO opaque_records (id, seq, alg, keyId, nonce, ciphertext, tombstone)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                  seq = excluded.seq,
+                  alg = excluded.alg,
+                  keyId = excluded.keyId,
+                  nonce = excluded.nonce,
+                  ciphertext = excluded.ciphertext,
+                  tombstone = excluded.tombstone
+                """,
+                arguments: [
+                    rec.id,
+                    rec.seq ?? 0,
+                    rec.alg,
+                    rec.keyId,
+                    rec.nonce,
+                    rec.ciphertext,
+                    (rec.tombstone == true) ? 1 : 0,
+                ]
+            )
+        }
+        try setState("needsUpgrade", value: true)
+    }
+
+    func needsUpgrade() throws -> Bool {
+        try getState("needsUpgrade") ?? false
+    }
+
+    func opaqueCount() throws -> Int {
+        try dbQueue.read { db in
+            try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM opaque_records") ?? 0
+        }
+    }
+
     // MARK: - Private
 
     private func apply(_ changes: [StoreChange], enqueueOutbox: Bool) async throws {

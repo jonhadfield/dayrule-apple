@@ -55,6 +55,18 @@ enum AppDatabase {
                 t.column("v", .text).notNull() // JSON
             }
         }
+        // Unknown-alg wire records kept untouched until the client upgrades (PLAN §10.2).
+        migrator.registerMigration("v2_opaque_records") { db in
+            try db.create(table: "opaque_records") { t in
+                t.column("id", .text).primaryKey()
+                t.column("seq", .integer).notNull()
+                t.column("alg", .integer).notNull()
+                t.column("keyId", .integer).notNull()
+                t.column("nonce", .text).notNull()
+                t.column("ciphertext", .text).notNull()
+                t.column("tombstone", .integer).notNull().defaults(to: 0)
+            }
+        }
         return migrator
     }
 }

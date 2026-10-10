@@ -20,6 +20,8 @@ final class AppModel {
     var vault: VaultSnapshot?
     var vaultLoading = false
     var accountEmail: String?
+    var syncStatus: SyncStatus = .idle
+    var showSettings = false
 
     let crypto = CryptoActor()
     let store = EntityStore()
@@ -87,11 +89,27 @@ final class AppModel {
 
     private func runSync() async {
         guard let syncEngine else { return }
+        syncStatus = .syncing
         do {
             try await syncEngine.sync()
             noteEntitiesChanged()
-            errorMessage = nil
+            if syncEngine.sawUnknownAlg {
+                syncStatus = .needsUpdate
+            } else {
+                syncStatus = .synced
+            }
+            if case .needsUpdate = syncStatus {
+                errorMessage = syncStatus.label
+            } else {
+                errorMessage = nil
+            }
+        } catch let err as SyncBlockedError {
+            syncStatus = .blocked(err.localizedDescription)
+            errorMessage = err.localizedDescription
+        } catch APIError.offline {
+            syncStatus = .offline("Offline — changes stay on this device.")
         } catch {
+            syncStatus = .offline(error.localizedDescription)
             errorMessage = error.localizedDescription
         }
     }
@@ -298,6 +316,8 @@ final class AppModel {
         vault = nil
         cipherStore = nil
         syncEngine = nil
+        syncStatus = .idle
+        showSettings = false
         store.hydrate(.empty())
         noteEntitiesChanged()
         Task {

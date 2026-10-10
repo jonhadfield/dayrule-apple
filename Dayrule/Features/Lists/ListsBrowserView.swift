@@ -16,25 +16,37 @@ struct ListsBrowserView: View {
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         NavigationSplitView {
-            List(ListName.allCases, id: \.self, selection: $selection) { name in
-                HStack {
-                    Text(name.title)
-                    Spacer()
-                    if let badge = badge(for: name) {
-                        Text("\(badge)")
-                            .foregroundStyle(
-                                name == .today && counts.overdue > 0
-                                    ? Tokens.Light.deadline
-                                    : colors.textSecondary
-                            )
-                    }
+            List(selection: $selection) {
+                if model.syncStatus == .needsUpdate {
+                    Text(model.syncStatus.label)
+                        .font(.footnote)
+                        .foregroundStyle(Tokens.Light.deadline)
+                        .listRowBackground(colors.sidebar)
                 }
-                .tag(name)
+                ForEach(ListName.allCases, id: \.self) { name in
+                    HStack {
+                        Text(name.title)
+                        Spacer()
+                        if let badge = badge(for: name) {
+                            Text("\(badge)")
+                                .foregroundStyle(
+                                    name == .today && counts.overdue > 0
+                                        ? Tokens.Light.deadline
+                                        : colors.textSecondary
+                                )
+                        }
+                    }
+                    .tag(name)
+                }
             }
             .navigationTitle("Dayrule")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Lock") { model.lock() }
+                        .foregroundStyle(colors.accent)
+                }
+                ToolbarItem(placement: .automatic) {
+                    Button("Settings") { model.showSettings = true }
                         .foregroundStyle(colors.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -44,10 +56,13 @@ struct ListsBrowserView: View {
                     .foregroundStyle(colors.accent)
                 }
             }
+            .sheet(isPresented: $model.showSettings) {
+                SettingsView(model: model)
+            }
         } detail: {
             List {
-                if model.vaultLoading && model.vault == nil {
-                    Text("Pulling vault…")
+                if model.syncStatus == .syncing || (model.vaultLoading && model.store.entities.todos.isEmpty) {
+                    Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                         .foregroundStyle(colors.textSecondary)
                 } else if let errorMessage = model.errorMessage, model.vault == nil {
                     Text(errorMessage)

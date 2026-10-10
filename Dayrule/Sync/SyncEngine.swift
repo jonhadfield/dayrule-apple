@@ -1,6 +1,6 @@
 import Foundation
 
-enum SyncBlockedError: Error, LocalizedError {
+enum SyncBlockedError: Error, LocalizedError, Equatable {
     case tooLarge
     case quota
 
@@ -18,17 +18,31 @@ final class SyncEngine {
     private let store: EntityStore
     private let db: CipherStore
     private let crypto: CryptoActor
-    private let api: APIClient
+    private let net: any SyncTransport
     private let pushBatch = 200
 
-    init(store: EntityStore, db: CipherStore, crypto: CryptoActor, api: APIClient) {
+    /// Set when a pull sees `alg` we cannot decrypt.
+    private(set) var sawUnknownAlg = false
+
+    init(
+        store: EntityStore,
+        db: CipherStore,
+        crypto: CryptoActor,
+        net: any SyncTransport
+    ) {
         self.store = store
         self.db = db
         self.crypto = crypto
-        self.api = api
+        self.net = net
     }
 
+    convenience init(store: EntityStore, db: CipherStore, crypto: CryptoActor, api: APIClient) {
+        self.init(store: store, db: db, crypto: crypto, net: api)
+    }
+
+    /// Runs up to 4 pull/push rounds. Throws on quota / too-large / transport errors.
     func sync() async throws {
+        sawUnknownAlg = try await db.needsUpgrade()
         if !(try await db.uploaded()) {
             try await db.markDirty(Incoming.allKeys(store.entities))
             try await db.setUploaded(true)
@@ -46,7 +60,7 @@ final class SyncEngine {
         while true {
             let page: PullResponse
             do {
-                page = try await api.pull(since: cursor, full: full)
+                page = try await net.pull(since: cursor, full: full)
             } catch let APIError.http(status, _, _) where status == 410 && cursor > 0 {
                 try await db.clearSeqs()
                 try await db.setCursor(0)
@@ -55,7 +69,13 @@ final class SyncEngine {
             if !page.records.isEmpty {
                 var payloads: [Incoming.Item] = []
                 var keys: [String] = []
+                var seqEntries: [(key: String, seq: Int64)] = []
                 for rec in page.records {
+                    if rec.alg != CryptoConstants.alg {
+                        try await db.holdOpaque(rec)
+                        sawUnknownAlg = true
+                        continue
+                    }
                     guard let p = try await crypto.decryptSyncPayload(rec) else { continue }
                     let expected = try await crypto.syncId(for: p.key)
                     guard expected == rec.id.lowercased() else {
@@ -63,21 +83,22 @@ final class SyncEngine {
                     }
                     payloads.append(Incoming.Item(key: p.key, value: p.valueAny, deleted: p.deleted))
                     keys.append(p.key)
+                    seqEntries.append((p.key, rec.seq ?? 0))
                 }
-                let tombs = try await db.tombstones(for: keys)
-                let result = Incoming.incomingChanges(
-                    entities: store.entities,
-                    items: payloads,
-                    localTombstones: tombs
-                )
-                store.applyRemote(result.changes)
-                try await db.setSeqs(
-                    zip(keys, page.records).map { (key: $0.0, seq: $0.1.seq ?? 0) }
-                )
-                if !result.pushBack.isEmpty {
-                    try await db.markDirty(result.pushBack)
+                if !payloads.isEmpty {
+                    let tombs = try await db.tombstones(for: keys)
+                    let result = Incoming.incomingChanges(
+                        entities: store.entities,
+                        items: payloads,
+                        localTombstones: tombs
+                    )
+                    store.applyRemote(result.changes)
+                    try await db.setSeqs(seqEntries)
+                    if !result.pushBack.isEmpty {
+                        try await db.markDirty(result.pushBack)
+                    }
+                    for k in keys { seen.insert(k) }
                 }
-                for k in keys { seen.insert(k) }
             }
             cursor = page.cursor
             try await db.setCursor(cursor)
@@ -134,7 +155,7 @@ final class SyncEngine {
                     )
                 )
             }
-            let response = try await api.push(wire)
+            let response = try await net.push(wire)
             let byId = Dictionary(uniqueKeysWithValues: response.results.map { ($0.id, $0) })
             var done: [(key: String, rev: Int)] = []
             var accepted: [(key: String, seq: Int64)] = []
