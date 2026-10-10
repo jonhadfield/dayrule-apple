@@ -34,6 +34,17 @@ struct CryptoVectorsFile: Decodable {
         var recordAad: String
         var recordPlaintextJson: String
         var recordCiphertext: String
+        var recoveryProof: String?
+        var syncIdKey: String?
+        var syncEntityKey: String?
+        var syncWireId: String?
+        var syncRecordAad: String?
+        var syncPlaintextJson: String?
+        var syncCiphertext: String?
+        var syncTombstonePlaintextJson: String?
+        var syncTombstoneCiphertext: String?
+        var uppercaseUserIdDecryptFails: Bool?
+        var padBuckets: [Int]?
     }
 
     var input: Input
@@ -119,6 +130,65 @@ struct CryptoVectorsTests {
 
         let opened = try Primitives.decryptRecordJSON(ak: ak, meta: meta, env: env)
         #expect(String(bytes: opened, encoding: .utf8) == expected.recordPlaintextJson)
+
+        if let proofHex = expected.recoveryProof {
+            let proof = Primitives.hkdf(ikm: try Hex.decode(input.recoveryEntropy), label: Labels.recoveryProof)
+            #expect(Hex.encode(proof) == proofHex)
+        }
+        if let syncIdKeyHex = expected.syncIdKey,
+           let entityKey = expected.syncEntityKey,
+           let wireId = expected.syncWireId,
+           let syncAad = expected.syncRecordAad,
+           let syncPlain = expected.syncPlaintextJson,
+           let syncCt = expected.syncCiphertext
+        {
+            let syncIdKey = Primitives.hkdf(ikm: ak, label: Labels.syncId)
+            #expect(Hex.encode(syncIdKey) == syncIdKeyHex)
+            let crypto = CryptoActor()
+            // Unlock via known AK through password wrap from vectors.
+            let (_, kek2) = try await crypto.beginLogin(
+                password: input.password,
+                salt: try Hex.decode(input.salt),
+                kdf: input.kdf
+            )
+            _ = try await crypto.unlockWithPasswordWrap(
+                kek: kek2,
+                userId: input.userId,
+                wrapped: Primitives.Sealed(
+                    nonce: wrapNonce,
+                    ciphertext: try Hex.decode(expected.wrappedAccountKeyPassword)
+                ),
+                stayUnlocked: false
+            )
+            #expect(try await crypto.syncId(for: entityKey) == wireId)
+            let syncMeta = Primitives.RecordMeta(
+                userId: input.userId,
+                recordId: "sync/\(wireId)",
+                schemaVersion: 1,
+                keyId: 1
+            )
+            #expect(String(bytes: Primitives.recordAad(syncMeta), encoding: .utf8) == syncAad)
+            let syncEnv = try Primitives.encryptRecordJSON(
+                ak: ak,
+                meta: syncMeta,
+                jsonUTF8: Array(syncPlain.utf8),
+                nonce: try Hex.decode(input.recordNonce)
+            )
+            #expect(Hex.encode(syncEnv.ciphertext) == syncCt)
+            #expect(expected.uppercaseUserIdDecryptFails == true)
+            let badMeta = Primitives.RecordMeta(
+                userId: input.userId.uppercased(),
+                recordId: "sync/\(wireId)",
+                schemaVersion: 1,
+                keyId: 1
+            )
+            #expect(throws: CryptoError.openFailed) {
+                try Primitives.decryptRecordJSON(ak: ak, meta: badMeta, env: syncEnv)
+            }
+            if let buckets = expected.padBuckets {
+                #expect(buckets == [256, 256, 512, 512, 2048, 4096, 8192])
+            }
+        }
     }
 
     @Test("pads into fixed buckets")

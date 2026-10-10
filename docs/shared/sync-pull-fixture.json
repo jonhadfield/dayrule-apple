@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "description": "Minimal GET /api/v1/sync/pull response shape for native contract tests (W0).",
+  "response": {
+    "records": [],
+    "cursor": 0,
+    "hasMore": false
+  },
+  "recordExample": {
+    "id": "<syncWireId from crypto-vectors>",
+    "seq": 1,
+    "alg": 1,
+    "keyId": 1,
+    "nonce": "<base64>",
+    "ciphertext": "<base64>",
+    "tombstone": false
+  }
+}

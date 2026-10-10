@@ -9,6 +9,8 @@ struct VaultEntity: Identifiable, Hashable, Sendable {
 
 struct VaultSnapshot: Sendable {
     var entities: [VaultEntity]
+    /// Full decrypted `{k,v}` payloads (tombstones omitted).
+    var payloads: [SyncPayload]
     var counts: [String: Int]
     var recordCount: Int
     var skippedUnknownAlg: Int
@@ -34,6 +36,7 @@ enum VaultPull {
     /// Decrypt a page of wire records into entity titles/counts (testable without a network).
     static func materialize(records: [WireRecord], crypto: CryptoActor) async throws -> VaultSnapshot {
         var entities: [VaultEntity] = []
+        var payloads: [SyncPayload] = []
         var skipped = 0
 
         for rec in records {
@@ -43,9 +46,10 @@ enum VaultPull {
                 continue
             }
             do {
-                if let entity = try await crypto.decryptSyncRecord(rec) {
-                    entities.append(entity)
-                }
+                guard let payload = try await crypto.decryptSyncPayload(rec) else { continue }
+                if payload.deleted != nil { continue }
+                payloads.append(payload)
+                entities.append(VaultEntity(key: payload.key, title: payload.title, type: payload.type))
             } catch {
                 skipped += 1
             }
@@ -59,6 +63,7 @@ enum VaultPull {
         entities.sort { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
         return VaultSnapshot(
             entities: entities,
+            payloads: payloads,
             counts: counts,
             recordCount: records.count,
             skippedUnknownAlg: skipped
