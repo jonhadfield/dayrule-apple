@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "parseWhen": [
+    {
+      "input": "today",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "today"
+      }
+    },
+    {
+      "input": "Today ",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "today"
+      }
+    },
+    {
+      "input": "tonight",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "today"
+      }
+    },
+    {
+      "input": "later",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "later"
+      }
+    },
+    {
+      "input": "tom",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "input": "tomorrow",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "input": "in 3 days",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-07"
+      }
+    },
+    {
+      "input": "in 2 weeks",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-18"
+      }
+    },
+    {
+      "input": "in 1 month",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-11-04"
+      }
+    },
+    {
+      "input": "next week",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "input": "next month",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-11-01"
+      }
+    },
+    {
+      "input": "mon",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-05"
+      }
+    },
+    {
+      "input": "fri",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-09"
+      }
+    },
+    {
+      "input": "sun",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-11"
+      }
+    },
+    {
+      "input": "next fri",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-09"
+      }
+    },
+    {
+      "input": "2026-10-20",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-20"
+      }
+    },
+    {
+      "input": "10/4",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-04"
+      }
+    },
+    {
+      "input": "3/1",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2027-03-01"
+      }
+    },
+    {
+      "input": "20 oct",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-20"
+      }
+    },
+    {
+      "input": "oct 20",
+      "today": "2026-10-04",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-20"
+      }
+    },
+    {
+      "input": "next mon",
+      "today": "2026-10-07",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-12"
+      }
+    },
+    {
+      "input": "next fri",
+      "today": "2026-10-07",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-16"
+      }
+    },
+    {
+      "input": "fri",
+      "today": "2026-10-07",
+      "result": {
+        "kind": "date",
+        "date": "2026-10-09"
+      }
+    },
+    {
+      "input": "not a when",
+      "today": "2026-10-04",
+      "result": null
+    }
+  ],
+  "order": {
+    "keyBetween": [
+      {
+        "before": null,
+        "after": null,
+        "result": "a0"
+      },
+      {
+        "before": "a0",
+        "after": null,
+        "result": "a1"
+      },
+      {
+        "before": "a0",
+        "after": "a1",
+        "result": "a0V"
+      }
+    ],
+    "keysBetween": [
+      {
+        "before": "a0",
+        "after": "a1",
+        "n": 3,
+        "result": [
+          "a0G",
+          "a0V",
+          "a0l"
+        ]
+      }
+    ],
+    "compare": [
+      {
+        "a": "a0",
+        "b": "a1",
+        "result": -1
+      },
+      {
+        "a": "a0V",
+        "b": "a1",
+        "result": -1
+      }
+    ]
+  },
+  "hlc": {
+    "device": "dev1",
+    "steps": [
+      {
+        "op": "tick",
+        "now": 1000000000000,
+        "result": "0cre66i9s-0000-dev1"
+      },
+      {
+        "op": "tick",
+        "now": 1000000000000,
+        "result": "0cre66i9s-0001-dev1"
+      },
+      {
+        "op": "tick",
+        "now": 1000000000100,
+        "result": "0cre66ick-0000-dev1"
+      },
+      {
+        "op": "observe",
+        "stamp": "lfls-0002-other"
+      },
+      {
+        "op": "tick",
+        "now": 1000000000100,
+        "result": "0cre66ick-0001-dev1"
+      }
+    ]
+  }
+}

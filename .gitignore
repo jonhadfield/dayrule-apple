@@ -1,0 +1,26 @@
+# CLAUDE.md is globally ignored; commit only the bare @AGENTS.md pointer.
+!CLAUDE.md
+
+# Xcode
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+build/
+.swiftpm/
+.build/
+*.xcresult
+
+# macOS
+.DS_Store
+
+# Secrets / local env
+.env
+.env.*
+*.p12
+*.mobileprovision
+
+# IDE
+.idea/
+
+# SPM checkouts (Package.resolved is committed)
+Dayrule.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved.bak
