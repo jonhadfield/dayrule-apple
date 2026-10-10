@@ -8,6 +8,7 @@ import AppKit
 
 struct RecoveryPhraseView: View {
     let words: [String]
+    var busy: Bool = false
     let onConfirmed: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var confirmed = false
@@ -49,19 +50,21 @@ struct RecoveryPhraseView: View {
 
                 Toggle("I have saved this phrase somewhere safe", isOn: $confirmed)
                     .foregroundStyle(colors.text)
+                    .accessibilityIdentifier("recovery.savedToggle")
 
                 Button {
                     onConfirmed()
                 } label: {
-                    Text("Continue")
+                    Text(busy ? "Working…" : "Continue")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                         .foregroundStyle(colors.bg)
-                        .background(confirmed ? colors.accent : colors.hairline)
+                        .background(confirmed && !busy ? colors.accent : colors.hairline)
                         .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
                 }
-                .disabled(!confirmed)
+                .accessibilityIdentifier("recovery.continue")
+                .disabled(!confirmed || busy)
             }
             .padding(24)
         }

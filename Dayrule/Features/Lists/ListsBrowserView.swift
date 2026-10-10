@@ -9,32 +9,47 @@ private struct WhenTarget: Identifiable {
 struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selection: ListName = .inbox
+    @State private var selection: ListName? = .inbox
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
+
+    private var activeList: ListName { selection ?? .inbox }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         NavigationSplitView {
-            List(ListName.allCases, id: \.self, selection: $selection) { name in
-                HStack {
-                    Text(name.title)
-                    Spacer()
-                    if let badge = badge(for: name) {
-                        Text("\(badge)")
-                            .foregroundStyle(
-                                name == .today && counts.overdue > 0
-                                    ? Tokens.Light.deadline
-                                    : colors.textSecondary
-                            )
-                    }
+            List(selection: $selection) {
+                if model.syncStatus == .needsUpdate {
+                    Text(model.syncStatus.label)
+                        .font(.footnote)
+                        .foregroundStyle(Tokens.Light.deadline)
+                        .listRowBackground(colors.sidebar)
                 }
-                .tag(name)
+                ForEach(ListName.allCases, id: \.self) { name in
+                    HStack {
+                        Text(name.title)
+                        Spacer()
+                        if let badge = badge(for: name) {
+                            Text("\(badge)")
+                                .foregroundStyle(
+                                    name == .today && counts.overdue > 0
+                                        ? Tokens.Light.deadline
+                                        : colors.textSecondary
+                                )
+                        }
+                    }
+                    .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
+                    .tag(Optional(name))
+                }
             }
             .navigationTitle("Dayrule")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Lock") { model.lock() }
+                        .foregroundStyle(colors.accent)
+                }
+                ToolbarItem(placement: .automatic) {
+                    Button("Settings") { model.showSettings = true }
                         .foregroundStyle(colors.accent)
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -44,21 +59,28 @@ struct ListsBrowserView: View {
                     .foregroundStyle(colors.accent)
                 }
             }
+            .sheet(isPresented: $model.showSettings) {
+                SettingsView(model: model)
+            }
         } detail: {
             List {
-                if model.vaultLoading && model.vault == nil {
-                    Text("Pulling vault…")
-                        .foregroundStyle(colors.textSecondary)
-                } else if let errorMessage = model.errorMessage, model.vault == nil {
-                    Text(errorMessage)
-                        .foregroundStyle(Tokens.Light.deadline)
-                } else if rows(for: selection).isEmpty {
-                    RuledRow {
-                        Text(emptyCopy(for: selection))
+                // Never replace existing rows with a sync banner — that races Add in e2e
+                // and hides todos for the whole push/pull.
+                if rows(for: activeList).isEmpty {
+                    if model.syncStatus == .syncing || model.vaultLoading {
+                        Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                             .foregroundStyle(colors.textSecondary)
+                    } else if let errorMessage = model.errorMessage, model.vault == nil {
+                        Text(errorMessage)
+                            .foregroundStyle(Tokens.Light.deadline)
+                    } else {
+                        RuledRow {
+                            Text(emptyCopy(for: activeList))
+                                .foregroundStyle(colors.textSecondary)
+                        }
                     }
                 } else {
-                    ForEach(rows(for: selection), id: \.id) { row in
+                    ForEach(rows(for: activeList), id: \.id) { row in
                         RuledRow {
                             HStack(alignment: .center, spacing: 10) {
                                 if row.isTodo {
@@ -73,6 +95,8 @@ struct ListsBrowserView: View {
                                     Text(row.title)
                                         .foregroundStyle(colors.text)
                                         .strikethrough(row.status != .open)
+                                        .accessibilityLabel(row.title)
+                                        .accessibilityIdentifier("list.todo.\(row.id)")
                                     if let subtitle = row.subtitle {
                                         Text(subtitle)
                                             .font(.caption)
@@ -91,20 +115,24 @@ struct ListsBrowserView: View {
                         }
                     }
                 }
-                if selection == .inbox || selection == .today {
+                if activeList == .inbox || activeList == .today {
                     RuledRow {
                         HStack {
                             TextField("Add", text: $draftTitle)
+                                .accessibilityIdentifier("list.addField")
                                 .onSubmit(addTodo)
                             Button("Add", action: addTodo)
+                                .accessibilityIdentifier("list.addButton")
                                 .foregroundStyle(colors.accent)
                                 .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                // List rows can swallow Button actions; explicit role helps XCUITest.
+                                .buttonStyle(.borderless)
                         }
                     }
                 }
             }
             .listStyle(.plain)
-            .navigationTitle(selection.title)
+            .navigationTitle(activeList.title)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .toolbar {
@@ -209,7 +237,7 @@ struct ListsBrowserView: View {
     private func addTodo() {
         let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
-        let placement: Commands.Placement = selection == .today ? .today : .inbox
+        let placement: Commands.Placement = activeList == .today ? .today : .inbox
         do {
             _ = try model.store.run("Add") { d, env in
                 try Commands.createTodo(d, env, .init(title: title, placement: placement))

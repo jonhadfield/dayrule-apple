@@ -18,6 +18,9 @@ packages:
   Sodium:
     url: https://github.com/jedisct1/swift-sodium
     from: "0.11.0"
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
 targets:
   Dayrule:
     type: application
@@ -29,13 +32,19 @@ targets:
           - "Crypto/bip39-english.txt"
           - "Fonts/**"
           - "Resources/**"
-    resources:
+      # XcodeGen multiplatform targets omit top-level `resources:`; ship as resource sources.
       - path: Dayrule/Fonts
+        buildPhase: resources
+        excludes:
+          - "**/.DS_Store"
       - path: Dayrule/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
         destinationFilters: [iOS]
     dependencies:
       - package: Sodium
         product: Clibsodium
+      - package: GRDB
+        product: GRDB
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.Dayrule
@@ -76,3 +85,5 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleUITests
         GENERATE_INFOPLIST_FILE: YES
+        # XCUIApplication is MainActor-isolated on Xcode 16.4; keep tests annotated @MainActor.
+        SWIFT_STRICT_CONCURRENCY: complete

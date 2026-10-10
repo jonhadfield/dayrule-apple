@@ -145,6 +145,58 @@ actor CryptoActor {
             + "-" + String(p[16..<20]) + "-" + String(p[20..<32])
     }
 
+    /// Local GRDB row AAD is the entity key (`todos/<id>`), not `sync/<id>`.
+    func encryptLocal(recordId: String, jsonUTF8: [UInt8], keyId: Int = 1) throws -> EnvelopeB64 {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let meta = Primitives.RecordMeta(
+            userId: userId,
+            recordId: recordId,
+            schemaVersion: 1,
+            keyId: keyId
+        )
+        let env = try Primitives.encryptRecordJSON(ak: ak, meta: meta, jsonUTF8: jsonUTF8)
+        return EnvelopeB64(env)
+    }
+
+    func decryptLocal(recordId: String, envelope: EnvelopeB64) throws -> [UInt8] {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let meta = Primitives.RecordMeta(
+            userId: userId,
+            recordId: recordId,
+            schemaVersion: 1,
+            keyId: envelope.keyId
+        )
+        return try Primitives.decryptRecordJSON(ak: ak, meta: meta, env: try envelope.envelope())
+    }
+
+    /// Encrypt a sync wire payload `{k,v}` / `{k,d}` under AAD `sync/<wireId>`.
+    func encryptSyncPayload(
+        key: String,
+        value: [String: JSONValue]?,
+        deleted: String?,
+        keyId: Int = 1
+    ) throws -> (id: String, env: EnvelopeB64) {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let id = try syncId(for: key)
+        var payload: [String: Any] = ["k": key]
+        if let deleted {
+            payload["d"] = deleted
+        } else if let value {
+            payload["v"] = JSONDict.toAny(value)
+        } else {
+            throw CryptoError.sealFailed
+        }
+        let json = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+        let meta = Primitives.RecordMeta(
+            userId: userId,
+            recordId: "sync/\(id)",
+            schemaVersion: 1,
+            keyId: keyId
+        )
+        let env = try Primitives.encryptRecordJSON(ak: ak, meta: meta, jsonUTF8: [UInt8](json))
+        return (id, EnvelopeB64(env))
+    }
+
     func decryptSyncPayload(_ rec: WireRecord) throws -> SyncPayload? {
         guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
         let meta = Primitives.RecordMeta(

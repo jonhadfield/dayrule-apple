@@ -43,6 +43,10 @@ struct SessionStore: Sendable {
     }
 
     private func save(account: String, data: Data) throws {
+        if MemoryKeychain.enabled {
+            MemoryKeychain.save(service: service, account: account, data: data)
+            return
+        }
         try delete(account: account)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -56,6 +60,9 @@ struct SessionStore: Sendable {
     }
 
     private func load(account: String) throws -> Data? {
+        if MemoryKeychain.enabled {
+            return MemoryKeychain.load(service: service, account: account)
+        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -73,6 +80,10 @@ struct SessionStore: Sendable {
     }
 
     private func delete(account: String) throws {
+        if MemoryKeychain.enabled {
+            MemoryKeychain.delete(service: service, account: account)
+            return
+        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
