@@ -1,3 +1,4 @@
+import Clibsodium
 import Foundation
 
 /// Owns the account key while unlocked (PLAN §8.1).
@@ -9,6 +10,10 @@ actor CryptoActor {
 
     var isUnlocked: Bool { accountKey != nil }
 
+    func currentUserId() -> String? { userId }
+
+    func accountKeyBytes() -> [UInt8]? { accountKey?.bytes }
+
     func lock() {
         accountKey?.clear()
         syncIdKey?.clear()
@@ -17,60 +22,42 @@ actor CryptoActor {
         userId = nil
     }
 
-    /// Local demo unlock for M1: derive keys from password, create AK, wrap under device key.
-    @discardableResult
-    func unlockWithPassword(
-        password: String,
-        userId: String,
-        salt: [UInt8],
-        kdf: KdfParams = .default,
-        existingAccountKey: [UInt8]? = nil
-    ) async throws -> UnlockResult {
-        try kdf.meetFloor()
-        let mk = try Primitives.deriveMasterKey(password: password, salt: salt, kdf: kdf)
-        let authKey = Primitives.hkdf(ikm: mk, label: Labels.auth)
-        let kek = Primitives.hkdf(ikm: mk, label: Labels.kek)
-        let ak = existingAccountKey ?? Primitives.randomBytes(CryptoConstants.keyBytes)
-        let wrappedPw = try Primitives.wrapKey(
-            kek: kek,
-            key: ak,
-            label: Labels.wrapUnderKek,
-            userId: userId
-        )
-
-        let entropy = Recovery.newEntropy()
-        let rk = Recovery.recoveryKey(entropy: entropy)
-        let wrappedRecovery = try Primitives.wrapKey(
-            kek: rk,
-            key: ak,
-            label: Labels.wrapRecovery,
-            userId: userId
-        )
-        let words = try Recovery.toPhrase(entropy)
-        let proof = Recovery.recoveryProof(entropy: entropy)
-
-        let deviceKey = try deviceStore.loadOrCreate(userId: userId)
-        let wrappedDevice = try Primitives.wrapKey(
-            kek: deviceKey,
-            key: ak,
-            label: Labels.wrapDevice,
-            userId: userId
-        )
-
+    private func hold(ak: [UInt8], userId: String) {
         lock()
         self.userId = userId
         accountKey = SecureBuffer(bytes: ak)
         syncIdKey = SecureBuffer(bytes: Primitives.hkdf(ikm: ak, label: Labels.syncId))
+    }
 
-        return UnlockResult(
-            authKey: authKey,
-            wrappedPassword: wrappedPw,
-            wrappedRecovery: wrappedRecovery,
-            wrappedDevice: wrappedDevice,
-            recoveryWords: words,
-            recoveryProof: proof,
-            salt: salt,
-            kdf: kdf
+    /// Derive AuthKey for login (KEK kept only for the subsequent unwrap).
+    func beginLogin(password: String, salt: [UInt8], kdf: KdfParams) throws -> (authKey: [UInt8], kek: [UInt8]) {
+        try kdf.meetFloor()
+        let mk = try Primitives.deriveMasterKey(password: password, salt: salt, kdf: kdf)
+        let authKey = Primitives.hkdf(ikm: mk, label: Labels.auth)
+        let kek = Primitives.hkdf(ikm: mk, label: Labels.kek)
+        return (authKey, kek)
+    }
+
+    func unlockWithPasswordWrap(
+        kek: [UInt8],
+        userId: String,
+        wrapped: Primitives.Sealed,
+        stayUnlocked: Bool
+    ) throws -> Primitives.Sealed? {
+        let ak = try Primitives.unwrapKey(
+            kek: kek,
+            wrapped: wrapped,
+            label: Labels.wrapUnderKek,
+            userId: userId
+        )
+        hold(ak: ak, userId: userId)
+        guard stayUnlocked else { return nil }
+        let deviceKey = try deviceStore.loadOrCreate(userId: userId)
+        return try Primitives.wrapKey(
+            kek: deviceKey,
+            key: ak,
+            label: Labels.wrapDevice,
+            userId: userId
         )
     }
 
@@ -83,10 +70,7 @@ actor CryptoActor {
             label: Labels.wrapDevice,
             userId: userId
         )
-        lock()
-        self.userId = userId
-        accountKey = SecureBuffer(bytes: ak)
-        syncIdKey = SecureBuffer(bytes: Primitives.hkdf(ikm: ak, label: Labels.syncId))
+        hold(ak: ak, userId: userId)
     }
 
     func unlockFromRecovery(phrase: String, userId: String, wrappedRecovery: Primitives.Sealed) throws {
@@ -98,15 +82,95 @@ actor CryptoActor {
             label: Labels.wrapRecovery,
             userId: userId
         )
-        lock()
-        self.userId = userId
-        accountKey = SecureBuffer(bytes: ak)
-        syncIdKey = SecureBuffer(bytes: Primitives.hkdf(ikm: ak, label: Labels.syncId))
+        hold(ak: ak, userId: userId)
     }
 
-    func encryptRecordJSON(meta: Primitives.RecordMeta, jsonUTF8: [UInt8], nonce: [UInt8]? = nil) throws -> Primitives.Envelope {
-        guard let ak = accountKey?.bytes else { throw CryptoError.notUnlocked }
-        return try Primitives.encryptRecordJSON(ak: ak, meta: meta, jsonUTF8: jsonUTF8, nonce: nonce)
+    func recoveryProofB64(phrase: String) throws -> String {
+        let entropy = try Recovery.fromPhrase(phrase)
+        return Base64Std.encode(Recovery.recoveryProof(entropy: entropy))
+    }
+
+    /// Local demo account (M1) — kept for offline smoke without an API.
+    @discardableResult
+    func createLocalDemo(password: String, userId: String, salt: [UInt8], kdf: KdfParams = .default) throws -> UnlockResult {
+        try kdf.meetFloor()
+        let mk = try Primitives.deriveMasterKey(password: password, salt: salt, kdf: kdf)
+        let authKey = Primitives.hkdf(ikm: mk, label: Labels.auth)
+        let kek = Primitives.hkdf(ikm: mk, label: Labels.kek)
+        let ak = Primitives.randomBytes(CryptoConstants.keyBytes)
+        let wrappedPw = try Primitives.wrapKey(kek: kek, key: ak, label: Labels.wrapUnderKek, userId: userId)
+        let entropy = Recovery.newEntropy()
+        let rk = Recovery.recoveryKey(entropy: entropy)
+        let wrappedRecovery = try Primitives.wrapKey(kek: rk, key: ak, label: Labels.wrapRecovery, userId: userId)
+        let words = try Recovery.toPhrase(entropy)
+        let proof = Recovery.recoveryProof(entropy: entropy)
+        let deviceKey = try deviceStore.loadOrCreate(userId: userId)
+        let wrappedDevice = try Primitives.wrapKey(kek: deviceKey, key: ak, label: Labels.wrapDevice, userId: userId)
+        hold(ak: ak, userId: userId)
+        return UnlockResult(
+            authKey: authKey,
+            wrappedPassword: wrappedPw,
+            wrappedRecovery: wrappedRecovery,
+            wrappedDevice: wrappedDevice,
+            recoveryWords: words,
+            recoveryProof: proof,
+            salt: salt,
+            kdf: kdf
+        )
+    }
+
+    func syncId(for key: String) throws -> String {
+        guard let syncKey = syncIdKey?.bytes else { throw CryptoError.notUnlocked }
+        var mac = [UInt8](repeating: 0, count: Int(crypto_auth_hmacsha256_bytes()))
+        let msg = Array(key.utf8)
+        let status = mac.withUnsafeMutableBytes { macRaw in
+            msg.withUnsafeBytes { msgRaw in
+                syncKey.withUnsafeBytes { keyRaw in
+                    crypto_auth_hmacsha256(
+                        macRaw.bindMemory(to: UInt8.self).baseAddress!,
+                        msgRaw.bindMemory(to: UInt8.self).baseAddress!,
+                        UInt64(msg.count),
+                        keyRaw.bindMemory(to: UInt8.self).baseAddress!
+                    )
+                }
+            }
+        }
+        guard status == 0 else { throw CryptoError.sealFailed }
+        var truncated = Array(mac.prefix(16))
+        truncated[6] = (truncated[6] & 0x0F) | 0x40
+        truncated[8] = (truncated[8] & 0x3F) | 0x80
+        let hex = Hex.encode(truncated)
+        let p = Array(hex)
+        return String(p[0..<8]) + "-" + String(p[8..<12]) + "-" + String(p[12..<16])
+            + "-" + String(p[16..<20]) + "-" + String(p[20..<32])
+    }
+
+    func decryptSyncRecord(_ rec: WireRecord) throws -> VaultEntity? {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let meta = Primitives.RecordMeta(
+            userId: userId,
+            recordId: "sync/\(rec.id)",
+            schemaVersion: 1,
+            keyId: rec.keyId
+        )
+        let env = Primitives.Envelope(
+            alg: rec.alg,
+            keyId: rec.keyId,
+            nonce: try Base64Std.decode(rec.nonce),
+            ciphertext: try Base64Std.decode(rec.ciphertext)
+        )
+        let plain = try Primitives.decryptRecordJSON(ak: ak, meta: meta, env: env)
+        let obj = try JSONSerialization.jsonObject(with: Data(plain)) as? [String: Any]
+        guard let key = obj?["k"] as? String else { return nil }
+        let expected = try syncId(for: key)
+        guard expected == rec.id.lowercased() else { throw CryptoError.openFailed }
+        if obj?["d"] != nil { return nil }
+        guard let value = obj?["v"] as? [String: Any] else { return nil }
+        let type = value["type"] as? String
+            ?? key.split(separator: "/").first.map(String.init)
+            ?? "?"
+        let title = (value["title"] as? String) ?? (type == "settings" ? "Settings" : key)
+        return VaultEntity(key: key, title: title, type: type)
     }
 }
 

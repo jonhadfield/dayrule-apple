@@ -4,114 +4,215 @@ struct GateView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var password = ""
-    @State private var busy = false
+    @State private var recoveryPhrase = ""
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         ZStack {
             colors.bg.ignoresSafeArea()
             switch model.phase {
-            case .locked, .unlocking:
-                lockedForm(colors: colors)
-            case .showRecovery(let words):
-                RecoveryPhraseView(words: words) {
-                    model.confirmRecoverySaved()
-                }
+            case .locked:
+                lockedForm(colors: colors, busy: false)
+            case .unlocking:
+                lockedForm(colors: colors, busy: true)
+            case .needsRecovery:
+                recoveryForm(colors: colors)
             case .unlocked:
-                UnlockedHomeView(model: model)
+                VaultBrowserView(model: model)
             }
         }
-        .task {
-            await model.tryDeviceUnlock()
+        .task { await model.tryDeviceUnlock() }
+    }
+
+    @ViewBuilder
+    private func lockedForm(colors: DayruleColors, busy: Bool) -> some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                Spacer(minLength: 40)
+                Text("Dayrule")
+                    .font(DayruleFont.brand())
+                    .foregroundStyle(colors.text)
+                Text("Sign in to pull your encrypted vault.")
+                    .font(.body)
+                    .foregroundStyle(colors.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                field(colors: colors, label: "API", text: $model.apiBaseURLString)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.URL)
+
+                field(colors: colors, label: "Email", text: $model.email)
+                    .textContentType(.username)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .keyboardType(.emailAddress)
+
+                SecureField("Password", text: $password)
+                    .textContentType(.password)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .padding(14)
+                    .background(colors.sidebar)
+                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+                    .disabled(busy)
+
+                Toggle("Stay unlocked on this device", isOn: $model.stayUnlocked)
+                    .foregroundStyle(colors.textSecondary)
+
+                Button {
+                    Task {
+                        await model.unlock(password: password)
+                        password = ""
+                    }
+                } label: {
+                    Text(busy ? "Unlocking…" : "Sign in")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(colors.bg)
+                        .background(colors.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                }
+                .disabled(password.isEmpty || model.email.isEmpty || busy)
+
+                Button("Use recovery phrase") {
+                    model.phase = .needsRecovery
+                    model.errorMessage = nil
+                }
+                .foregroundStyle(colors.accent)
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(Tokens.Light.deadline)
+                        .multilineTextAlignment(.center)
+                }
+                Spacer(minLength: 40)
+            }
+            .padding(.horizontal, 32)
         }
     }
 
     @ViewBuilder
-    private func lockedForm(colors: DayruleColors) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
-            Text("Dayrule")
-                .font(DayruleFont.brand())
-                .foregroundStyle(colors.text)
-            Text("Your lists, encrypted on this device.")
-                .font(.body)
-                .foregroundStyle(colors.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
+    private func recoveryForm(colors: DayruleColors) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Recovery sign-in")
+                    .font(DayruleFont.listTitle())
+                    .foregroundStyle(colors.text)
+                Text("Enter your 24-word recovery phrase. This counts as both factors when a second step is required.")
+                    .foregroundStyle(colors.textSecondary)
 
-            SecureField("Password", text: $password)
-                .textContentType(.password)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
-                .padding(14)
-                .background(colors.sidebar)
-                .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
-                .padding(.horizontal, 32)
-                .disabled(model.phase == .unlocking)
+                field(colors: colors, label: "Email", text: $model.email)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
 
-            Toggle("Stay unlocked on this device", isOn: $model.stayUnlocked)
-                .foregroundStyle(colors.textSecondary)
-                .padding(.horizontal, 32)
+                TextField("twenty four words…", text: $recoveryPhrase, axis: .vertical)
+                    .lineLimit(4...8)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(14)
+                    .background(colors.sidebar)
+                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
 
-            Button {
-                Task {
-                    busy = true
-                    await model.unlock(password: password)
-                    password = ""
-                    busy = false
+                Button {
+                    Task {
+                        await model.unlockWithRecovery(phrase: recoveryPhrase)
+                        recoveryPhrase = ""
+                    }
+                } label: {
+                    Text(model.phase == .unlocking ? "Unlocking…" : "Unlock with phrase")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(colors.bg)
+                        .background(colors.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
                 }
-            } label: {
-                Text(model.phase == .unlocking || busy ? "Unlocking…" : "Unlock")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .foregroundStyle(colors.bg)
-                    .background(colors.accent)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
-            }
-            .disabled(password.isEmpty || model.phase == .unlocking || busy)
-            .padding(.horizontal, 32)
 
-            if let errorMessage = model.errorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(Tokens.Light.deadline)
-                    .padding(.horizontal, 32)
-            }
+                Button("Back") {
+                    model.phase = .locked
+                    model.errorMessage = nil
+                }
+                .foregroundStyle(colors.accent)
 
-            Spacer()
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(Tokens.Light.deadline)
+                }
+            }
+            .padding(24)
         }
+    }
+
+    private func field(colors: DayruleColors, label: String, text: Binding<String>) -> some View {
+        TextField(label, text: text)
+            .padding(14)
+            .background(colors.sidebar)
+            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
     }
 }
 
-struct UnlockedHomeView: View {
+struct VaultBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        VStack(spacing: 16) {
-            Text("Dayrule")
-                .font(DayruleFont.brand())
-                .foregroundStyle(colors.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-
-            Text("Inbox, Today, Scheduled and Backlog will land in M3.")
-                .foregroundStyle(colors.textSecondary)
-                .padding(.horizontal, 24)
-
-            Spacer()
-
-            Button("Lock") {
-                model.lock()
+        NavigationStack {
+            List {
+                if model.vaultLoading && model.vault == nil {
+                    Text("Pulling vault…")
+                        .foregroundStyle(colors.textSecondary)
+                }
+                if let vault = model.vault {
+                    Section("Counts") {
+                        ForEach(vault.counts.keys.sorted(), id: \.self) { key in
+                            HStack {
+                                Text(key)
+                                Spacer()
+                                Text("\(vault.counts[key] ?? 0)")
+                                    .foregroundStyle(colors.textSecondary)
+                            }
+                        }
+                        Text("\(vault.recordCount) wire records · \(vault.skippedUnknownAlg) skipped")
+                            .font(.footnote)
+                            .foregroundStyle(colors.textSecondary)
+                    }
+                    Section("Titles") {
+                        ForEach(vault.entities) { entity in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(entity.title)
+                                    .foregroundStyle(colors.text)
+                                Text("\(entity.type) · \(entity.key)")
+                                    .font(.caption)
+                                    .foregroundStyle(colors.textSecondary)
+                            }
+                        }
+                    }
+                } else if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .foregroundStyle(Tokens.Light.deadline)
+                }
             }
-            .foregroundStyle(colors.accent)
-            .padding(.bottom, 32)
+            .scrollContentBackground(.hidden)
+            .background(colors.bg)
+            .navigationTitle("Dayrule")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Lock") { model.lock() }
+                        .foregroundStyle(colors.accent)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Refresh") {
+                        Task { await model.refreshVault() }
+                    }
+                    .foregroundStyle(colors.accent)
+                }
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(colors.bg.ignoresSafeArea())
         .simultaneousGesture(
             DragGesture(minimumDistance: 0).onChanged { _ in model.bumpIdle() }
         )

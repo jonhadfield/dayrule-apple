@@ -39,13 +39,8 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.Dayrule
-        INFOPLIST_KEY_CFBundleDisplayName: Dayrule
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: YES
-        INFOPLIST_KEY_UIAppFonts: Fraunces-Variable.ttf
-        GENERATE_INFOPLIST_FILE: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Dayrule/Resources/Info.plist
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
     scheme:

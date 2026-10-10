@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		08613D9715503FF6B42375F2 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B779DA6B2031BF08649C89C /* APIClient.swift */; };
 		181A8D17F279AFCBCD6A58E0 /* Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009C4F0B2898FCD16E2FFC1A /* Hex.swift */; };
 		19D4E828090DB6793A9C6C43 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7445A8887D2541F518050BD1 /* Typography.swift */; };
 		1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */; };
@@ -21,7 +22,10 @@
 		A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA8099CD51FDF8947583529 /* SecureBuffer.swift */; };
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
 		AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04DD9593EDD04B386E31B09 /* BIP39.swift */; };
+		B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36B87A1F0A8515AFC2411AC /* VaultPull.swift */; };
+		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
 		D21D41CB86112AA455D78513 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4608F0B7201CE4C352E4294D /* Tokens.swift */; };
+		D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8C8968ECDB5433251704AB /* SessionStore.swift */; };
 		E5A683A625CD7BE743935E5C /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = 3C89D1DF494846980AFD6C74 /* Clibsodium */; };
 		E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374E24148DE7D295BFAC4296 /* Primitives.swift */; };
 		EC72C196606D5324DEBC1640 /* CryptoActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15015B5511061101944C5356 /* CryptoActor.swift */; };
@@ -61,12 +65,16 @@
 		67A6060A2F05BA56D06D4BFE /* DayruleTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DayruleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7445A8887D2541F518050BD1 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoVectorsTests.swift; sourceTree = "<group>"; };
+		7B779DA6B2031BF08649C89C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleUITests.swift; sourceTree = "<group>"; };
 		A04DD9593EDD04B386E31B09 /* BIP39.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39.swift; sourceTree = "<group>"; };
+		A36B87A1F0A8515AFC2411AC /* VaultPull.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPull.swift; sourceTree = "<group>"; };
 		B6A9CCB3D751BB5F83672A3E /* Recovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recovery.swift; sourceTree = "<group>"; };
 		CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		CDA8099CD51FDF8947583529 /* SecureBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureBuffer.swift; sourceTree = "<group>"; };
 		E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPhraseView.swift; sourceTree = "<group>"; };
+		EB8C8968ECDB5433251704AB /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -99,6 +107,15 @@
 			path = DayruleUITests;
 			sourceTree = "<group>";
 		};
+		53310EF47871235719F05123 /* Networking */ = {
+			isa = PBXGroup;
+			children = (
+				7B779DA6B2031BF08649C89C /* APIClient.swift */,
+				EB8C8968ECDB5433251704AB /* SessionStore.swift */,
+			);
+			path = Networking;
+			sourceTree = "<group>";
+		};
 		5E7073F5D227D1861F99DBB4 /* Design */ = {
 			isa = PBXGroup;
 			children = (
@@ -115,6 +132,8 @@
 				AA566409FCF2E23A99F986CD /* Crypto */,
 				5E7073F5D227D1861F99DBB4 /* Design */,
 				ACB6200334CB7648E0F838AD /* Gate */,
+				53310EF47871235719F05123 /* Networking */,
+				D5BC0780B24063ECC15F69DA /* Sync */,
 			);
 			path = Dayrule;
 			sourceTree = "<group>";
@@ -123,6 +142,7 @@
 			isa = PBXGroup;
 			children = (
 				7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */,
+				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
 			);
 			path = DayruleTests;
 			sourceTree = "<group>";
@@ -170,6 +190,14 @@
 				E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */,
 			);
 			path = Gate;
+			sourceTree = "<group>";
+		};
+		D5BC0780B24063ECC15F69DA /* Sync */ = {
+			isa = PBXGroup;
+			children = (
+				A36B87A1F0A8515AFC2411AC /* VaultPull.swift */,
+			);
+			path = Sync;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -283,6 +311,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				08613D9715503FF6B42375F2 /* APIClient.swift in Sources */,
 				9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */,
 				AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */,
 				F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */,
@@ -297,8 +326,10 @@
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,
 				51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */,
 				A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */,
+				D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */,
 				D21D41CB86112AA455D78513 /* Tokens.swift in Sources */,
 				19D4E828090DB6793A9C6C43 /* Typography.swift in Sources */,
+				B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -315,6 +346,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				85124F6031198380233EA8D5 /* CryptoVectorsTests.swift in Sources */,
+				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -401,13 +433,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Dayrule;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = YES;
-				INFOPLIST_KEY_UIAppFonts = "Fraunces-Variable.ttf";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -561,13 +588,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = Dayrule;
-				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = YES;
-				INFOPLIST_KEY_UIAppFonts = "Fraunces-Variable.ttf";
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
