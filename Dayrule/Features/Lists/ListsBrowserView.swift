@@ -9,9 +9,11 @@ private struct WhenTarget: Identifiable {
 struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
-    @State private var selection: ListName = .inbox
+    @State private var selection: ListName? = .inbox
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
+
+    private var activeList: ListName { selection ?? .inbox }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -36,7 +38,7 @@ struct ListsBrowserView: View {
                                 )
                         }
                     }
-                    .tag(name)
+                    .tag(Optional(name))
                 }
             }
             .navigationTitle("Dayrule")
@@ -67,13 +69,13 @@ struct ListsBrowserView: View {
                 } else if let errorMessage = model.errorMessage, model.vault == nil {
                     Text(errorMessage)
                         .foregroundStyle(Tokens.Light.deadline)
-                } else if rows(for: selection).isEmpty {
+                } else if rows(for: activeList).isEmpty {
                     RuledRow {
-                        Text(emptyCopy(for: selection))
+                        Text(emptyCopy(for: activeList))
                             .foregroundStyle(colors.textSecondary)
                     }
                 } else {
-                    ForEach(rows(for: selection), id: \.id) { row in
+                    ForEach(rows(for: activeList), id: \.id) { row in
                         RuledRow {
                             HStack(alignment: .center, spacing: 10) {
                                 if row.isTodo {
@@ -106,7 +108,7 @@ struct ListsBrowserView: View {
                         }
                     }
                 }
-                if selection == .inbox || selection == .today {
+                if activeList == .inbox || activeList == .today {
                     RuledRow {
                         HStack {
                             TextField("Add", text: $draftTitle)
@@ -119,7 +121,7 @@ struct ListsBrowserView: View {
                 }
             }
             .listStyle(.plain)
-            .navigationTitle(selection.title)
+            .navigationTitle(activeList.title)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .toolbar {
@@ -224,7 +226,7 @@ struct ListsBrowserView: View {
     private func addTodo() {
         let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
-        let placement: Commands.Placement = selection == .today ? .today : .inbox
+        let placement: Commands.Placement = activeList == .today ? .today : .inbox
         do {
             _ = try model.store.run("Add") { d, env in
                 try Commands.createTodo(d, env, .init(title: title, placement: placement))

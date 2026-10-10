@@ -13,6 +13,13 @@ enum AppDatabase {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let safe = userId.replacingOccurrences(of: "/", with: "_")
         let url = root.appendingPathComponent("data-\(safe).sqlite")
+        return try open(at: url)
+    }
+
+    /// Open (or create) a ciphertext DB at an explicit path (tests / custom roots).
+    static func open(at url: URL) throws -> DatabaseQueue {
+        let dir = url.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         var config = Configuration()
         config.prepareDatabase { db in
             try db.execute(sql: "PRAGMA foreign_keys = ON")

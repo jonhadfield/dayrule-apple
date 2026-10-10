@@ -86,6 +86,15 @@ struct RecoverStartResponse: Codable, Sendable {
     var wrappedRecovery: WrappedB64
 }
 
+struct SignupVerifyResponse: Codable, Sendable {
+    var signupToken: String
+}
+
+struct RegisterResponse: Codable, Sendable {
+    var userId: String
+    var token: String?
+}
+
 struct SyncHead: Codable, Sendable {
     var seq: Int64
     var floor: Int64
@@ -117,6 +126,8 @@ struct PushResponse: Codable, Sendable {
 actor APIClient {
     var baseURL: URL
     private(set) var token: String?
+    /// Override platform segment of `X-Dayrule-Client` (tests; server mints body tokens for `ios/`).
+    var clientKind: String?
     private let session: URLSession
     private let build: String
 
@@ -129,10 +140,16 @@ actor APIClient {
         self.session = URLSession(configuration: config)
     }
 
-    private var clientHeader: String { ClientPlatform.clientHeader(build: build) }
+    private var clientHeader: String {
+        "\(clientKind ?? ClientPlatform.kind)/\(build)"
+    }
 
     func setToken(_ token: String?) {
         self.token = token
+    }
+
+    func setClientKind(_ kind: String?) {
+        clientKind = kind
     }
 
     func setBaseURL(_ url: URL) {
@@ -183,6 +200,60 @@ actor APIClient {
 
     func prelogin(email: String) async throws -> PreloginResponse {
         try await decode("POST", path: "api/v1/auth/prelogin", jsonBody: ["email": email])
+    }
+
+    func signupStart(email: String, inviteCode: String) async throws {
+        _ = try await raw(
+            "POST",
+            path: "api/v1/auth/signup/start",
+            jsonBody: ["email": email, "inviteCode": inviteCode]
+        )
+    }
+
+    func signupVerify(email: String, code: String) async throws -> SignupVerifyResponse {
+        try await decode(
+            "POST",
+            path: "api/v1/auth/signup/verify",
+            jsonBody: ["email": email, "code": code]
+        )
+    }
+
+    func register(
+        email: String,
+        signupToken: String,
+        inviteCode: String,
+        userId: String,
+        saltB64: String,
+        kdf: KdfParams,
+        authKeyB64: String,
+        wrappedPassword: WrappedB64,
+        wrappedRecovery: WrappedB64,
+        recoveryProofB64: String,
+        deviceLabel: String
+    ) async throws -> RegisterResponse {
+        try await decode(
+            "POST",
+            path: "api/v1/auth/register",
+            jsonBody: [
+                "email": email,
+                "signupToken": signupToken,
+                "inviteCode": inviteCode,
+                "userId": userId,
+                "salt": saltB64,
+                "kdf": ["v": kdf.v, "ops": Int(kdf.ops), "mem": Int(kdf.mem)],
+                "authKey": authKeyB64,
+                "wrappedPassword": [
+                    "nonce": wrappedPassword.nonce,
+                    "ciphertext": wrappedPassword.ciphertext,
+                ],
+                "wrappedRecovery": [
+                    "nonce": wrappedRecovery.nonce,
+                    "ciphertext": wrappedRecovery.ciphertext,
+                ],
+                "recoveryProof": recoveryProofB64,
+                "deviceLabel": deviceLabel,
+            ]
+        )
     }
 
     func login(email: String, authKeyB64: String, deviceLabel: String) async throws -> LoginResponse {

@@ -74,11 +74,13 @@
 		D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951105343C5D083C09317947 /* RecordCipher.swift */; };
 		D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8C8968ECDB5433251704AB /* SessionStore.swift */; };
 		DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336000FBB2DB5AD70D51A33A /* RepeatTests.swift */; };
+		E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */; };
 		E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340184C820B58937291F1AB9 /* SyncTransport.swift */; };
 		E5A683A625CD7BE743935E5C /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = 3C89D1DF494846980AFD6C74 /* Clibsodium */; };
 		E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */ = {isa = PBXBuildFile; fileRef = 374E24148DE7D295BFAC4296 /* Primitives.swift */; };
 		EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39F13541F8210D40139B57E9 /* ListsTests.swift */; };
 		EC72C196606D5324DEBC1640 /* CryptoActor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15015B5511061101944C5356 /* CryptoActor.swift */; };
+		EEB8836EEFBE8F137FF5FC6B /* SyncE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */; };
 		F1BAB03732D8621115934C26 /* Incoming.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D8718EB1E6396EDCA15E8B /* Incoming.swift */; };
 		F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */; };
 		F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */; };
@@ -175,11 +177,13 @@
 		E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CipherStoreTests.swift; sourceTree = "<group>"; };
 		E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatformTests.swift; sourceTree = "<group>"; };
 		E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPhraseView.swift; sourceTree = "<group>"; };
+		E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncE2ETests.swift; sourceTree = "<group>"; };
 		EB8C8968ECDB5433251704AB /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		ED491D92E219DF041A432C75 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorRecordCipherTests.swift; sourceTree = "<group>"; };
 		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
 		F47D18259248FBC451348D37 /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
+		F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaintextOnDiskTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -297,9 +301,11 @@
 				0026AAA1C063454CC9B4A1B8 /* IncomingTests.swift */,
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
+				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
 				BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */,
 				336000FBB2DB5AD70D51A33A /* RepeatTests.swift */,
 				1160CD5B09CB87451563810B /* StoreTests.swift */,
+				E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */,
 				221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */,
 				ABA59A162F972005C49AB993 /* UuidV5Tests.swift */,
 				21624A016DAA93040A515E60 /* UuidV7Tests.swift */,
@@ -606,9 +612,11 @@
 				02A1DA607E312B851FD990F1 /* IncomingTests.swift in Sources */,
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
+				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
 				DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */,
 				F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */,
 				FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */,
+				EEB8836EEFBE8F137FF5FC6B /* SyncE2ETests.swift in Sources */,
 				6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */,
 				4B19474584B0F1C1D6ECC138 /* UuidV5Tests.swift in Sources */,
 				35B2037FC4B6BF6087528746 /* UuidV7Tests.swift in Sources */,
