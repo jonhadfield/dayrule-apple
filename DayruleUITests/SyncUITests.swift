@@ -5,6 +5,7 @@ import XCTest
 /// Enabled by `/tmp/dayrule-e2e-config.json` from `scripts/local-sync-e2e.sh`
 /// (script supplies a fresh `invite`; this test reads email codes from `api.log`).
 final class SyncUITests: XCTestCase {
+    @MainActor
     func testSignupAddTodoAppearsInInbox() throws {
         let cfgURL = URL(fileURLWithPath: "/tmp/dayrule-e2e-config.json")
         guard FileManager.default.fileExists(atPath: cfgURL.path),
@@ -118,6 +119,7 @@ final class SyncUITests: XCTestCase {
         }
     }
 
+    @MainActor
     private func clearAndType(_ element: XCUIElement, _ text: String) {
         XCTAssertTrue(element.waitForExistence(timeout: 5))
         element.tap()

@@ -85,3 +85,5 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleUITests
         GENERATE_INFOPLIST_FILE: YES
+        # XCUIApplication is MainActor-isolated on Xcode 16.4; keep tests annotated @MainActor.
+        SWIFT_STRICT_CONCURRENCY: complete

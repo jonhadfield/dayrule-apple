@@ -1,6 +1,7 @@
 import XCTest
 
 final class DayruleUITests: XCTestCase {
+    @MainActor
     func testLaunchShowsBrand() throws {
         let app = XCUIApplication()
         app.launch()
@@ -8,6 +9,7 @@ final class DayruleUITests: XCTestCase {
     }
 
     /// Smoke audit on the locked gate (PLAN §14.1 M3).
+    @MainActor
     func testGateAccessibilityAudit() throws {
         let app = XCUIApplication()
         app.launch()
