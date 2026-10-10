@@ -1,0 +1,35 @@
+{
+  "input": {
+    "password": "correct horse battery staple ✓ Ünïcode",
+    "salt": "000102030405060708090a0b0c0d0e0f",
+    "kdf": {
+      "v": 1,
+      "ops": 3,
+      "mem": 67108864
+    },
+    "userId": "6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b",
+    "accountKey": "2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+    "wrapNonce": "111111111111111111111111111111111111111111111111",
+    "recoveryEntropy": "7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f01010101010101010101010101010101",
+    "recordId": "0c9b8a7d-6e5f-4a3b-9c2d-1e0f2a3b4c5d",
+    "recordNonce": "222222222222222222222222222222222222222222222222",
+    "record": {
+      "type": "todo",
+      "title": "Buy milk",
+      "notes": "semi-skimmed",
+      "tonight": false
+    }
+  },
+  "output": {
+    "masterKey": "ccfd67956ed156a43b67e30ea0fb853ba5a0b9d37649713c6660f24ceb036483",
+    "authKey": "2fbb2f0715e8b70cb972c89988f793a37624c97e6c766facc6493b7739226869",
+    "kek": "3e87d9c126a07559dbd79838b0ad2e8bb8fbe598e3120b5933a9543cc8899648",
+    "wrappedAccountKeyPassword": "99bfd060773cacfb87f85ba4464717d4d2238f02fc2400a75d3c1cd63fb158189e06a682fafed73569bb96373c1771fa",
+    "recoveryPhrase": "legal winner thank year wave sausage worth useful legal winner thank wrap avoid letter advice cage absurd amount doctor acoustic avoid letter advice denial",
+    "recoveryKey": "3005eadc61b87b703021d2e22b7d35189cec3918a84fcea6e7fe27aff0a0801b",
+    "wrappedAccountKeyRecovery": "5c657d498f1b9c9300fc83572d59259c31fd52a8448e5f0deefe251bc4d73278f63fdcd63d8873c5f621282071573141",
+    "recordAad": "dayrule/record/v1|6f1d2c3b-4a59-4e6f-8a7b-9c0d1e2f3a4b|0c9b8a7d-6e5f-4a3b-9c2d-1e0f2a3b4c5d|v1|alg1|key1",
+    "recordPlaintextJson": "{\"type\":\"todo\",\"title\":\"Buy milk\",\"notes\":\"semi-skimmed\",\"tonight\":false}",
+    "recordCiphertext": "02bc75fdde99d163d5800a484588aedc4a433fcacafd1b960bd5f98efd40f8a075abded0b8793467a8255318fd5624ef20e9fbbab78a459af18c03fd5136ffa9bf79d2a3936dec00631dce3bdddd6a92b9dd13029ce9ee6b1564e3dadba32a6462efe1af6d75b6221aac56cf06e1056fb99f96f6044e80764cb182e0599458582adc3318a6c566bee20e8e626ce71a3c77827d85d118d7443d0224587293b84f40781d2cec1a52571f1f1893fe85fd17abf26b5ebc1bc397fbc031ba020454d79a41400c70042118dba751ea38fbd74ff470cbb38fcd8d7d734cb64d9db3783adacd759b74317382cfca5963ec914f1f60c12ccb2cb547e47442d2f284246aa0c75d7411698d7817e6ab4a6a6caf465f"
+  }
+}

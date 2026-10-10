@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Verify shared fixture lock
+        run: |
+          set -euo pipefail
+          while read -r line; do
+            case "$line" in
+              web_commit=*) ;;
+              *)
+                hash="${line%%  *}"
+                file="${line#*  }"
+                actual="$(shasum -a 256 "docs/shared/$file" | awk '{print $1}')"
+                test "$hash" = "$actual"
+                ;;
+            esac
+          done < docs/shared/SHARED.lock
+
+      - name: Generate project
+        run: brew install xcodegen && xcodegen generate
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
+
+      - name: Test
+        run: |
+          DEST=$(xcrun simctl list devices available -j | python3 -c "
+          import json,sys,re
+          devices=json.load(sys.stdin)['devices']
+          # Prefer iPhone 16 on iOS 18+ (deployment target).
+          candidates=[]
+          for runtime,devs in devices.items():
+            m=re.search(r'iOS[^\d]*(\d+)', runtime)
+            if not m or int(m.group(1)) < 18: continue
+            for d in devs:
+              if d.get('isAvailable') and 'iPhone' in d['name']:
+                score = 0
+                if 'iPhone 16' in d['name']: score += 10
+                if 'Pro' in d['name']: score += 1
+                candidates.append((score, d['udid'], d['name']))
+          if not candidates:
+            raise SystemExit('no iPhone simulator on iOS 18+')
+          candidates.sort(reverse=True)
+          print(f\"platform=iOS Simulator,id={candidates[0][1]}\")
+          ")
+          xcodebuild test \
+            -project Dayrule.xcodeproj \
+            -scheme Dayrule \
+            -destination "$DEST" \
+            -skip-testing:DayruleUITests \
+            CODE_SIGNING_ALLOWED=NO
