@@ -15,9 +15,11 @@
 		181A8D17F279AFCBCD6A58E0 /* Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009C4F0B2898FCD16E2FFC1A /* Hex.swift */; };
 		19D4E828090DB6793A9C6C43 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7445A8887D2541F518050BD1 /* Typography.swift */; };
 		1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */; };
+		1FEB0C7B35784ED70726081E /* RuledRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */; };
 		256FEEB655F2D4F0863BD232 /* EntityJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8438C0E4D3766BEAE5D0763A /* EntityJSON.swift */; };
 		2BF4C47D521435E78A947EF1 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDA6EB07F5EF2CD6EE40649 /* Order.swift */; };
 		30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B739D187E09BA80EF8304B /* DayruleApp.swift */; };
+		323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */; };
 		33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */; };
 		34FED0087086C173E8D97B31 /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9A6D321AF398DD22A708FC /* World.swift */; };
 		40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A9CCB3D751BB5F83672A3E /* Recovery.swift */; };
@@ -88,6 +90,7 @@
 		34DACE485DAF6FB4AB18C160 /* Dayrule.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dayrule.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		374E24148DE7D295BFAC4296 /* Primitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Primitives.swift; sourceTree = "<group>"; };
 		39F13541F8210D40139B57E9 /* ListsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsTests.swift; sourceTree = "<group>"; };
+		3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuledRow.swift; sourceTree = "<group>"; };
 		43FC547FBEFB77D78A87433D /* GateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateView.swift; sourceTree = "<group>"; };
 		4608F0B7201CE4C352E4294D /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		4E6C23642DCB6C41B26D8671 /* Merge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Merge.swift; sourceTree = "<group>"; };
@@ -110,6 +113,7 @@
 		A022752FC1044F75EE926924 /* When.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = When.swift; sourceTree = "<group>"; };
 		A04DD9593EDD04B386E31B09 /* BIP39.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39.swift; sourceTree = "<group>"; };
 		A36B87A1F0A8515AFC2411AC /* VaultPull.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPull.swift; sourceTree = "<group>"; };
+		A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhenSheetView.swift; sourceTree = "<group>"; };
 		AB9A6D321AF398DD22A708FC /* World.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = World.swift; sourceTree = "<group>"; };
 		B5D74A31D06E83A0F0DD471D /* Lists.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lists.swift; sourceTree = "<group>"; };
 		B6A9CCB3D751BB5F83672A3E /* Recovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recovery.swift; sourceTree = "<group>"; };
@@ -145,6 +149,8 @@
 			isa = PBXGroup;
 			children = (
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
+				3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */,
+				A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */,
 			);
 			path = Lists;
 			sourceTree = "<group>";
@@ -458,6 +464,7 @@
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,
 				51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */,
 				12C2447A0BBEBFD64F6DDD97 /* Restamp.swift in Sources */,
+				1FEB0C7B35784ED70726081E /* RuledRow.swift in Sources */,
 				A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */,
 				D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */,
 				D21D41CB86112AA455D78513 /* Tokens.swift in Sources */,
@@ -466,6 +473,7 @@
 				B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */,
 				713DDCD4F2D941D9B57B0FCF /* VaultToEntities.swift in Sources */,
 				4CDF10FD22A4470066A87487 /* When.swift in Sources */,
+				323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

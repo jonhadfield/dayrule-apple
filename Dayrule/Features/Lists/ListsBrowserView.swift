@@ -1,11 +1,17 @@
 import SwiftUI
 
-/// Read-only list shell (M3): Inbox → Trash over Entities from the vault.
+private struct WhenTarget: Identifiable {
+    var id: String { ids.joined(separator: ",") }
+    var ids: [ID]
+}
+
+/// List shell (M3): Inbox → Trash over Entities from the vault / store.
 struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: ListName = .inbox
     @State private var draftTitle = ""
+    @State private var whenTarget: WhenTarget?
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -47,44 +53,59 @@ struct ListsBrowserView: View {
                     Text(errorMessage)
                         .foregroundStyle(Tokens.Light.deadline)
                 } else if rows(for: selection).isEmpty {
-                    Text(emptyCopy(for: selection))
-                        .foregroundStyle(colors.textSecondary)
+                    RuledRow {
+                        Text(emptyCopy(for: selection))
+                            .foregroundStyle(colors.textSecondary)
+                    }
                 } else {
                     ForEach(rows(for: selection), id: \.id) { row in
-                        HStack(alignment: .top, spacing: 10) {
-                            if row.isTodo {
-                                Button {
-                                    toggleComplete(row.id)
-                                } label: {
-                                    Image(systemName: row.completed ? "checkmark.circle.fill" : "circle")
-                                        .foregroundStyle(colors.accent)
+                        RuledRow {
+                            HStack(alignment: .center, spacing: 10) {
+                                if row.isTodo {
+                                    Button {
+                                        toggleComplete(row.id)
+                                    } label: {
+                                        Image(systemName: row.completed ? "checkmark.circle.fill" : "circle")
+                                            .foregroundStyle(colors.accent)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(row.completed ? "Reopen" : "Complete")
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel(row.completed ? "Reopen" : "Complete")
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(row.title)
-                                    .foregroundStyle(colors.text)
-                                    .strikethrough(row.completed)
-                                if let subtitle = row.subtitle {
-                                    Text(subtitle)
-                                        .font(.caption)
-                                        .foregroundStyle(colors.textSecondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(row.title)
+                                        .foregroundStyle(colors.text)
+                                        .strikethrough(row.completed)
+                                    if let subtitle = row.subtitle {
+                                        Text(subtitle)
+                                            .font(.caption)
+                                            .foregroundStyle(colors.textSecondary)
+                                    }
                                 }
+                                Spacer(minLength: 0)
                             }
+                        }
+                        .contextMenu {
+                            Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
+                            if row.isTodo, !row.completed {
+                                Button("Complete") { toggleComplete(row.id) }
+                            }
+                            Button("Trash", role: .destructive) { trash(row.id) }
                         }
                     }
                 }
                 if selection == .inbox || selection == .today {
-                    HStack {
-                        TextField("Add", text: $draftTitle)
-                            .onSubmit(addTodo)
-                        Button("Add", action: addTodo)
-                            .foregroundStyle(colors.accent)
-                            .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    RuledRow {
+                        HStack {
+                            TextField("Add", text: $draftTitle)
+                                .onSubmit(addTodo)
+                            Button("Add", action: addTodo)
+                                .foregroundStyle(colors.accent)
+                                .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        }
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle(selection.title)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
@@ -101,6 +122,9 @@ struct ListsBrowserView: View {
                     }
                     .disabled(!model.store.canRedo)
                 }
+            }
+            .sheet(item: $whenTarget) { target in
+                WhenSheetView(model: model, ids: target.ids)
             }
         }
         #if os(iOS)
@@ -200,9 +224,18 @@ struct ListsBrowserView: View {
     }
 
     private func toggleComplete(_ id: ID) {
-        let status: Status = model.entities.todos[id]?.status == .open ? .completed : .open
+        let open = model.entities.todos[id]?.status == .open
+            || model.entities.projects[id]?.status == .open
+        let status: Status = open ? .completed : .open
         model.store.run(status == .completed ? "Complete" : "Reopen") { d, env in
             Commands.setStatus(d, env, ids: [id], status: status)
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func trash(_ id: ID) {
+        model.store.run("Trash") { d, env in
+            Commands.trashItems(d, env, ids: [id])
         }
         model.noteEntitiesChanged()
     }
