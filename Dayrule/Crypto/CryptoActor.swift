@@ -145,7 +145,7 @@ actor CryptoActor {
             + "-" + String(p[16..<20]) + "-" + String(p[20..<32])
     }
 
-    func decryptSyncRecord(_ rec: WireRecord) throws -> VaultEntity? {
+    func decryptSyncPayload(_ rec: WireRecord) throws -> SyncPayload? {
         guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
         let meta = Primitives.RecordMeta(
             userId: userId,
@@ -164,13 +164,42 @@ actor CryptoActor {
         guard let key = obj?["k"] as? String else { return nil }
         let expected = try syncId(for: key)
         guard expected == rec.id.lowercased() else { throw CryptoError.openFailed }
-        if obj?["d"] != nil { return nil }
+        if let deleted = obj?["d"] as? String {
+            return SyncPayload(key: key, value: nil, deleted: deleted)
+        }
         guard let value = obj?["v"] as? [String: Any] else { return nil }
-        let type = value["type"] as? String
+        return SyncPayload(key: key, value: JSONDict.fromAny(value), deleted: nil)
+    }
+
+    func decryptSyncRecord(_ rec: WireRecord) throws -> VaultEntity? {
+        guard let payload = try decryptSyncPayload(rec), payload.deleted == nil else { return nil }
+        return VaultEntity(key: payload.key, title: payload.title, type: payload.type)
+    }
+}
+
+/// Decrypted sync payload (`{k,v}` or tombstone `{k,d}`). `value` is nil for tombstones.
+struct SyncPayload: Sendable {
+    var key: String
+    var value: [String: JSONValue]?
+    var deleted: String?
+
+    var title: String {
+        guard let value else { return key }
+        if let t = value["title"]?.stringValue { return t }
+        let type = value["type"]?.stringValue
             ?? key.split(separator: "/").first.map(String.init)
             ?? "?"
-        let title = (value["title"] as? String) ?? (type == "settings" ? "Settings" : key)
-        return VaultEntity(key: key, title: title, type: type)
+        return type == "settings" ? "Settings" : key
+    }
+
+    var type: String {
+        value?["type"]?.stringValue
+            ?? key.split(separator: "/").first.map(String.init)
+            ?? "?"
+    }
+
+    var valueAny: [String: Any]? {
+        value.map(JSONDict.toAny)
     }
 }
 

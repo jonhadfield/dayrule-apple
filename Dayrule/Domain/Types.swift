@@ -21,6 +21,8 @@ struct Area: Equatable, Sendable {
     var order: OrderKey
     var tagIds: [ID]
     var trashedAt: Timestamp?
+    /// Fields not in the typed schema (PLAN §5.3).
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct Project: Equatable, Sendable {
@@ -42,6 +44,7 @@ struct Project: Equatable, Sendable {
     var todayOrder: OrderKey?
     var completedAt: Timestamp?
     var trashedAt: Timestamp?
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct Heading: Equatable, Sendable {
@@ -53,6 +56,7 @@ struct Heading: Equatable, Sendable {
     var title: String
     var order: OrderKey
     var archived: Bool
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct RepeatRule: Equatable, Sendable {
@@ -91,6 +95,7 @@ struct Todo: Equatable, Sendable {
     var reminderAt: String?
     var `repeat`: RepeatRule?
     var repeatTemplateId: ID?
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct ChecklistItem: Equatable, Sendable {
@@ -102,6 +107,7 @@ struct ChecklistItem: Equatable, Sendable {
     var title: String
     var done: Bool
     var order: OrderKey
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct Tag: Equatable, Sendable {
@@ -112,6 +118,7 @@ struct Tag: Equatable, Sendable {
     var title: String
     var parentId: ID?
     var order: OrderKey
+    var unknown: [String: JSONValue] = [:]
 }
 
 enum DoneMode: String, Codable, Sendable, Equatable {
@@ -122,6 +129,7 @@ struct Settings: Equatable, Sendable {
     var clock: FieldClock?
     var moveToDone: DoneMode
     var lastMovedToDoneAt: Timestamp?
+    var unknown: [String: JSONValue] = [:]
 }
 
 struct Entities: Equatable, Sendable {
