@@ -62,19 +62,17 @@ struct ListsBrowserView: View {
                         RuledRow {
                             HStack(alignment: .center, spacing: 10) {
                                 if row.isTodo {
-                                    Button {
+                                    DayruleCheckbox(
+                                        status: row.status,
+                                        label: row.status == .open ? "Complete" : "Reopen"
+                                    ) {
                                         toggleComplete(row.id)
-                                    } label: {
-                                        Image(systemName: row.completed ? "checkmark.circle.fill" : "circle")
-                                            .foregroundStyle(colors.accent)
                                     }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel(row.completed ? "Reopen" : "Complete")
                                 }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(row.title)
                                         .foregroundStyle(colors.text)
-                                        .strikethrough(row.completed)
+                                        .strikethrough(row.status != .open)
                                     if let subtitle = row.subtitle {
                                         Text(subtitle)
                                             .font(.caption)
@@ -86,7 +84,7 @@ struct ListsBrowserView: View {
                         }
                         .contextMenu {
                             Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
-                            if row.isTodo, !row.completed {
+                            if row.isTodo, row.status == .open {
                                 Button("Complete") { toggleComplete(row.id) }
                             }
                             Button("Trash", role: .destructive) { trash(row.id) }
@@ -154,7 +152,7 @@ struct ListsBrowserView: View {
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, completed: $0.status != .open)
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, status: $0.status)
             }
         case .today:
             return Lists.today(model.entities, ctx).map {
@@ -163,14 +161,14 @@ struct ListsBrowserView: View {
                     title: $0.title,
                     subtitle: $0.isTodo ? nil : "Project",
                     isTodo: $0.isTodo,
-                    completed: $0.status != .open
+                    status: $0.status
                 )
             }
         case .scheduled:
             let s = Lists.scheduled(model.entities, ctx)
             return s.days.flatMap { day in
                 day.items.map {
-                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, completed: $0.status != .open)
+                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, status: $0.status)
                 }
             }
         case .backlog:
@@ -181,29 +179,29 @@ struct ListsBrowserView: View {
                         title: $0.title,
                         subtitle: containerLabel(g.container),
                         isTodo: true,
-                        completed: $0.status != .open
+                        status: $0.status
                     )
                 }
             }
         case .notNow:
             let n = Lists.notNow(model.entities, ctx)
             return n.projects.map {
-                Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, completed: $0.status != .open)
+                Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, status: $0.status)
             } + n.todos.map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, completed: $0.status != .open)
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, status: $0.status)
             }
         case .done:
             return Lists.doneList(model.entities, ctx).flatMap { day in
                 day.items.map {
-                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, completed: true)
+                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, status: $0.status)
                 }
             }
         case .trash:
             let t = Lists.trash(model.entities)
             return t.areas.map {
-                Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, completed: false)
+                Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, status: .open)
             } + t.items.map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, completed: $0.status != .open)
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, status: $0.status)
             }
         }
     }
@@ -258,7 +256,7 @@ struct ListsBrowserView: View {
         var title: String
         var subtitle: String?
         var isTodo: Bool
-        var completed: Bool
+        var status: Status
     }
 }
 

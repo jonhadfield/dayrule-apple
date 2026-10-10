@@ -8,7 +8,7 @@ struct StoreClock: Sendable {
     static func system(device: String = StoreClock.newDeviceId()) -> StoreClock {
         StoreClock(
             now: { Date() },
-            newId: { UUID().uuidString.lowercased() },
+            newId: { UuidV7.generate() },
             hlc: HLC(device: device)
         )
     }

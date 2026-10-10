@@ -104,6 +104,9 @@ enum Commands {
                 item.completedAt = completedAt
                 item.updatedAt = ISOStamp.format(env.now)
                 d.putTodo(item)
+                if status != .open {
+                    Repeats.onInstanceDone(d, env, instance: item)
+                }
             } else if var item = d.getProject(id), item.status != status {
                 item.status = status
                 item.completedAt = completedAt
