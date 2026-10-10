@@ -32,9 +32,13 @@ targets:
           - "Crypto/bip39-english.txt"
           - "Fonts/**"
           - "Resources/**"
-    resources:
+      # XcodeGen multiplatform targets omit top-level `resources:`; ship as resource sources.
       - path: Dayrule/Fonts
+        buildPhase: resources
+        excludes:
+          - "**/.DS_Store"
       - path: Dayrule/Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
         destinationFilters: [iOS]
     dependencies:
       - package: Sodium

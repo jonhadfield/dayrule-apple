@@ -1,9 +1,11 @@
 name: Local sync e2e
 
-# Manual for now (PLAN §14.2): needs a dayrule checkout + throwaway Postgres.
+# PLAN §14.2: checkout dayrule @ SHARED.lock, Postgres, serve-api, SyncE2E + SyncUITests.
 # Local: E2E_DATABASE_URL=… ./scripts/local-sync-e2e.sh
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
 
 jobs:
   sync-e2e:

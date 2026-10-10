@@ -38,6 +38,7 @@ struct ListsBrowserView: View {
                                 )
                         }
                     }
+                    .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
                     .tag(Optional(name))
                 }
             }
@@ -63,16 +64,20 @@ struct ListsBrowserView: View {
             }
         } detail: {
             List {
-                if model.syncStatus == .syncing || (model.vaultLoading && model.store.entities.todos.isEmpty) {
-                    Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
-                        .foregroundStyle(colors.textSecondary)
-                } else if let errorMessage = model.errorMessage, model.vault == nil {
-                    Text(errorMessage)
-                        .foregroundStyle(Tokens.Light.deadline)
-                } else if rows(for: activeList).isEmpty {
-                    RuledRow {
-                        Text(emptyCopy(for: activeList))
+                // Never replace existing rows with a sync banner — that races Add in e2e
+                // and hides todos for the whole push/pull.
+                if rows(for: activeList).isEmpty {
+                    if model.syncStatus == .syncing || model.vaultLoading {
+                        Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                             .foregroundStyle(colors.textSecondary)
+                    } else if let errorMessage = model.errorMessage, model.vault == nil {
+                        Text(errorMessage)
+                            .foregroundStyle(Tokens.Light.deadline)
+                    } else {
+                        RuledRow {
+                            Text(emptyCopy(for: activeList))
+                                .foregroundStyle(colors.textSecondary)
+                        }
                     }
                 } else {
                     ForEach(rows(for: activeList), id: \.id) { row in
@@ -90,6 +95,8 @@ struct ListsBrowserView: View {
                                     Text(row.title)
                                         .foregroundStyle(colors.text)
                                         .strikethrough(row.status != .open)
+                                        .accessibilityLabel(row.title)
+                                        .accessibilityIdentifier("list.todo.\(row.id)")
                                     if let subtitle = row.subtitle {
                                         Text(subtitle)
                                             .font(.caption)
@@ -112,10 +119,14 @@ struct ListsBrowserView: View {
                     RuledRow {
                         HStack {
                             TextField("Add", text: $draftTitle)
+                                .accessibilityIdentifier("list.addField")
                                 .onSubmit(addTodo)
                             Button("Add", action: addTodo)
+                                .accessibilityIdentifier("list.addButton")
                                 .foregroundStyle(colors.accent)
                                 .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                // List rows can swallow Button actions; explicit role helps XCUITest.
+                                .buttonStyle(.borderless)
                         }
                     }
                 }

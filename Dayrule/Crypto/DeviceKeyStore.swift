@@ -15,6 +15,9 @@ struct DeviceKeyStore: Sendable {
     }
 
     func load(userId: String) throws -> [UInt8]? {
+        if MemoryKeychain.enabled {
+            return MemoryKeychain.load(service: service, account: userId).map { [UInt8]($0) }
+        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -32,6 +35,10 @@ struct DeviceKeyStore: Sendable {
     }
 
     func save(userId: String, key: [UInt8]) throws {
+        if MemoryKeychain.enabled {
+            MemoryKeychain.save(service: service, account: userId, data: Data(key))
+            return
+        }
         try delete(userId: userId)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -47,6 +54,10 @@ struct DeviceKeyStore: Sendable {
     }
 
     func delete(userId: String) throws {
+        if MemoryKeychain.enabled {
+            MemoryKeychain.delete(service: service, account: userId)
+            return
+        }
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,

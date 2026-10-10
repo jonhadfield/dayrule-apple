@@ -9,6 +9,8 @@ final class AppModel {
         case locked
         case unlocking
         case needsRecovery
+        case signup
+        case confirmRecovery
         case unlocked
     }
 
@@ -23,6 +25,14 @@ final class AppModel {
     var syncStatus: SyncStatus = .idle
     var showSettings = false
 
+    /// Create-account fields (Gate signup).
+    var inviteCode = ""
+    var signupCode = ""
+    var signupBusy = false
+    private(set) var signupToken: String?
+    private(set) var pendingRecoveryWords: [String] = []
+    private var pendingSignup: PendingSignup?
+
     let crypto = CryptoActor()
     let store = EntityStore()
     /// Bumped when `store.entities` changes so Observation refreshes views.
@@ -34,6 +44,15 @@ final class AppModel {
     private var syncEngine: SyncEngine?
     private var syncTask: Task<Void, Never>?
 
+    private struct PendingSignup {
+        var email: String
+        var inviteCode: String
+        var signupToken: String
+        var userId: String
+        var salt: [UInt8]
+        var created: UnlockResult
+    }
+
     var entities: Entities {
         _ = entitiesEpoch
         return store.entities
@@ -44,7 +63,10 @@ final class AppModel {
     }
 
     init() {
-        api = APIClient(baseURL: URL(string: "http://127.0.0.1:8080")!)
+        let env = ProcessInfo.processInfo.environment
+        let defaultAPI = env["DAYRULE_API"] ?? "http://127.0.0.1:8080"
+        apiBaseURLString = defaultAPI
+        api = APIClient(baseURL: URL(string: defaultAPI) ?? URL(string: "http://127.0.0.1:8080")!)
         if let cached = try? sessions.loadAccount() {
             email = cached.email
             accountEmail = cached.email
@@ -54,6 +76,147 @@ final class AppModel {
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
+        }
+    }
+
+    func beginSignup() {
+        errorMessage = nil
+        signupCode = ""
+        signupToken = nil
+        pendingSignup = nil
+        pendingRecoveryWords = []
+        phase = .signup
+    }
+
+    func cancelSignup() {
+        errorMessage = nil
+        signupCode = ""
+        signupToken = nil
+        pendingSignup = nil
+        pendingRecoveryWords = []
+        signupBusy = false
+        phase = .locked
+    }
+
+    func signupSendCode() async {
+        errorMessage = nil
+        signupBusy = true
+        defer { signupBusy = false }
+        do {
+            guard let base = URL(string: apiBaseURLString) else { throw APIError.offline }
+            await api.setBaseURL(base)
+            try await api.signupStart(email: email, inviteCode: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
+            signupToken = nil
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func signupVerifyCode() async {
+        errorMessage = nil
+        signupBusy = true
+        defer { signupBusy = false }
+        do {
+            let verified = try await api.signupVerify(
+                email: email,
+                code: signupCode.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+            signupToken = verified.signupToken
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Derive keys and show the recovery phrase; `finishSignup` registers after confirm.
+    func signupPrepareAccount(password: String, confirm: String) async {
+        errorMessage = nil
+        guard password.count >= 10 else {
+            errorMessage = "Use at least 10 characters."
+            return
+        }
+        guard password == confirm else {
+            errorMessage = "Passwords don’t match."
+            return
+        }
+        guard let token = signupToken else {
+            errorMessage = "Verify the email code first."
+            return
+        }
+        signupBusy = true
+        defer { signupBusy = false }
+        do {
+            Primitives.ready()
+            let userId = UUID().uuidString.lowercased()
+            let salt = Primitives.randomBytes(16)
+            let created = try await crypto.createLocalDemo(
+                password: password,
+                userId: userId,
+                salt: salt
+            )
+            pendingSignup = PendingSignup(
+                email: email.lowercased(),
+                inviteCode: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines),
+                signupToken: token,
+                userId: userId,
+                salt: salt,
+                created: created
+            )
+            pendingRecoveryWords = created.recoveryWords
+            phase = .confirmRecovery
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func finishSignup() async {
+        errorMessage = nil
+        guard let pending = pendingSignup else {
+            phase = .locked
+            return
+        }
+        signupBusy = true
+        defer { signupBusy = false }
+        do {
+            let registered = try await api.register(
+                email: pending.email,
+                signupToken: pending.signupToken,
+                inviteCode: pending.inviteCode,
+                userId: pending.userId,
+                saltB64: Base64Std.encode(pending.salt),
+                kdf: pending.created.kdf,
+                authKeyB64: Base64Std.encode(pending.created.authKey),
+                wrappedPassword: WrappedB64(pending.created.wrappedPassword),
+                wrappedRecovery: WrappedB64(pending.created.wrappedRecovery),
+                recoveryProofB64: Base64Std.encode(pending.created.recoveryProof),
+                deviceLabel: ClientPlatform.deviceLabel
+            )
+            guard let token = registered.token else {
+                throw APIError.decoding
+            }
+            await api.setToken(token)
+            try sessions.saveToken(token)
+            let cached = SessionStore.CachedAccount(
+                userId: pending.userId,
+                email: pending.email,
+                saltB64: Base64Std.encode(pending.salt),
+                kdf: KdfDTO(v: pending.created.kdf.v, ops: pending.created.kdf.ops, mem: pending.created.kdf.mem),
+                wrappedPassword: WrappedB64(pending.created.wrappedPassword),
+                deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil
+            )
+            try sessions.saveAccount(cached)
+            accountEmail = pending.email
+            email = pending.email
+            try openPersistence(userId: pending.userId)
+            pendingSignup = nil
+            pendingRecoveryWords = []
+            signupToken = nil
+            // Pull before unlocking the list UI so hydrate can't wipe a concurrent Add.
+            await refreshVault()
+            phase = .unlocked
+            bumpIdle()
+        } catch {
+            errorMessage = error.localizedDescription
+            phase = .confirmRecovery
         }
     }
 
@@ -136,14 +299,17 @@ final class AppModel {
                 } catch APIError.offline {
                     try await offlineUnlock(password: password, cached: cached)
                     await refreshVault()
+                    phase = .unlocked
+                    bumpIdle()
                     return
                 }
             } else {
                 try await onlineLogin(password: password)
             }
             if phase == .needsRecovery { return }
-            bumpIdle()
             await refreshVault()
+            phase = .unlocked
+            bumpIdle()
         } catch {
             if phase != .needsRecovery {
                 phase = .locked
@@ -202,7 +368,6 @@ final class AppModel {
         try sessions.saveAccount(cached)
         accountEmail = cached.email
         try openPersistence(userId: userId)
-        phase = .unlocked
     }
 
     private func offlineUnlock(password: String, cached: SessionStore.CachedAccount) async throws {
@@ -218,8 +383,6 @@ final class AppModel {
         )
         accountEmail = cached.email
         try openPersistence(userId: cached.userId)
-        phase = .unlocked
-        bumpIdle()
     }
 
     func unlockWithRecovery(phrase: String) async {
@@ -240,9 +403,9 @@ final class AppModel {
             }
             accountEmail = email.lowercased()
             try openPersistence(userId: start.userId.lowercased())
+            await refreshVault()
             phase = .unlocked
             bumpIdle()
-            await refreshVault()
         } catch {
             phase = .needsRecovery
             errorMessage = error.localizedDescription
@@ -265,9 +428,9 @@ final class AppModel {
             accountEmail = cached.email
             email = cached.email
             try openPersistence(userId: cached.userId)
+            await refreshVault()
             phase = .unlocked
             bumpIdle()
-            await refreshVault()
         } catch {
             errorMessage = error.localizedDescription
             phase = .locked
