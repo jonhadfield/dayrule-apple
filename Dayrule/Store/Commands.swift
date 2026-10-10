@@ -252,6 +252,86 @@ enum Commands {
         }
     }
 
+    static func setDoneMode(_ d: Draft, mode: DoneMode) {
+        var s = d.settings
+        s.moveToDone = mode
+        d.setSettings(s)
+    }
+
+    /// "Log Completed" for manual logging mode (web `moveToDoneNow`).
+    static func moveToDoneNow(_ d: Draft, _ env: EntityStore.Env) {
+        var s = d.settings
+        s.lastMovedToDoneAt = ISOStamp.format(env.now)
+        d.setSettings(s)
+    }
+
+    @discardableResult
+    static func createHeading(_ d: Draft, _ env: EntityStore.Env, projectId: ID, title: String) throws -> Heading {
+        let siblings = d.allHeadings().filter { $0.projectId == projectId }
+        let ts = ISOStamp.format(env.now)
+        let heading = Heading(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            projectId: projectId,
+            title: title,
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            archived: false
+        )
+        d.putHeading(heading)
+        return heading
+    }
+
+    static func updateHeading(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String?, archived: Bool?) {
+        guard var h = d.getHeading(id) else { return }
+        if let title { h.title = title }
+        if let archived { h.archived = archived }
+        h.updatedAt = ISOStamp.format(env.now)
+        d.putHeading(h)
+    }
+
+    static func deleteHeading(_ d: Draft, _ env: EntityStore.Env, id: ID) {
+        let ts = ISOStamp.format(env.now)
+        for var t in d.allTodos() where t.headingId == id {
+            t.headingId = nil
+            t.updatedAt = ts
+            d.putTodo(t)
+        }
+        d.remove(.headings, id: id)
+    }
+
+    @discardableResult
+    static func createTag(_ d: Draft, _ env: EntityStore.Env, title: String, parentId: ID? = nil) throws -> Tag {
+        let ts = ISOStamp.format(env.now)
+        let tag = Tag(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            parentId: parentId,
+            order: try Order.keyAfterLast(d.allTags().map(\.order))
+        )
+        d.putTag(tag)
+        return tag
+    }
+
+    static func setTags(_ d: Draft, _ env: EntityStore.Env, ids: [ID], tagIds: [ID]) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            if var t = d.getTodo(id) {
+                t.tagIds = tagIds
+                t.updatedAt = ts
+                d.putTodo(t)
+            } else if var p = d.getProject(id) {
+                p.tagIds = tagIds
+                p.updatedAt = ts
+                d.putProject(p)
+            }
+        }
+    }
+
     /// Permanently delete trashed items and everything inside them (web `emptyTrash`).
     static func emptyTrash(_ d: Draft) {
         let areaIds = Set(d.allAreas().filter { $0.trashedAt != nil }.map(\.id))

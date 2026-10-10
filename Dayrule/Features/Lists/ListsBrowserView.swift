@@ -13,6 +13,7 @@ struct ListsBrowserView: View {
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
+    @State private var tagTarget: WhenTarget?
     @State private var editTarget: EditTarget?
     @State private var showFind = false
 
@@ -54,6 +55,11 @@ struct ListsBrowserView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Lock") { model.lock() }
                         .foregroundStyle(colors.accent)
+                }
+                ToolbarItem(placement: .automatic) {
+                    Button("Find") { showFind = true }
+                        .foregroundStyle(colors.accent)
+                        .accessibilityIdentifier("sidebar.find")
                 }
                 ToolbarItem(placement: .automatic) {
                     Button("Settings") { model.showSettings = true }
@@ -128,6 +134,7 @@ struct ListsBrowserView: View {
                                 Button("Edit") { editTarget = EditTarget(id: row.id) }
                                 Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
                                 Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
+                                Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
                                 if row.isTodo, row.status == .open {
                                     Button("Complete") { toggleComplete(row.id) }
                                 }
@@ -175,6 +182,10 @@ struct ListsBrowserView: View {
                             .accessibilityIdentifier("list.emptyTrash")
                             .disabled(rows(for: .trash).isEmpty)
                     }
+                    if activeList == .done, model.entities.settings.moveToDone == .manually {
+                        Button("Log Completed") { logCompleted() }
+                            .accessibilityIdentifier("list.logCompleted")
+                    }
                 }
             }
             .sheet(item: $whenTarget) { target in
@@ -182,6 +193,9 @@ struct ListsBrowserView: View {
             }
             .sheet(item: $deadlineTarget) { target in
                 DeadlineSheetView(model: model, ids: target.ids)
+            }
+            .sheet(item: $tagTarget) { target in
+                TagSheetView(model: model, ids: target.ids)
             }
             .sheet(item: $editTarget) { target in
                 ItemEditorSheet(model: model, id: target.id)
@@ -326,6 +340,13 @@ struct ListsBrowserView: View {
     private func emptyTrash() {
         model.store.run("Empty Trash") { d, _ in
             Commands.emptyTrash(d)
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func logCompleted() {
+        model.store.run("Move to Done") { d, env in
+            Commands.moveToDoneNow(d, env)
         }
         model.noteEntitiesChanged()
     }

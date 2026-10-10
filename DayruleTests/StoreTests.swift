@@ -165,4 +165,55 @@ struct StoreTests {
         }
         #expect(store.entities.todos[todo.id]?.deadline == nil)
     }
+
+    @Test func tagsHeadingsAndLogCompleted() throws {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Build")
+        }
+        let heading = try store.run("Heading") { d, env in
+            try Commands.createHeading(d, env, projectId: project.id, title: "Materials")
+        }
+        #expect(store.entities.headings[heading.id]?.title == "Materials")
+        let tag = try store.run("Tag") { d, env in
+            try Commands.createTag(d, env, title: "Errand")
+        }
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env, .init(title: "Buy screws", placement: .project(projectId: project.id, headingId: heading.id))
+            )
+        }
+        store.run("Tags") { d, env in
+            Commands.setTags(d, env, ids: [todo.id], tagIds: [tag.id])
+        }
+        #expect(store.entities.todos[todo.id]?.tagIds == [tag.id])
+
+        store.run("Done mode") { d, _ in
+            Commands.setDoneMode(d, mode: .manually)
+        }
+        #expect(store.entities.settings.moveToDone == .manually)
+        store.run("Complete") { d, env in
+            Commands.setStatus(d, env, ids: [todo.id], status: .completed)
+        }
+        let ctx = Lists.Context(today: "2023-11-14", keepVisible: nil)
+        #expect(!Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
+        store.run("Move to Done") { d, env in
+            Commands.moveToDoneNow(d, env)
+        }
+        #expect(store.entities.settings.lastMovedToDoneAt != nil)
+        #expect(Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
+    }
 }

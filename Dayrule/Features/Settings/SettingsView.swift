@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Minimal device Settings: sync status (M4).
+/// Device Settings: sync status (M4) + Done logging mode (M5).
 struct SettingsView: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
@@ -28,6 +28,24 @@ struct SettingsView: View {
                     .foregroundStyle(colors.accent)
                     .disabled(model.syncStatus == .syncing)
                 }
+                Section("Completed") {
+                    Picker("Move to Done", selection: doneModeBinding) {
+                        Text("Immediately").tag(DoneMode.immediately)
+                        Text("Daily").tag(DoneMode.daily)
+                        Text("Manually").tag(DoneMode.manually)
+                    }
+                    .accessibilityIdentifier("settings.doneMode")
+                    if model.entities.settings.moveToDone == .manually {
+                        Button("Log Completed") {
+                            model.store.run("Move to Done") { d, env in
+                                Commands.moveToDoneNow(d, env)
+                            }
+                            model.noteEntitiesChanged()
+                        }
+                        .foregroundStyle(colors.accent)
+                        .accessibilityIdentifier("settings.logCompleted")
+                    }
+                }
                 if let email = model.accountEmail {
                     Section("Account") {
                         Text(email)
@@ -48,6 +66,18 @@ struct SettingsView: View {
                 }
             }
         }
+    }
+
+    private var doneModeBinding: Binding<DoneMode> {
+        Binding(
+            get: { model.entities.settings.moveToDone },
+            set: { mode in
+                model.store.run("Done mode") { d, _ in
+                    Commands.setDoneMode(d, mode: mode)
+                }
+                model.noteEntitiesChanged()
+            }
+        )
     }
 }
 

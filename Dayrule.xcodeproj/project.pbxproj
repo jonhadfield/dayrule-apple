@@ -94,6 +94,7 @@
 		EEB8836EEFBE8F137FF5FC6B /* SyncE2ETests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */; };
 		F1BAB03732D8621115934C26 /* Incoming.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D8718EB1E6396EDCA15E8B /* Incoming.swift */; };
 		F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */; };
+		F346AD2992D016BBDC804EBC /* TagSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */; };
 		F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */; };
 		FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1160CD5B09CB87451563810B /* StoreTests.swift */; };
 /* End PBXBuildFile section */
@@ -145,6 +146,7 @@
 		4E6C23642DCB6C41B26D8671 /* Merge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Merge.swift; sourceTree = "<group>"; };
 		50B739D187E09BA80EF8304B /* DayruleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleApp.swift; sourceTree = "<group>"; };
 		54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCover.swift; sourceTree = "<group>"; };
+		5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSheetView.swift; sourceTree = "<group>"; };
 		589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39Wordlist.swift; sourceTree = "<group>"; };
 		58C9377E81FBB2D6C813497B /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Types.swift; sourceTree = "<group>"; };
 		5DBDE6106B1405EEE9CD140F /* ISOStamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ISOStamp.swift; sourceTree = "<group>"; };
@@ -230,6 +232,7 @@
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
 				3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */,
+				5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */,
 				A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */,
 			);
 			path = Lists;
@@ -646,6 +649,7 @@
 				88DDAAD2A9D4C431A5762B6F /* SyncEngine.swift in Sources */,
 				C8182DA2B1A801B357F38156 /* SyncStatus.swift in Sources */,
 				E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */,
+				F346AD2992D016BBDC804EBC /* TagSheetView.swift in Sources */,
 				D21D41CB86112AA455D78513 /* Tokens.swift in Sources */,
 				A1ADF984C09C62EBD6CCB462 /* Types.swift in Sources */,
 				19D4E828090DB6793A9C6C43 /* Typography.swift in Sources */,
