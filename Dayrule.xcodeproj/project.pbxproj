@@ -100,6 +100,7 @@
 		CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */; };
 		D21D41CB86112AA455D78513 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4608F0B7201CE4C352E4294D /* Tokens.swift */; };
 		D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951105343C5D083C09317947 /* RecordCipher.swift */; };
+		D39DC922D37ACD64C4737AE0 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C10485E36552B5A2566472 /* APIConfig.swift */; };
 		D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8C8968ECDB5433251704AB /* SessionStore.swift */; };
 		DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336000FBB2DB5AD70D51A33A /* RepeatTests.swift */; };
 		DB8E55D9D16612CA224EB233 /* SyncConvergenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E760B37539EA8DA121BE562E /* SyncConvergenceTests.swift */; };
@@ -151,6 +152,7 @@
 		1160CD5B09CB87451563810B /* StoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTests.swift; sourceTree = "<group>"; };
 		11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorRecordCipher.swift; sourceTree = "<group>"; };
 		125829DF9F4D7E9BBA487D14 /* Restamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Restamp.swift; sourceTree = "<group>"; };
+		14C10485E36552B5A2566472 /* APIConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfig.swift; sourceTree = "<group>"; };
 		15015B5511061101944C5356 /* CryptoActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoActor.swift; sourceTree = "<group>"; };
 		178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlanTests.swift; sourceTree = "<group>"; };
 		1807A047920C5CFD8D16ECCF /* LegalViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegalViews.swift; sourceTree = "<group>"; };
@@ -323,6 +325,7 @@
 			isa = PBXGroup;
 			children = (
 				7B779DA6B2031BF08649C89C /* APIClient.swift */,
+				14C10485E36552B5A2566472 /* APIConfig.swift */,
 				EB8C8968ECDB5433251704AB /* SessionStore.swift */,
 			);
 			path = Networking;
@@ -633,16 +636,16 @@
 				LastUpgradeCheck = 1600;
 				TargetAttributes = {
 					36DDC9BCC220F54EF5B2FDC7 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = VBZY8FBYR5;
 						ProvisioningStyle = Automatic;
 					};
 					78BF740FA24304887FB4425F = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = VBZY8FBYR5;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 9FEB49FA4D163378379259A8;
 					};
 					9FEB49FA4D163378379259A8 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = VBZY8FBYR5;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -691,6 +694,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				08613D9715503FF6B42375F2 /* APIClient.swift in Sources */,
+				D39DC922D37ACD64C4737AE0 /* APIConfig.swift in Sources */,
 				CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */,
 				96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */,
 				9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */,
@@ -870,7 +874,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -902,6 +906,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Dayrule/Resources/Dayrule-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Dayrule/Resources/Dayrule.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1001,7 +1006,7 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 1;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -1083,6 +1088,7 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]" = "Dayrule/Resources/Dayrule-iOS.entitlements";
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Dayrule/Resources/Dayrule.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;

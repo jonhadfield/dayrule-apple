@@ -18,7 +18,7 @@ final class AppModel {
     var errorMessage: String?
     var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
     var email = ""
-    var apiBaseURLString = "http://127.0.0.1:8080"
+    var apiBaseURLString = APIConfig.defaultBaseURLString
     var vault: VaultSnapshot?
     var vaultLoading = false
     var accountEmail: String?
@@ -113,10 +113,11 @@ final class AppModel {
     #endif
 
     init() {
-        let env = ProcessInfo.processInfo.environment
-        let defaultAPI = env["DAYRULE_API"] ?? "http://127.0.0.1:8080"
+        let defaultAPI = APIConfig.defaultBaseURLString
         apiBaseURLString = defaultAPI
-        api = APIClient(baseURL: URL(string: defaultAPI) ?? URL(string: "http://127.0.0.1:8080")!)
+        api = APIClient(
+            baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
+        )
         if let cached = try? sessions.loadAccount() {
             email = cached.email
             accountEmail = cached.email
