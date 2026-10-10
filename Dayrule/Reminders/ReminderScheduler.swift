@@ -1,5 +1,5 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 /// Schedules local notifications for upcoming to-do reminders (PLAN §11).
 /// Never calls `PUT /reminders`. Caps at 64 pending OS requests.
@@ -16,7 +16,10 @@ enum ReminderScheduler {
 
     static func reschedule(entities: Entities) async {
         let center = UNUserNotificationCenter.current()
-        let ours = await pendingDayruleIdentifiers(center: center)
+        let pending = await center.pendingNotificationRequests()
+        let ours = pending
+            .map(\.identifier)
+            .filter { $0.hasPrefix(ReminderPlan.idPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: ours)
 
         guard DeviceReminderPrefs.enabled else { return }
@@ -41,22 +44,10 @@ enum ReminderScheduler {
 
     static func clearAll() async {
         let center = UNUserNotificationCenter.current()
-        let ours = await pendingDayruleIdentifiers(center: center)
+        let pending = await center.pendingNotificationRequests()
+        let ours = pending
+            .map(\.identifier)
+            .filter { $0.hasPrefix(ReminderPlan.idPrefix) }
         center.removePendingNotificationRequests(withIdentifiers: ours)
-    }
-
-    /// Pull identifiers via the completion API so non-Sendable
-    /// `UNNotificationRequest` never crosses an async boundary (Xcode 16.4 / Swift 6).
-    private static func pendingDayruleIdentifiers(
-        center: UNUserNotificationCenter
-    ) async -> [String] {
-        await withCheckedContinuation { cont in
-            center.getPendingNotificationRequests { requests in
-                let ids = requests
-                    .map(\.identifier)
-                    .filter { $0.hasPrefix(ReminderPlan.idPrefix) }
-                cont.resume(returning: ids)
-            }
-        }
     }
 }
