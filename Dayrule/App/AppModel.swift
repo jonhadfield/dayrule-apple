@@ -334,6 +334,10 @@ final class AppModel {
         } catch let err as SyncBlockedError {
             syncStatus = .blocked(err.localizedDescription)
             errorMessage = err.localizedDescription
+        } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
+            // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
+            syncStatus = .needsUpdate
+            errorMessage = message.isEmpty ? SyncStatus.needsUpdate.label : message
         } catch APIError.offline {
             syncStatus = .offline("Offline — changes stay on this device.")
         } catch {

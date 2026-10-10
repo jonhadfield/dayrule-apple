@@ -521,6 +521,78 @@ enum Commands {
         }
     }
 
+    enum OrderField: Sendable {
+        case order
+        case todayOrder
+    }
+
+    enum ReorderCollection: Sendable {
+        case todos
+        case projects
+        case areas
+        case headings
+        case tags
+    }
+
+    /// Place an item between two neighbours; only the moved item's key changes
+    /// (web `commands.reorder`).
+    static func reorder(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        collection: ReorderCollection,
+        id: ID,
+        field: OrderField,
+        before: ID?,
+        after: ID?
+    ) throws {
+        func keyOf(_ nid: ID?) -> OrderKey? {
+            guard let nid else { return nil }
+            switch collection {
+            case .todos:
+                guard let n = d.getTodo(nid) else { return nil }
+                return field == .todayOrder ? (n.todayOrder ?? n.order) : n.order
+            case .projects:
+                guard let n = d.getProject(nid) else { return nil }
+                return field == .todayOrder ? (n.todayOrder ?? n.order) : n.order
+            case .areas:
+                return d.getArea(nid)?.order
+            case .headings:
+                return d.getHeading(nid)?.order
+            case .tags:
+                return d.getTag(nid)?.order
+            }
+        }
+        let key = try Order.keyBetween(keyOf(before), keyOf(after))
+        let ts = ISOStamp.format(env.now)
+        switch collection {
+        case .todos:
+            guard var t = d.getTodo(id) else { return }
+            if field == .todayOrder { t.todayOrder = key } else { t.order = key }
+            t.updatedAt = ts
+            d.putTodo(t)
+        case .projects:
+            guard var p = d.getProject(id) else { return }
+            if field == .todayOrder { p.todayOrder = key } else { p.order = key }
+            p.updatedAt = ts
+            d.putProject(p)
+        case .areas:
+            guard var a = d.getArea(id) else { return }
+            a.order = key
+            a.updatedAt = ts
+            d.putArea(a)
+        case .headings:
+            guard var h = d.getHeading(id) else { return }
+            h.order = key
+            h.updatedAt = ts
+            d.putHeading(h)
+        case .tags:
+            guard var t = d.getTag(id) else { return }
+            t.order = key
+            t.updatedAt = ts
+            d.putTag(t)
+        }
+    }
+
     // MARK: - Helpers
 
     private static func todayKeys(_ d: Draft, _ env: EntityStore.Env) -> [OrderKey] {

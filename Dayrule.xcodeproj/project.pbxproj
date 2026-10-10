@@ -46,6 +46,7 @@
 		51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */; };
 		57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */; };
 		581E7295BF175BDA84841426 /* UuidV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E1BF1D54C5D45D14D5AD42 /* UuidV5.swift */; };
+		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
 		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */; };
@@ -170,6 +171,7 @@
 		340184C820B58937291F1AB9 /* SyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTransport.swift; sourceTree = "<group>"; };
 		34DACE485DAF6FB4AB18C160 /* Dayrule.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dayrule.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		374E24148DE7D295BFAC4296 /* Primitives.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Primitives.swift; sourceTree = "<group>"; };
+		39249F4D8A3C33FC891105E8 /* ReorderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReorderTests.swift; sourceTree = "<group>"; };
 		39E1BF1D54C5D45D14D5AD42 /* UuidV5.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UuidV5.swift; sourceTree = "<group>"; };
 		39F13541F8210D40139B57E9 /* ListsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsTests.swift; sourceTree = "<group>"; };
 		3B6A9F3E304118C6A55C4728 /* BiometricKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricKeyStore.swift; sourceTree = "<group>"; };
@@ -402,6 +404,7 @@
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
 				777DAD146F35C4D1E9355E55 /* PrfUnlockTests.swift */,
 				178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */,
+				39249F4D8A3C33FC891105E8 /* ReorderTests.swift */,
 				BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */,
 				336000FBB2DB5AD70D51A33A /* RepeatTests.swift */,
 				1160CD5B09CB87451563810B /* StoreTests.swift */,
@@ -799,6 +802,7 @@
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
 				B21B2727BD5595AE8BE08DE8 /* PrfUnlockTests.swift in Sources */,
 				B45AC67AF22E7122D0F81365 /* ReminderPlanTests.swift in Sources */,
+				5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */,
 				DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */,
 				F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */,
 				FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */,

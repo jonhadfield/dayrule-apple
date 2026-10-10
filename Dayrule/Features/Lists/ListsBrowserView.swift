@@ -182,6 +182,14 @@ struct ListsBrowserView: View {
                             .accessibilityAction(named: Text("When…")) {
                                 whenTarget = WhenTarget(ids: [row.id])
                             }
+                            .accessibilityAction(named: Text("Move up")) {
+                                guard row.isTodo else { return }
+                                moveTodo(row.id, dir: -1)
+                            }
+                            .accessibilityAction(named: Text("Move down")) {
+                                guard row.isTodo else { return }
+                                moveTodo(row.id, dir: 1)
+                            }
                             .contextMenu {
                                 if activeList == .trash {
                                     Button("Restore") { restore(row.id) }
@@ -425,6 +433,34 @@ struct ListsBrowserView: View {
                 try Commands.createTodo(d, env, .init(title: title, placement: placement))
             }
             draftTitle = ""
+            model.noteEntitiesChanged()
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Keyboard / VoiceOver reorder (web `useGlobalKeys` Move).
+    private func moveTodo(_ id: ID, dir: Int) {
+        let visible = rows(for: activeList).filter(\.isTodo).map(\.id)
+        guard let i = visible.firstIndex(of: id) else { return }
+        let rest = visible.filter { $0 != id }
+        let target = max(0, min(rest.count, i + dir))
+        guard target != i else { return }
+        let field: Commands.OrderField = activeList == .today ? .todayOrder : .order
+        let before: ID? = target > 0 ? rest[target - 1] : nil
+        let after: ID? = target < rest.count ? rest[target] : nil
+        do {
+            try model.store.run("Move") { d, env in
+                try Commands.reorder(
+                    d,
+                    env,
+                    collection: .todos,
+                    id: id,
+                    field: field,
+                    before: before,
+                    after: after
+                )
+            }
             model.noteEntitiesChanged()
         } catch {
             model.errorMessage = error.localizedDescription
