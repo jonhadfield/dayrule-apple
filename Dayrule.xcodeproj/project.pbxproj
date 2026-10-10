@@ -50,6 +50,7 @@
 		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */; };
 		65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */; };
+		663D4D9CFEDB78E5F0756CC0 /* FileProtection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5FE49922F152AE52CDB2C52 /* FileProtection.swift */; };
 		66B3AE7E8A5FD9422E1DF140 /* GateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43FC547FBEFB77D78A87433D /* GateView.swift */; };
 		6BA8B46AF47B5ADF63E843C2 /* Labels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CAF46F7EBC5CEC5D22EBC3 /* Labels.swift */; };
 		6C1367F5855ADA291DC35643 /* LegalViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1807A047920C5CFD8D16ECCF /* LegalViews.swift */; };
@@ -234,6 +235,7 @@
 		CFF7B27C792AA9376304425B /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
 		D290020145AAD6D0ED81B565 /* Fraunces-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-Variable.ttf"; sourceTree = "<group>"; };
 		D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychain.swift; sourceTree = "<group>"; };
+		D5FE49922F152AE52CDB2C52 /* FileProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileProtection.swift; sourceTree = "<group>"; };
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
 		D917B1933E1E1DCDB240A5FD /* FindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindTests.swift; sourceTree = "<group>"; };
 		DFBE1D22F608EE636247658F /* Repeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeat.swift; sourceTree = "<group>"; };
@@ -543,6 +545,7 @@
 				08878191201EF746BA57A180 /* AppDatabase.swift */,
 				0E767FC5D7B9C015AD0AF761 /* CipherStore.swift */,
 				2926027C49B5BEDF339EC385 /* EnvelopeB64.swift */,
+				D5FE49922F152AE52CDB2C52 /* FileProtection.swift */,
 				951105343C5D083C09317947 /* RecordCipher.swift */,
 			);
 			path = Persistence;
@@ -708,6 +711,7 @@
 				87CB98D2087F020ED18D6C2C /* EntityStore.swift in Sources */,
 				4440BDF5F17EB0D5AA696C1C /* EnvelopeB64.swift in Sources */,
 				F913F1DE7E957405EA69B8AD /* Exchange.swift in Sources */,
+				663D4D9CFEDB78E5F0756CC0 /* FileProtection.swift in Sources */,
 				17FA39351C63860FD3F1C96D /* Find.swift in Sources */,
 				9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */,
 				66B3AE7E8A5FD9422E1DF140 /* GateView.swift in Sources */,

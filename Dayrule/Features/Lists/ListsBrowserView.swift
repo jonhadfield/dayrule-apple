@@ -52,6 +52,7 @@ struct ListsBrowserView: View {
                                         ? Tokens.Light.deadline
                                         : colors.textSecondary
                                 )
+                                .accessibilityLabel(sidebarBadgeLabel(name: name, count: badge))
                         }
                     }
                     .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
@@ -110,25 +111,60 @@ struct ListsBrowserView: View {
                                     if row.isTodo {
                                         DayruleCheckbox(
                                             status: row.status,
-                                            label: row.status == .open ? "Complete" : "Reopen"
+                                            label: checkboxLabel(for: row)
                                         ) {
-                                            toggleComplete(row.id)
+                                            toggleComplete(row.id, title: row.title)
                                         }
                                     }
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(row.title)
-                                            .foregroundStyle(colors.text)
-                                            .strikethrough(row.status != .open)
-                                            .accessibilityLabel(row.title)
-                                            .accessibilityIdentifier("list.todo.\(row.id)")
+                                        HStack(spacing: 6) {
+                                            Text(row.title)
+                                                .foregroundStyle(colors.text)
+                                                .strikethrough(row.status != .open)
+                                            if row.hasReminder, row.status == .open {
+                                                Image(systemName: "bell")
+                                                    .font(.caption)
+                                                    .foregroundStyle(colors.textSecondary)
+                                                    .accessibilityLabel("Has a reminder")
+                                            }
+                                            if row.isRepeating {
+                                                Image(systemName: "repeat")
+                                                    .font(.caption)
+                                                    .foregroundStyle(colors.textSecondary)
+                                                    .accessibilityLabel("Repeating")
+                                            }
+                                            if row.hasNotes {
+                                                Image(systemName: "doc.text")
+                                                    .font(.caption)
+                                                    .foregroundStyle(colors.textSecondary)
+                                                    .accessibilityLabel("Has notes")
+                                            }
+                                            if let checklist = row.checklistLabel {
+                                                Text(checklist)
+                                                    .font(.caption)
+                                                    .foregroundStyle(colors.textSecondary)
+                                                    .accessibilityLabel(checklist + " done")
+                                            }
+                                        }
+                                        .accessibilityElement(children: .combine)
+                                        .accessibilityLabel(rowTitleAccessibility(row))
+                                        .accessibilityIdentifier("list.todo.\(row.id)")
                                         if let subtitle = row.subtitle {
-                                            Text(subtitle)
-                                                .font(.caption)
-                                                .foregroundStyle(
-                                                    row.deadlineOverdue
-                                                        ? Tokens.Light.deadline
-                                                        : colors.textSecondary
-                                                )
+                                            HStack(spacing: 4) {
+                                                if row.deadlineOverdue {
+                                                    Image(systemName: "exclamationmark.circle.fill")
+                                                        .font(.caption2)
+                                                        .foregroundStyle(Tokens.Light.deadline)
+                                                        .accessibilityLabel("Overdue")
+                                                }
+                                                Text(subtitle)
+                                                    .font(.caption)
+                                                    .foregroundStyle(
+                                                        row.deadlineOverdue
+                                                            ? Tokens.Light.deadline
+                                                            : colors.textSecondary
+                                                    )
+                                            }
                                         }
                                     }
                                     Spacer(minLength: 0)
@@ -142,6 +178,9 @@ struct ListsBrowserView: View {
                                 } else {
                                     editTarget = EditTarget(id: row.id)
                                 }
+                            }
+                            .accessibilityAction(named: Text("When…")) {
+                                whenTarget = WhenTarget(ids: [row.id])
                             }
                             .contextMenu {
                                 if activeList == .trash {
@@ -162,7 +201,7 @@ struct ListsBrowserView: View {
                                         Button("Reminder…") { reminderTarget = EditTarget(id: row.id) }
                                     }
                                     if row.isTodo, row.status == .open {
-                                        Button("Complete") { toggleComplete(row.id) }
+                                        Button("Complete") { toggleComplete(row.id, title: row.title) }
                                     }
                                     Button("Trash", role: .destructive) { trash(row.id) }
                                 }
@@ -270,13 +309,10 @@ struct ListsBrowserView: View {
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
-                Row(
-                    id: $0.id,
-                    title: $0.title,
+                todoRow(
+                    $0,
                     subtitle: deadlineSubtitle($0.deadline),
-                    isTodo: true,
-                    status: $0.status,
-                    deadlineOverdue: Lists.isOverdue(.todo($0), ctx)
+                    overdue: Lists.isOverdue(.todo($0), ctx)
                 )
             }
         case .today:
@@ -284,11 +320,14 @@ struct ListsBrowserView: View {
                 let kind = $0.isTodo ? nil : "Project"
                 let deadline = deadlineSubtitle($0.deadline)
                 let subtitle = [kind, deadline].compactMap { $0 }.joined(separator: " · ")
+                if $0.isTodo, let t = model.entities.todos[$0.id] {
+                    return todoRow(t, subtitle: subtitle.isEmpty ? nil : subtitle, overdue: Lists.isOverdue($0, ctx))
+                }
                 return Row(
                     id: $0.id,
                     title: $0.title,
                     subtitle: subtitle.isEmpty ? nil : subtitle,
-                    isTodo: $0.isTodo,
+                    isTodo: false,
                     status: $0.status,
                     deadlineOverdue: Lists.isOverdue($0, ctx)
                 )
@@ -297,19 +336,16 @@ struct ListsBrowserView: View {
             let s = Lists.scheduled(model.entities, ctx)
             return s.days.flatMap { day in
                 day.items.map {
-                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, status: $0.status)
+                    if $0.isTodo, let t = model.entities.todos[$0.id] {
+                        return todoRow(t, subtitle: day.date, overdue: false)
+                    }
+                    return Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: false, status: $0.status)
                 }
             }
         case .backlog:
             return Lists.backlog(model.entities, ctx).flatMap { g in
                 g.todos.map {
-                    Row(
-                        id: $0.id,
-                        title: $0.title,
-                        subtitle: containerLabel(g.container),
-                        isTodo: true,
-                        status: $0.status
-                    )
+                    todoRow($0, subtitle: containerLabel(g.container), overdue: false)
                 }
             }
         case .notNow:
@@ -317,12 +353,15 @@ struct ListsBrowserView: View {
             return n.projects.map {
                 Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, status: $0.status)
             } + n.todos.map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, status: $0.status)
+                todoRow($0, subtitle: nil, overdue: false)
             }
         case .done:
             return Lists.doneList(model.entities, ctx).flatMap { day in
                 day.items.map {
-                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, status: $0.status)
+                    if $0.isTodo, let t = model.entities.todos[$0.id] {
+                        return todoRow(t, subtitle: day.date, overdue: false)
+                    }
+                    return Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: false, status: $0.status)
                 }
             }
         case .trash:
@@ -330,9 +369,51 @@ struct ListsBrowserView: View {
             return t.areas.map {
                 Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, status: .open)
             } + t.items.map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, status: $0.status)
+                if $0.isTodo, let todo = model.entities.todos[$0.id] {
+                    return todoRow(todo, subtitle: nil, overdue: false)
+                }
+                return Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, status: $0.status)
             }
         }
+    }
+
+    private func todoRow(_ todo: Todo, subtitle: String?, overdue: Bool) -> Row {
+        let checklist = model.entities.checklistItems.values.filter { $0.todoId == todo.id }
+        let done = checklist.filter(\.done).count
+        return Row(
+            id: todo.id,
+            title: todo.title.isEmpty ? "Untitled" : todo.title,
+            subtitle: subtitle,
+            isTodo: true,
+            status: todo.status,
+            deadlineOverdue: overdue,
+            hasReminder: todo.reminderAt != nil,
+            isRepeating: todo.repeat != nil || todo.repeatTemplateId != nil,
+            hasNotes: !todo.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            checklistLabel: checklist.isEmpty ? nil : "\(done) of \(checklist.count)"
+        )
+    }
+
+    private func checkboxLabel(for row: Row) -> String {
+        let title = row.title.isEmpty ? "to-do" : row.title
+        return row.status == .open ? "Complete \(title)" : "Reopen \(title)"
+    }
+
+    private func rowTitleAccessibility(_ row: Row) -> String {
+        var parts = [row.title]
+        if row.hasReminder, row.status == .open { parts.append("Has a reminder") }
+        if row.isRepeating { parts.append("Repeating") }
+        if row.hasNotes { parts.append("Has notes") }
+        if let checklist = row.checklistLabel { parts.append("\(checklist) done") }
+        if row.deadlineOverdue { parts.append("Overdue") }
+        return parts.joined(separator: ", ")
+    }
+
+    private func sidebarBadgeLabel(name: ListName, count: Int) -> String {
+        if name == .today, counts.overdue > 0 {
+            return "\(count) items, \(counts.overdue) overdue"
+        }
+        return "\(count)"
     }
 
     private func addTodo() {
@@ -350,7 +431,7 @@ struct ListsBrowserView: View {
         }
     }
 
-    private func toggleComplete(_ id: ID) {
+    private func toggleComplete(_ id: ID, title: String) {
         let open = model.entities.todos[id]?.status == .open
             || model.entities.projects[id]?.status == .open
         let status: Status = open ? .completed : .open
@@ -358,6 +439,10 @@ struct ListsBrowserView: View {
             Commands.setStatus(d, env, ids: [id], status: status)
         }
         model.noteEntitiesChanged()
+        if status == .completed {
+            // Visual linger is too short for VoiceOver (PLAN §6.7).
+            AccessibilityNotification.Announcement("Completed \(title).").post()
+        }
     }
 
     private func trash(_ id: ID) {
@@ -431,6 +516,10 @@ struct ListsBrowserView: View {
         var isTodo: Bool
         var status: Status
         var deadlineOverdue: Bool = false
+        var hasReminder: Bool = false
+        var isRepeating: Bool = false
+        var hasNotes: Bool = false
+        var checklistLabel: String?
     }
 }
 
