@@ -98,6 +98,22 @@ struct GateView: View {
                     .disabled(busy)
                 }
 
+                if model.passkeyUnlockAvailable {
+                    Button {
+                        Task { await model.unlockWithPasskey() }
+                    } label: {
+                        Text(busy ? "Unlocking…" : "Unlock with passkey")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(colors.accent)
+                            .background(colors.sidebar)
+                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    }
+                    .accessibilityIdentifier("gate.passkey")
+                    .disabled(busy)
+                }
+
                 Button {
                     Task {
                         await model.unlock(password: password)

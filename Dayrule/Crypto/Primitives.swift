@@ -43,6 +43,16 @@ enum Primitives {
         return out
     }
 
+    /// Best-effort wipe of a mutable byte buffer (libsodium `sodium_memzero`).
+    static func wipe(_ bytes: inout [UInt8]) {
+        bytes.withUnsafeMutableBytes { buf in
+            if let base = buf.baseAddress {
+                sodium_memzero(base, buf.count)
+            }
+        }
+        bytes = []
+    }
+
     /// HKDF-SHA256 with empty salt and a text label as `info`.
     static func hkdf(ikm: [UInt8], label: String, length: Int = CryptoConstants.keyBytes) -> [UInt8] {
         let input = SymmetricKey(data: Data(ikm))

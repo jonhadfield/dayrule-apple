@@ -54,6 +54,8 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         TARGETED_DEVICE_FAMILY: "1,2"
         # macOS-only (sdk-conditioned); App Sandbox + network client.
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: Dayrule/Resources/Dayrule-iOS.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Dayrule/Resources/Dayrule-iOS.entitlements
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Dayrule/Resources/Dayrule.entitlements
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
     scheme:

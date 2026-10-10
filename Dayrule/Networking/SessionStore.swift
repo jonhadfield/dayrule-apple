@@ -14,6 +14,14 @@ struct SessionStore: Sendable {
         var deviceWrappedAK: WrappedB64?
         /// AK wrapped under the biometric Keychain key (PLAN §8.3).
         var biometricWrappedAK: WrappedB64?
+        /// Device-local passkey PRF unlock material (PLAN §8.4).
+        var passkey: PasskeyUnlock?
+    }
+
+    struct PasskeyUnlock: Codable, Equatable, Sendable {
+        var credentialId: String
+        var salt: String
+        var wrapped: WrappedB64
     }
 
     func saveToken(_ token: String) throws {

@@ -106,6 +106,34 @@ actor CryptoActor {
         try biometricStore.delete(userId: userId)
     }
 
+    /// Wrap AK under HKDF(PRF, `dayrule/prf-kek/v1`) (PLAN §8.4). Wipes `prf`.
+    func wrapForPrf(prf: inout [UInt8]) throws -> Primitives.Sealed {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        defer { Primitives.wipe(&prf) }
+        var kek = Primitives.hkdf(ikm: prf, label: Labels.prfKek)
+        defer { Primitives.wipe(&kek) }
+        return try Primitives.wrapKey(
+            kek: kek,
+            key: ak,
+            label: Labels.wrapUnderPrf,
+            userId: userId
+        )
+    }
+
+    /// Unlock with PRF output; wipes `prf` (PLAN §8.4).
+    func unlockWithPrf(userId: String, prf: inout [UInt8], wrapped: Primitives.Sealed) throws {
+        defer { Primitives.wipe(&prf) }
+        var kek = Primitives.hkdf(ikm: prf, label: Labels.prfKek)
+        defer { Primitives.wipe(&kek) }
+        let ak = try Primitives.unwrapKey(
+            kek: kek,
+            wrapped: wrapped,
+            label: Labels.wrapUnderPrf,
+            userId: userId
+        )
+        hold(ak: ak, userId: userId)
+    }
+
     func unlockFromRecovery(phrase: String, userId: String, wrappedRecovery: Primitives.Sealed) throws {
         let entropy = try Recovery.fromPhrase(phrase)
         let rk = Recovery.recoveryKey(entropy: entropy)

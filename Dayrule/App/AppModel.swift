@@ -27,6 +27,8 @@ final class AppModel {
     /// True when a biometric wrap is cached for this device.
     var biometricUnlockAvailable = false
     var biometryLabel = "Biometrics"
+    /// True when a passkey PRF unlock blob is cached (PLAN §8.4).
+    var passkeyUnlockAvailable = false
 
     /// Create-account fields (Gate signup).
     var inviteCode = ""
@@ -87,6 +89,7 @@ final class AppModel {
         }
         if let cached = try? sessions.loadAccount() {
             biometricUnlockAvailable = cached.biometricWrappedAK != nil
+            passkeyUnlockAvailable = cached.passkey != nil
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
@@ -224,10 +227,12 @@ final class AppModel {
                 kdf: KdfDTO(v: pending.created.kdf.v, ops: pending.created.kdf.ops, mem: pending.created.kdf.mem),
                 wrappedPassword: WrappedB64(pending.created.wrappedPassword),
                 deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil,
-                biometricWrappedAK: nil
+                biometricWrappedAK: nil,
+                passkey: nil
             )
             try sessions.saveAccount(cached)
             biometricUnlockAvailable = false
+            passkeyUnlockAvailable = false
             accountEmail = pending.email
             email = pending.email
             try openPersistence(userId: pending.userId)
@@ -388,11 +393,13 @@ final class AppModel {
             kdf: kdfDTO,
             wrappedPassword: wrapped,
             deviceWrappedAK: deviceWrap.map(WrappedB64.init),
-            biometricWrappedAK: (try? sessions.loadAccount())?.biometricWrappedAK
+            biometricWrappedAK: (try? sessions.loadAccount())?.biometricWrappedAK,
+            passkey: (try? sessions.loadAccount())?.passkey
         )
         if !stayUnlocked { cached.deviceWrappedAK = nil }
         try sessions.saveAccount(cached)
         biometricUnlockAvailable = cached.biometricWrappedAK != nil
+        passkeyUnlockAvailable = cached.passkey != nil
         accountEmail = cached.email
         try openPersistence(userId: userId)
     }
@@ -441,7 +448,9 @@ final class AppModel {
 
     func refreshBiometryLabel() async {
         biometryLabel = await crypto.biometryName()
-        biometricUnlockAvailable = (try? sessions.loadAccount())?.biometricWrappedAK != nil
+        let cached = try? sessions.loadAccount()
+        biometricUnlockAvailable = cached?.biometricWrappedAK != nil
+        passkeyUnlockAvailable = cached?.passkey != nil
     }
 
     /// Enable Face ID / Touch ID unlock while the vault is open (PLAN §8.3).
@@ -466,9 +475,39 @@ final class AppModel {
         }
     }
 
+    /// Enable device-local passkey PRF unlock while unlocked (PLAN §8.4).
+    func setPasskeyUnlock(enabled: Bool) async {
+        guard phase == .unlocked else { return }
+        do {
+            guard var cached = try sessions.loadAccount() else { return }
+            if enabled {
+                let enrollment = try await PasskeyPRF.enroll(
+                    userId: cached.userId,
+                    email: cached.email
+                )
+                var prf = enrollment.prf
+                let sealed = try await crypto.wrapForPrf(prf: &prf)
+                cached.passkey = SessionStore.PasskeyUnlock(
+                    credentialId: Base64Std.encode(enrollment.credentialId),
+                    salt: Base64Std.encode(enrollment.salt),
+                    wrapped: WrappedB64(sealed)
+                )
+                try sessions.saveAccount(cached)
+                passkeyUnlockAvailable = true
+            } else {
+                cached.passkey = nil
+                try sessions.saveAccount(cached)
+                passkeyUnlockAvailable = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            passkeyUnlockAvailable = (try? sessions.loadAccount())?.passkey != nil
+        }
+    }
+
     func tryDeviceUnlock() async {
         await refreshBiometryLabel()
-        // Prefer biometric when enrolled; fall back to stay-unlocked device wrap.
+        // Prefer biometric, then passkey, then stay-unlocked device wrap.
         if let cached = try? sessions.loadAccount(), let wrapped = cached.biometricWrappedAK {
             do {
                 try await crypto.unlockFromBiometricWrap(
@@ -507,6 +546,28 @@ final class AppModel {
             try await crypto.unlockFromBiometricWrap(
                 userId: cached.userId,
                 wrapped: try wrapped.sealed()
+            )
+            try await finishConvenienceUnlock(cached: cached)
+        } catch {
+            phase = .locked
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func unlockWithPasskey() async {
+        errorMessage = nil
+        guard let cached = try? sessions.loadAccount(),
+              let passkey = cached.passkey
+        else { return }
+        phase = .unlocking
+        do {
+            let credentialId = try Base64Std.decode(passkey.credentialId)
+            let salt = try Base64Std.decode(passkey.salt)
+            var prf = try await PasskeyPRF.assert(credentialId: credentialId, salt: salt)
+            try await crypto.unlockWithPrf(
+                userId: cached.userId,
+                prf: &prf,
+                wrapped: try passkey.wrapped.sealed()
             )
             try await finishConvenienceUnlock(cached: cached)
         } catch {

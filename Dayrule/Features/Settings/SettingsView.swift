@@ -67,6 +67,12 @@ struct SettingsView: View {
                     Text("Uses this device’s biometrics to open the Keychain item that unwraps your account key. Password and recovery stay authoritative.")
                         .font(.footnote)
                         .foregroundStyle(colors.textSecondary)
+                    Toggle("Unlock with passkey", isOn: passkeyBinding)
+                        .accessibilityIdentifier("settings.passkey")
+                        .disabled(model.phase != .unlocked)
+                    Text("Creates a passkey on this device that derives a wrap key (PRF). This is not the same as a sign-in passkey on the web account — that comes later. Password stays the fallback.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
                     Text("Stay unlocked keeps a device wrap key without biometrics — anyone who can unlock the phone can open Dayrule.")
                         .font(.footnote)
                         .foregroundStyle(colors.textSecondary)
@@ -235,6 +241,15 @@ struct SettingsView: View {
             get: { model.biometricUnlockAvailable },
             set: { on in
                 Task { await model.setBiometricUnlock(enabled: on) }
+            }
+        )
+    }
+
+    private var passkeyBinding: Binding<Bool> {
+        Binding(
+            get: { model.passkeyUnlockAvailable },
+            set: { on in
+                Task { await model.setPasskeyUnlock(enabled: on) }
             }
         )
     }
