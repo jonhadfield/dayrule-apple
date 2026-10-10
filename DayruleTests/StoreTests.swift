@@ -150,4 +150,19 @@ struct StoreTests {
         }
         #expect(store.entities.todos[todo.id] == nil)
     }
+
+    @Test func setDeadlineAndClear() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Due soon", placement: .inbox))
+        }
+        store.run("Deadline") { d, env in
+            Commands.setDeadline(d, env, ids: [todo.id], deadline: "2026-10-20")
+        }
+        #expect(store.entities.todos[todo.id]?.deadline == "2026-10-20")
+        store.run("Clear deadline") { d, env in
+            Commands.setDeadline(d, env, ids: [todo.id], deadline: nil)
+        }
+        #expect(store.entities.todos[todo.id]?.deadline == nil)
+    }
 }

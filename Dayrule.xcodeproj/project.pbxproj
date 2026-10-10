@@ -33,6 +33,7 @@
 		4B19474584B0F1C1D6ECC138 /* UuidV5Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABA59A162F972005C49AB993 /* UuidV5Tests.swift */; };
 		4C4E0A198B4141767C26545A /* ListsBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */; };
 		4CDF10FD22A4470066A87487 /* When.swift in Sources */ = {isa = PBXBuildFile; fileRef = A022752FC1044F75EE926924 /* When.swift */; };
+		4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */; };
 		4FAD8F1555B3DCDD02C7101D /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1D7D219429FAD1F65665F1 /* JSONValue.swift */; };
 		51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */; };
 		57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */; };
@@ -184,6 +185,7 @@
 		D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychain.swift; sourceTree = "<group>"; };
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
 		DFBE1D22F608EE636247658F /* Repeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeat.swift; sourceTree = "<group>"; };
+		E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineSheetView.swift; sourceTree = "<group>"; };
 		E1D8718EB1E6396EDCA15E8B /* Incoming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Incoming.swift; sourceTree = "<group>"; };
 		E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPullTests.swift; sourceTree = "<group>"; };
 		E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CipherStoreTests.swift; sourceTree = "<group>"; };
@@ -217,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				97824AB22FF60471D9B4E963 /* DayruleCheckbox.swift */,
+				E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */,
 				9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */,
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
 				3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */,
@@ -597,6 +600,7 @@
 				EC72C196606D5324DEBC1640 /* CryptoActor.swift in Sources */,
 				30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */,
 				7738646857613F1FEF1643A7 /* DayruleCheckbox.swift in Sources */,
+				4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */,
 				1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */,
 				16D9A8632A3B7BEF825EB2EC /* Draft.swift in Sources */,
 				256FEEB655F2D4F0863BD232 /* EntityJSON.swift in Sources */,

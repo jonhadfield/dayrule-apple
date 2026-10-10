@@ -12,6 +12,7 @@ struct ListsBrowserView: View {
     @State private var selection: ListName? = .inbox
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
+    @State private var deadlineTarget: WhenTarget?
     @State private var editTarget: EditTarget?
 
     private struct EditTarget: Identifiable {
@@ -105,7 +106,11 @@ struct ListsBrowserView: View {
                                     if let subtitle = row.subtitle {
                                         Text(subtitle)
                                             .font(.caption)
-                                            .foregroundStyle(colors.textSecondary)
+                                            .foregroundStyle(
+                                                row.deadlineOverdue
+                                                    ? Tokens.Light.deadline
+                                                    : colors.textSecondary
+                                            )
                                     }
                                 }
                                 Spacer(minLength: 0)
@@ -121,6 +126,7 @@ struct ListsBrowserView: View {
                             } else {
                                 Button("Edit") { editTarget = EditTarget(id: row.id) }
                                 Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
+                                Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
                                 if row.isTodo, row.status == .open {
                                     Button("Complete") { toggleComplete(row.id) }
                                 }
@@ -171,6 +177,9 @@ struct ListsBrowserView: View {
             .sheet(item: $whenTarget) { target in
                 WhenSheetView(model: model, ids: target.ids)
             }
+            .sheet(item: $deadlineTarget) { target in
+                DeadlineSheetView(model: model, ids: target.ids)
+            }
             .sheet(item: $editTarget) { target in
                 ItemEditorSheet(model: model, id: target.id)
             }
@@ -202,16 +211,27 @@ struct ListsBrowserView: View {
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
-                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, status: $0.status)
-            }
-        case .today:
-            return Lists.today(model.entities, ctx).map {
                 Row(
                     id: $0.id,
                     title: $0.title,
-                    subtitle: $0.isTodo ? nil : "Project",
+                    subtitle: deadlineSubtitle($0.deadline),
+                    isTodo: true,
+                    status: $0.status,
+                    deadlineOverdue: Lists.isOverdue(.todo($0), ctx)
+                )
+            }
+        case .today:
+            return Lists.today(model.entities, ctx).map {
+                let kind = $0.isTodo ? nil : "Project"
+                let deadline = deadlineSubtitle($0.deadline)
+                let subtitle = [kind, deadline].compactMap { $0 }.joined(separator: " · ")
+                return Row(
+                    id: $0.id,
+                    title: $0.title,
+                    subtitle: subtitle.isEmpty ? nil : subtitle,
                     isTodo: $0.isTodo,
-                    status: $0.status
+                    status: $0.status,
+                    deadlineOverdue: Lists.isOverdue($0, ctx)
                 )
             }
         case .scheduled:
@@ -315,12 +335,18 @@ struct ListsBrowserView: View {
         return "Nothing in \(name.title)."
     }
 
+    private func deadlineSubtitle(_ deadline: LocalDate?) -> String? {
+        guard let deadline else { return nil }
+        return "Due \(deadline)"
+    }
+
     private struct Row: Identifiable {
         var id: String
         var title: String
         var subtitle: String?
         var isTodo: Bool
         var status: Status
+        var deadlineOverdue: Bool = false
     }
 }
 
