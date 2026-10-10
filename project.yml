@@ -3,14 +3,13 @@ options:
   bundleIdPrefix: app.dayrule
   deploymentTarget:
     iOS: "18.0"
+    macOS: "15.0"
   xcodeVersion: "16.0"
   createIntermediateGroups: true
   groupSortPosition: top
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    TARGETED_DEVICE_FAMILY: "1,2"
-    IPHONEOS_DEPLOYMENT_TARGET: "18.0"
     CURRENT_PROJECT_VERSION: 1
     MARKETING_VERSION: "0.1.0"
     DEVELOPMENT_TEAM: ""
@@ -22,7 +21,7 @@ packages:
 targets:
   Dayrule:
     type: application
-    platform: iOS
+    supportedDestinations: [iOS, macOS]
     sources:
       - path: Dayrule
         excludes:
@@ -33,6 +32,7 @@ targets:
     resources:
       - path: Dayrule/Fonts
       - path: Dayrule/Resources/PrivacyInfo.xcprivacy
+        destinationFilters: [iOS]
     dependencies:
       - package: Sodium
         product: Clibsodium
@@ -43,13 +43,17 @@ targets:
         INFOPLIST_FILE: Dayrule/Resources/Info.plist
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # macOS-only (sdk-conditioned); App Sandbox + network client.
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Dayrule/Resources/Dayrule.entitlements
+        ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
     scheme:
       testTargets:
         - DayruleTests
         - DayruleUITests
   DayruleTests:
     type: bundle.unit-test
-    platform: iOS
+    supportedDestinations: [iOS, macOS]
     sources:
       - path: DayruleTests
     dependencies:
@@ -58,9 +62,12 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleTests
         GENERATE_INFOPLIST_FILE: YES
+        # Multiplatform host path: iOS puts the binary at .app root; macOS under Contents/MacOS.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Dayrule.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayrule"
+        BUNDLE_LOADER: "$(TEST_HOST)"
   DayruleUITests:
     type: bundle.ui-testing
-    platform: iOS
+    supportedDestinations: [iOS, macOS]
     sources:
       - path: DayruleUITests
     dependencies:

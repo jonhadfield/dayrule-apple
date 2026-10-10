@@ -1,22 +1,26 @@
-# Dayrule iOS
+# Dayrule native (iOS + macOS)
 
 Native SwiftUI companion to the Dayrule web app
-(`/Users/hadfielj/Repositories/dayrule`). Same "paper and ink" identity,
-vocabulary, domain model, sync protocol and end-to-end encryption. This
-repo's `PLAN.md` is the source of truth for **native** choices; the web
-repo's `PLAN.md` remains the source of truth for shared product, crypto
-(§10), sync (§11) and decisions (§17). Read the relevant section before
-changing behaviour, and update this `PLAN.md` in the same change when a
-native decision changes. When a shared rule changes, update the web
-`PLAN.md` first (or in the same coordinated change).
+(`/Users/hadfielj/Repositories/dayrule`) for **iPhone, iPad, and Mac**. Same
+"paper and ink" identity, vocabulary, domain model, sync protocol and
+end-to-end encryption. One multiplatform Xcode target and one source tree
+(`dayrule-apple`). This repo's `PLAN.md` is the source of truth for
+**native** choices; the web repo's `PLAN.md` remains the source of truth
+for shared product, crypto (§10), sync (§11) and decisions (§17). Read the
+relevant section before changing behaviour, and update this `PLAN.md` in
+the same change when a native decision changes. When a shared rule
+changes, update the web `PLAN.md` first (or in the same coordinated
+change).
 
 ## Layout
 
-- `Dayrule/` — app target (SwiftUI views, domain, store, sync, crypto,
-  persistence, design system).
+- `Dayrule/` — shared app sources (SwiftUI views, domain, store, sync,
+  crypto, persistence, design system, `Platform/` helpers).
 - `DayruleTests/` — unit tests (domain, merge, crypto vectors).
 - `DayruleUITests/` — UI tests.
-- `docs/` — iOS threat-model deltas; `docs/shared/` is a mirror of
+- `project.yml` — XcodeGen source of truth (`supportedDestinations: iOS,
+  macOS`); regenerate with `xcodegen generate`.
+- `docs/` — native threat-model deltas; `docs/shared/` is a mirror of
   `dayrule/docs/shared/` (crypto vectors, wire fixtures, domain vectors),
   updated only with `scripts/sync-shared.sh <sha>` and pinned by
   `docs/shared/SHARED.lock`. Never hand-edit the mirror.
@@ -27,8 +31,10 @@ native decision changes. When a shared rule changes, update the web
 From the repo root (requires a Mac and the Xcode version pinned in CI;
 pick a simulator that exists with `xcrun simctl list devices available`):
 
+- `xcodegen generate` — regenerate `Dayrule.xcodeproj` from `project.yml`.
 - `xcodebuild -scheme Dayrule -destination 'platform=iOS Simulator,name=<simulator>' test` — unit + UI tests.
-- `xcodebuild -scheme Dayrule -destination 'generic/platform=iOS' build` — release-shaped build.
+- `xcodebuild -scheme Dayrule -destination 'generic/platform=iOS' build` — release-shaped iOS build.
+- `xcodebuild -scheme Dayrule -destination 'platform=macOS' build` — macOS build.
 - `swift test` — only if a SwiftPM package target exists for shared pure-Swift modules.
 
 Development and UI tests run against a **local Go server** started with
@@ -106,8 +112,8 @@ ship in a binary. TestFlight builds use the production host
 - Reminders are local notifications only; the app never registers
   reminders with the server and has no APNs entitlement (PLAN §11).
 - Auth from the app uses the native session model in PLAN §9
-  (`Authorization: Bearer` + `X-Dayrule-Client: ios/<build>`). Do not stuff
-  passwords into the Keychain beyond what unlock requires; never log
-  bodies, tokens or recovery words.
+  (`Authorization: Bearer` + `X-Dayrule-Client: ios/<build>` or
+  `macos/<build>`). Do not stuff passwords into the Keychain beyond what
+  unlock requires; never log bodies, tokens or recovery words.
 - Never write secrets into code, docs, commits or PR text. Use env /
   Xcode scheme variable **names** only.

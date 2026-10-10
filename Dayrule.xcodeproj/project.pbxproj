@@ -12,8 +12,11 @@
 		19D4E828090DB6793A9C6C43 /* Typography.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7445A8887D2541F518050BD1 /* Typography.swift */; };
 		1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */; };
 		30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B739D187E09BA80EF8304B /* DayruleApp.swift */; };
+		33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */; };
 		40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6A9CCB3D751BB5F83672A3E /* Recovery.swift */; };
+		469EF88CBE833E8769F66FE2 /* ClientPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */; };
 		51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */; };
+		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */; };
 		66B3AE7E8A5FD9422E1DF140 /* GateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43FC547FBEFB77D78A87433D /* GateView.swift */; };
 		6BA8B46AF47B5ADF63E843C2 /* Labels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27CAF46F7EBC5CEC5D22EBC3 /* Labels.swift */; };
@@ -22,6 +25,7 @@
 		A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA8099CD51FDF8947583529 /* SecureBuffer.swift */; };
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
 		AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04DD9593EDD04B386E31B09 /* BIP39.swift */; };
+		B206B81AA34A975D008567EA /* VaultPullTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */; };
 		B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36B87A1F0A8515AFC2411AC /* VaultPull.swift */; };
 		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
 		D21D41CB86112AA455D78513 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4608F0B7201CE4C352E4294D /* Tokens.swift */; };
@@ -67,11 +71,15 @@
 		7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoVectorsTests.swift; sourceTree = "<group>"; };
 		7B779DA6B2031BF08649C89C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleUITests.swift; sourceTree = "<group>"; };
+		92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatform.swift; sourceTree = "<group>"; };
 		A04DD9593EDD04B386E31B09 /* BIP39.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39.swift; sourceTree = "<group>"; };
 		A36B87A1F0A8515AFC2411AC /* VaultPull.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPull.swift; sourceTree = "<group>"; };
 		B6A9CCB3D751BB5F83672A3E /* Recovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recovery.swift; sourceTree = "<group>"; };
+		C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainVectorsTests.swift; sourceTree = "<group>"; };
 		CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		CDA8099CD51FDF8947583529 /* SecureBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureBuffer.swift; sourceTree = "<group>"; };
+		E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPullTests.swift; sourceTree = "<group>"; };
+		E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatformTests.swift; sourceTree = "<group>"; };
 		E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPhraseView.swift; sourceTree = "<group>"; };
 		EB8C8968ECDB5433251704AB /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
@@ -133,16 +141,28 @@
 				5E7073F5D227D1861F99DBB4 /* Design */,
 				ACB6200334CB7648E0F838AD /* Gate */,
 				53310EF47871235719F05123 /* Networking */,
+				635E6DDC35C09B3A4F0D64AA /* Platform */,
 				D5BC0780B24063ECC15F69DA /* Sync */,
 			);
 			path = Dayrule;
 			sourceTree = "<group>";
 		};
+		635E6DDC35C09B3A4F0D64AA /* Platform */ = {
+			isa = PBXGroup;
+			children = (
+				92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */,
+			);
+			path = Platform;
+			sourceTree = "<group>";
+		};
 		9B4850277D72E4C66AE96595 /* DayruleTests */ = {
 			isa = PBXGroup;
 			children = (
+				E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */,
 				7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */,
+				C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
+				E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */,
 			);
 			path = DayruleTests;
 			sourceTree = "<group>";
@@ -315,6 +335,7 @@
 				9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */,
 				AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */,
 				F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */,
+				469EF88CBE833E8769F66FE2 /* ClientPlatform.swift in Sources */,
 				EC72C196606D5324DEBC1640 /* CryptoActor.swift in Sources */,
 				30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */,
 				1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */,
@@ -345,8 +366,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */,
 				85124F6031198380233EA8D5 /* CryptoVectorsTests.swift in Sources */,
+				33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
+				B206B81AA34A975D008567EA /* VaultPullTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -415,15 +439,15 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
@@ -431,7 +455,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Dayrule/Resources/Dayrule.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
@@ -440,7 +466,11 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.Dayrule;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -457,7 +487,11 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleUITests;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Dayrule;
 			};
@@ -474,9 +508,13 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleTests;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayrule.app/Dayrule";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayrule.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayrule";
 			};
 			name = Release;
 		};
@@ -535,16 +573,16 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				MACOSX_DEPLOYMENT_TARGET = 15.0;
 				MARKETING_VERSION = 0.1.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -559,7 +597,11 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleUITests;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				TEST_TARGET_NAME = Dayrule;
 			};
@@ -576,9 +618,13 @@
 					"@loader_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleTests;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayrule.app/Dayrule";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayrule.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayrule";
 			};
 			name = Debug;
 		};
@@ -586,7 +632,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = Dayrule/Resources/Dayrule.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"ENABLE_HARDENED_RUNTIME[sdk=macosx*]" = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
@@ -595,7 +643,11 @@
 					"@executable_path/Frameworks",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.Dayrule;
-				SDKROOT = iphoneos;
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_STRICT_CONCURRENCY = complete;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

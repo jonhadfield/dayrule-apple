@@ -1,5 +1,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
+#if os(iOS)
+import UIKit
+#elseif os(macOS)
+import AppKit
+#endif
 
 struct RecoveryPhraseView: View {
     let words: [String]
@@ -38,14 +43,7 @@ struct RecoveryPhraseView: View {
                 .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
 
                 Button("Copy phrase") {
-                    let joined = words.joined(separator: " ")
-                    UIPasteboard.general.setItems(
-                        [[UTType.utf8PlainText.identifier: joined]],
-                        options: [
-                            .localOnly: true,
-                            .expirationDate: Date().addingTimeInterval(60),
-                        ]
-                    )
+                    copyRecoveryPhrase(words.joined(separator: " "))
                 }
                 .foregroundStyle(colors.accent)
 
@@ -68,5 +66,27 @@ struct RecoveryPhraseView: View {
             .padding(24)
         }
         .background(colors.bg.ignoresSafeArea())
+    }
+
+    /// Local-only, short-lived on iOS; plain pasteboard write on macOS (cleared after 60s).
+    private func copyRecoveryPhrase(_ joined: String) {
+        #if os(iOS)
+        UIPasteboard.general.setItems(
+            [[UTType.utf8PlainText.identifier: joined]],
+            options: [
+                .localOnly: true,
+                .expirationDate: Date().addingTimeInterval(60),
+            ]
+        )
+        #elseif os(macOS)
+        let board = NSPasteboard.general
+        board.clearContents()
+        board.setString(joined, forType: .string)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60) {
+            if board.string(forType: .string) == joined {
+                board.clearContents()
+            }
+        }
+        #endif
     }
 }

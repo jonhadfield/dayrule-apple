@@ -85,7 +85,7 @@ final class AppModel {
         let login = try await api.login(
             email: email,
             authKeyB64: Base64Std.encode(authKey),
-            deviceLabel: "iOS"
+            deviceLabel: ClientPlatform.deviceLabel
         )
 
         if login.secondStep != nil {

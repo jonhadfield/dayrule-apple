@@ -91,7 +91,7 @@ struct SyncHead: Codable, Sendable {
     var floor: Int64
 }
 
-/// JSON client for the Dayrule API (Bearer + `X-Dayrule-Client: ios/<build>`).
+/// JSON client for the Dayrule API (Bearer + `X-Dayrule-Client: ios|macos/<build>`).
 actor APIClient {
     var baseURL: URL
     private(set) var token: String?
@@ -107,7 +107,7 @@ actor APIClient {
         self.session = URLSession(configuration: config)
     }
 
-    private var clientHeader: String { "ios/\(build)" }
+    private var clientHeader: String { ClientPlatform.clientHeader(build: build) }
 
     func setToken(_ token: String?) {
         self.token = token

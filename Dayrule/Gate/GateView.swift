@@ -38,20 +38,26 @@ struct GateView: View {
                     .multilineTextAlignment(.center)
 
                 field(colors: colors, label: "API", text: $model.apiBaseURLString)
-                    .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
+                    #endif
 
                 field(colors: colors, label: "Email", text: $model.email)
                     .textContentType(.username)
-                    .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
+                    #endif
 
                 SecureField("Password", text: $password)
                     .textContentType(.password)
                     .autocorrectionDisabled()
+                    #if os(iOS)
                     .textInputAutocapitalization(.never)
+                    #endif
                     .padding(14)
                     .background(colors.sidebar)
                     .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
@@ -105,13 +111,17 @@ struct GateView: View {
                     .foregroundStyle(colors.textSecondary)
 
                 field(colors: colors, label: "Email", text: $model.email)
-                    .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
 
                 TextField("twenty four words…", text: $recoveryPhrase, axis: .vertical)
                     .lineLimit(4...8)
-                    .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    #endif
                     .padding(14)
                     .background(colors.sidebar)
                     .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
@@ -201,11 +211,11 @@ struct VaultBrowserView: View {
             .background(colors.bg)
             .navigationTitle("Dayrule")
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Lock") { model.lock() }
                         .foregroundStyle(colors.accent)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .primaryAction) {
                     Button("Refresh") {
                         Task { await model.refreshVault() }
                     }
@@ -213,8 +223,10 @@ struct VaultBrowserView: View {
                 }
             }
         }
+        #if os(iOS)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0).onChanged { _ in model.bumpIdle() }
         )
+        #endif
     }
 }
