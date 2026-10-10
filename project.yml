@@ -18,6 +18,9 @@ packages:
   Sodium:
     url: https://github.com/jedisct1/swift-sodium
     from: "0.11.0"
+  GRDB:
+    url: https://github.com/groue/GRDB.swift
+    from: "7.0.0"
 targets:
   Dayrule:
     type: application
@@ -36,6 +39,8 @@ targets:
     dependencies:
       - package: Sodium
         product: Clibsodium
+      - package: GRDB
+        product: GRDB
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.Dayrule
