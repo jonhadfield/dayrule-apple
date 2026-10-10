@@ -48,6 +48,12 @@ final class Draft {
         all(collection: .projects, baseMap: base.projects) { EntityJSON.decodeProject($0, id: $1) }
     }
 
+    func allChecklistItems() -> [ChecklistItem] {
+        all(collection: .checklistItems, baseMap: base.checklistItems) {
+            EntityJSON.decodeChecklist($0, id: $1)
+        }
+    }
+
     func putTodo(_ t: Todo) {
         record(.todos, id: t.id, after: JSONDict.fromAny(EntityJSON.encode(t)))
     }
@@ -58,6 +64,10 @@ final class Draft {
 
     func putArea(_ a: Area) {
         record(.areas, id: a.id, after: JSONDict.fromAny(EntityJSON.encode(a)))
+    }
+
+    func putChecklistItem(_ c: ChecklistItem) {
+        record(.checklistItems, id: c.id, after: JSONDict.fromAny(EntityJSON.encode(c)))
     }
 
     func remove(_ collection: CollectionName, id: ID) {
@@ -121,8 +131,8 @@ final class Draft {
         case .todos: base.todos[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
         case .projects: base.projects[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
         case .areas: base.areas[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
-        case .headings: nil // encode later when headings are mutated
-        case .checklistItems: nil
+        case .checklistItems: base.checklistItems[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
+        case .headings: nil
         case .tags: nil
         }
     }

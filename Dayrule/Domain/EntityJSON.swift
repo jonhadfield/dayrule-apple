@@ -136,6 +136,22 @@ enum EntityJSON {
         return d
     }
 
+    static func encode(_ c: ChecklistItem) -> [String: Any] {
+        var d: [String: Any] = [
+            "type": "checklistItem",
+            "id": c.id,
+            "createdAt": c.createdAt,
+            "updatedAt": c.updatedAt,
+            "todoId": c.todoId,
+            "title": c.title,
+            "done": c.done,
+            "order": c.order,
+        ]
+        putOptional(&d, "clock", c.clock)
+        for (k, v) in c.unknown { d[k] = v.toAny() }
+        return d
+    }
+
     // MARK: - Decode
 
     static func decodeTodo(_ v: [String: Any], id: ID) -> Todo {

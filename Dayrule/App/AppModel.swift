@@ -212,6 +212,7 @@ final class AppModel {
             let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
             vault = snap
             store.hydrate(VaultToEntities.build(from: snap))
+            store.generateRepeats()
             noteEntitiesChanged()
             errorMessage = nil
         } catch {

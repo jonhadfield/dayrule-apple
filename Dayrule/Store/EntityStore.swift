@@ -19,6 +19,9 @@ struct StoreClock: Sendable {
     }
 }
 
+/// Clock stamp for generated repeat instances (web `GENERATED`).
+let generatedHlcStamp = "000000000-0000-generated"
+
 /// In-memory entity store with HLC-stamped undoable commands (web `store.ts`).
 @MainActor
 final class EntityStore {
@@ -95,6 +98,40 @@ final class EntityStore {
         self.entities = entities
         past.removeAll()
         future.removeAll()
+    }
+
+    /// Upkeep that isn't a user action (repeat instances): no undo entry;
+    /// created records use `generatedHlcStamp` so devices converge.
+    func generate(_ command: (Draft, Env) -> Set<String>) {
+        let draft = Draft(base: entities)
+        let created = command(draft, env())
+        let proposed = draft.changes()
+        guard !proposed.isEmpty else { return }
+        let tick = hlc.tick()
+        let stamped = Restamp.stamp(current: entities, changes: proposed, tick: tick).map { c -> StoreChange in
+            guard case let .entity(collection, id, before, after, _) = c,
+                  let after,
+                  created.contains("\(collection.rawValue)/\(id)")
+            else { return c }
+            var fixed = after
+            if case let .object(clock)? = after["clock"] {
+                var gen: [String: JSONValue] = [:]
+                for k in clock.keys { gen[k] = .string(generatedHlcStamp) }
+                fixed["clock"] = .object(gen)
+            }
+            return .entity(
+                collection: collection,
+                id: id,
+                before: before,
+                after: fixed,
+                hlc: generatedHlcStamp
+            )
+        }
+        entities = ApplyChanges.apply(entities, stamped, direction: .forward)
+    }
+
+    func generateRepeats() {
+        generate { d, env in Repeats.generateRepeats(d, env) }
     }
 
     var canUndo: Bool { !past.isEmpty }
