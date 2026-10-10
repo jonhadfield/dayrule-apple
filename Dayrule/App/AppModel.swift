@@ -28,6 +28,9 @@ final class AppModel {
     private let sessions = SessionStore()
     private var api: APIClient
     private var idleTask: Task<Void, Never>?
+    private var cipherStore: CipherStore?
+    private var syncEngine: SyncEngine?
+    private var syncTask: Task<Void, Never>?
 
     var entities: Entities {
         _ = entitiesEpoch
@@ -46,6 +49,50 @@ final class AppModel {
         }
         if let token = try? sessions.loadToken() {
             Task { await api.setToken(token) }
+        }
+        store.onChanges = { [weak self] changes, source in
+            await self?.persist(changes, source: source)
+        }
+    }
+
+    private func persist(_ changes: [StoreChange], source: ChangeSource) async {
+        guard let cipherStore else { return }
+        do {
+            switch source {
+            case .local: try await cipherStore.applyLocal(changes)
+            case .sync: try await cipherStore.applyRemote(changes)
+            }
+            noteEntitiesChanged()
+            if source == .local { scheduleSync() }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func openPersistence(userId: String) throws {
+        let db = try AppDatabase.open(userId: userId)
+        let store = CipherStore(dbQueue: db, cipher: ActorRecordCipher(crypto: crypto))
+        cipherStore = store
+        syncEngine = SyncEngine(store: self.store, db: store, crypto: crypto, api: api)
+    }
+
+    private func scheduleSync() {
+        syncTask?.cancel()
+        syncTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            guard !Task.isCancelled else { return }
+            await self?.runSync()
+        }
+    }
+
+    private func runSync() async {
+        guard let syncEngine else { return }
+        do {
+            try await syncEngine.sync()
+            noteEntitiesChanged()
+            errorMessage = nil
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 
@@ -136,6 +183,7 @@ final class AppModel {
         if !stayUnlocked { cached.deviceWrappedAK = nil }
         try sessions.saveAccount(cached)
         accountEmail = cached.email
+        try openPersistence(userId: userId)
         phase = .unlocked
     }
 
@@ -151,6 +199,7 @@ final class AppModel {
             stayUnlocked: false
         )
         accountEmail = cached.email
+        try openPersistence(userId: cached.userId)
         phase = .unlocked
         bumpIdle()
     }
@@ -172,6 +221,7 @@ final class AppModel {
                 await api.setToken(token)
             }
             accountEmail = email.lowercased()
+            try openPersistence(userId: start.userId.lowercased())
             phase = .unlocked
             bumpIdle()
             await refreshVault()
@@ -196,6 +246,7 @@ final class AppModel {
             }
             accountEmail = cached.email
             email = cached.email
+            try openPersistence(userId: cached.userId)
             phase = .unlocked
             bumpIdle()
             await refreshVault()
@@ -209,14 +260,31 @@ final class AppModel {
         vaultLoading = true
         defer { vaultLoading = false }
         do {
-            let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
-            vault = snap
-            store.hydrate(VaultToEntities.build(from: snap))
+            if cipherStore == nil, let userId = await crypto.currentUserId() {
+                try openPersistence(userId: userId)
+            }
+            guard let cipherStore else {
+                throw APIError.offline
+            }
+            if try await cipherStore.isEmpty() {
+                let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
+                vault = snap
+                let e = VaultToEntities.build(from: snap)
+                try await cipherStore.replaceAll(e)
+                try await cipherStore.markDirty(Incoming.allKeys(e))
+                try await cipherStore.setUploaded(true)
+                store.hydrate(e)
+            } else {
+                store.hydrate(try await cipherStore.load())
+                vault = VaultSnapshot(entities: [], payloads: [], counts: [:], recordCount: 0, skippedUnknownAlg: 0)
+            }
             store.generateRepeats()
+            await store.awaitPendingPersist()
             noteEntitiesChanged()
             errorMessage = nil
+            await runSync()
         } catch {
-            if vault == nil {
+            if store.entities.todos.isEmpty && store.entities.projects.isEmpty {
                 errorMessage = error.localizedDescription
             }
         }
@@ -225,7 +293,11 @@ final class AppModel {
     func lock() {
         idleTask?.cancel()
         idleTask = nil
+        syncTask?.cancel()
+        syncTask = nil
         vault = nil
+        cipherStore = nil
+        syncEngine = nil
         store.hydrate(.empty())
         noteEntitiesChanged()
         Task {

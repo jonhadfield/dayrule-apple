@@ -91,6 +91,28 @@ struct SyncHead: Codable, Sendable {
     var floor: Int64
 }
 
+struct PushWireRecord: Encodable, Sendable {
+    var id: String
+    var baseSeq: Int64
+    var alg: Int
+    var keyId: Int
+    var nonce: String
+    var ciphertext: String
+    var tombstone: Bool?
+}
+
+struct PushResultRow: Codable, Sendable {
+    var id: String
+    var seq: Int64
+    var conflict: Bool?
+    var error: String?
+}
+
+struct PushResponse: Codable, Sendable {
+    var results: [PushResultRow]
+    var head: Int64
+}
+
 /// JSON client for the Dayrule API (Bearer + `X-Dayrule-Client: ios|macos/<build>`).
 actor APIClient {
     var baseURL: URL
@@ -195,5 +217,23 @@ actor APIClient {
 
     func head() async throws -> SyncHead {
         try await decode("GET", path: "api/v1/sync/head")
+    }
+
+    func push(_ records: [PushWireRecord]) async throws -> PushResponse {
+        let body: [String: Any] = [
+            "records": records.map { r -> [String: Any] in
+                var d: [String: Any] = [
+                    "id": r.id,
+                    "baseSeq": r.baseSeq,
+                    "alg": r.alg,
+                    "keyId": r.keyId,
+                    "nonce": r.nonce,
+                    "ciphertext": r.ciphertext,
+                ]
+                if let t = r.tombstone { d["tombstone"] = t }
+                return d
+            },
+        ]
+        return try await decode("POST", path: "api/v1/sync/push", jsonBody: body)
     }
 }

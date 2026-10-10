@@ -127,11 +127,71 @@ actor CipherStore {
     }
 
     func setCursor(_ cursor: Int64) throws {
-        try setState("pullCursor", value: cursor)
+        try setState("cursor", value: cursor)
     }
 
     func cursor() throws -> Int64 {
-        try getState("pullCursor") ?? 0
+        try getState("cursor") ?? 0
+    }
+
+    func setUploaded(_ uploaded: Bool) throws {
+        try setState("uploaded", value: uploaded)
+    }
+
+    func uploaded() throws -> Bool {
+        try getState("uploaded") ?? false
+    }
+
+    func pendingKeys() throws -> [String] {
+        try dbQueue.read { db in
+            try String.fetchAll(db, sql: "SELECT key FROM outbox")
+        }
+    }
+
+    func seqs(_ keys: [String]) throws -> [String: Int64] {
+        guard !keys.isEmpty else { return [:] }
+        return try dbQueue.read { db in
+            var out: [String: Int64] = [:]
+            for key in keys {
+                if let seq: Int64 = try Int64.fetchOne(
+                    db, sql: "SELECT seq FROM syncmeta WHERE key = ?", arguments: [key]
+                ) {
+                    out[key] = seq
+                }
+            }
+            return out
+        }
+    }
+
+    func setSeqs(_ entries: [(key: String, seq: Int64)]) throws {
+        try dbQueue.write { db in
+            for e in entries {
+                try db.execute(
+                    sql: "INSERT OR REPLACE INTO syncmeta (key, seq) VALUES (?, ?)",
+                    arguments: [e.key, e.seq]
+                )
+            }
+        }
+    }
+
+    func clearSeqs() throws {
+        try dbQueue.write { db in
+            try db.execute(sql: "DELETE FROM syncmeta")
+        }
+    }
+
+    func tombstone(_ key: String) throws -> String? {
+        try dbQueue.read { db in
+            try String.fetchOne(db, sql: "SELECT hlc FROM tombstones WHERE key = ?", arguments: [key])
+        }
+    }
+
+    func tombstones(for keys: [String]) throws -> [String: String] {
+        var out: [String: String] = [:]
+        for key in keys {
+            if let h = try tombstone(key) { out[key] = h }
+        }
+        return out
     }
 
     // MARK: - Private

@@ -22,6 +22,11 @@ struct StoreClock: Sendable {
 /// Clock stamp for generated repeat instances (web `GENERATED`).
 let generatedHlcStamp = "000000000-0000-generated"
 
+enum ChangeSource: Sendable {
+    case local
+    case sync
+}
+
 /// In-memory entity store with HLC-stamped undoable commands (web `store.ts`).
 @MainActor
 final class EntityStore {
@@ -33,11 +38,20 @@ final class EntityStore {
     private var hlc: HLC
     private let undoLimit = 200
 
+    /// Fired after entities change (persist / sync). Not called for `hydrate`.
+    var onChanges: (@MainActor ([StoreChange], ChangeSource) async -> Void)?
+    private var persistTask: Task<Void, Never>?
+
     init(entities: Entities = .empty(), clock: StoreClock = .system()) {
         self.entities = entities
         self.now = clock.now
         self.newId = clock.newId
         self.hlc = clock.hlc
+    }
+
+    /// Wait for the latest persist handler (if any) to finish.
+    func awaitPendingPersist() async {
+        await persistTask?.value
     }
 
     struct Env: Sendable {
@@ -63,6 +77,7 @@ final class EntityStore {
         past.append(StoreEntry(label: label, changes: stamped))
         if past.count > undoLimit { past.removeFirst(past.count - undoLimit) }
         future.removeAll()
+        emit(stamped, .local)
         return result
     }
 
@@ -77,6 +92,7 @@ final class EntityStore {
         )
         entities = ApplyChanges.apply(entities, changes, direction: .forward)
         future.append(entry)
+        emit(changes, .local)
         return entry.label
     }
 
@@ -91,6 +107,7 @@ final class EntityStore {
         )
         entities = ApplyChanges.apply(entities, changes, direction: .forward)
         past.append(entry)
+        emit(changes, .local)
         return entry.label
     }
 
@@ -99,6 +116,20 @@ final class EntityStore {
         past.removeAll()
         future.removeAll()
     }
+
+    /// Apply already-merged remote changes: no undo entry, no re-stamp.
+    func applyRemote(_ changes: [StoreChange]) {
+        guard !changes.isEmpty else { return }
+        for c in changes {
+            if let h = c.hlc { hlc.observe(h) }
+            observeClocks(c)
+        }
+        entities = ApplyChanges.apply(entities, changes, direction: .forward)
+        emit(changes, .sync)
+    }
+
+    @discardableResult
+    func tick() -> String { hlc.tick() }
 
     /// Upkeep that isn't a user action (repeat instances): no undo entry;
     /// created records use `generatedHlcStamp` so devices converge.
@@ -128,6 +159,7 @@ final class EntityStore {
             )
         }
         entities = ApplyChanges.apply(entities, stamped, direction: .forward)
+        emit(stamped, .local)
     }
 
     func generateRepeats() {
@@ -136,4 +168,24 @@ final class EntityStore {
 
     var canUndo: Bool { !past.isEmpty }
     var canRedo: Bool { !future.isEmpty }
+
+    private func emit(_ changes: [StoreChange], _ source: ChangeSource) {
+        guard let onChanges else { return }
+        persistTask = Task { @MainActor in
+            await onChanges(changes, source)
+        }
+    }
+
+    private func observeClocks(_ c: StoreChange) {
+        let after: [String: JSONValue]? = {
+            switch c {
+            case let .entity(_, _, _, after, _): after
+            case let .settings(_, after, _): after
+            }
+        }()
+        guard case let .object(clock)? = after?["clock"] else { return }
+        for (_, v) in clock {
+            if case let .string(s) = v { hlc.observe(s) }
+        }
+    }
 }
