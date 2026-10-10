@@ -12,6 +12,8 @@ struct SessionStore: Sendable {
         var kdf: KdfDTO
         var wrappedPassword: WrappedB64
         var deviceWrappedAK: WrappedB64?
+        /// AK wrapped under the biometric Keychain key (PLAN §8.3).
+        var biometricWrappedAK: WrappedB64?
     }
 
     func saveToken(_ token: String) throws {

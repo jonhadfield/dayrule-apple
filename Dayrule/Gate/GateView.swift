@@ -77,6 +77,26 @@ struct GateView: View {
 
                 Toggle("Stay unlocked on this device", isOn: $model.stayUnlocked)
                     .foregroundStyle(colors.textSecondary)
+                    .onChange(of: model.stayUnlocked) { _, on in
+                        DeviceUnlockPrefs.stayUnlocked = on
+                    }
+                    .accessibilityIdentifier("gate.stayUnlocked")
+
+                if model.biometricUnlockAvailable {
+                    Button {
+                        Task { await model.unlockWithBiometrics() }
+                    } label: {
+                        Text(busy ? "Unlocking…" : "Unlock with \(model.biometryLabel)")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(colors.accent)
+                            .background(colors.sidebar)
+                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    }
+                    .accessibilityIdentifier("gate.biometric")
+                    .disabled(busy)
+                }
 
                 Button {
                     Task {

@@ -35,4 +35,10 @@ enum MemoryKeychain {
         defer { store.lock.unlock() }
         store.items.removeValue(forKey: key(service: service, account: account))
     }
+
+    static func reset() {
+        store.lock.lock()
+        defer { store.lock.unlock() }
+        store.items.removeAll()
+    }
 }

@@ -16,7 +16,7 @@ final class AppModel {
 
     var phase: Phase = .locked
     var errorMessage: String?
-    var stayUnlocked = false
+    var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
     var email = ""
     var apiBaseURLString = "http://127.0.0.1:8080"
     var vault: VaultSnapshot?
@@ -24,6 +24,9 @@ final class AppModel {
     var accountEmail: String?
     var syncStatus: SyncStatus = .idle
     var showSettings = false
+    /// True when a biometric wrap is cached for this device.
+    var biometricUnlockAvailable = false
+    var biometryLabel = "Biometrics"
 
     /// Create-account fields (Gate signup).
     var inviteCode = ""
@@ -81,6 +84,9 @@ final class AppModel {
         }
         if let token = try? sessions.loadToken() {
             Task { await api.setToken(token) }
+        }
+        if let cached = try? sessions.loadAccount() {
+            biometricUnlockAvailable = cached.biometricWrappedAK != nil
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
@@ -210,15 +216,18 @@ final class AppModel {
             }
             await api.setToken(token)
             try sessions.saveToken(token)
+            DeviceUnlockPrefs.stayUnlocked = stayUnlocked
             let cached = SessionStore.CachedAccount(
                 userId: pending.userId,
                 email: pending.email,
                 saltB64: Base64Std.encode(pending.salt),
                 kdf: KdfDTO(v: pending.created.kdf.v, ops: pending.created.kdf.ops, mem: pending.created.kdf.mem),
                 wrappedPassword: WrappedB64(pending.created.wrappedPassword),
-                deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil
+                deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil,
+                biometricWrappedAK: nil
             )
             try sessions.saveAccount(cached)
+            biometricUnlockAvailable = false
             accountEmail = pending.email
             email = pending.email
             try openPersistence(userId: pending.userId)
@@ -371,16 +380,19 @@ final class AppModel {
             stayUnlocked: stayUnlocked
         )
 
+        DeviceUnlockPrefs.stayUnlocked = stayUnlocked
         var cached = SessionStore.CachedAccount(
             userId: userId,
             email: email.lowercased(),
             saltB64: saltB64,
             kdf: kdfDTO,
             wrappedPassword: wrapped,
-            deviceWrappedAK: deviceWrap.map(WrappedB64.init)
+            deviceWrappedAK: deviceWrap.map(WrappedB64.init),
+            biometricWrappedAK: (try? sessions.loadAccount())?.biometricWrappedAK
         )
         if !stayUnlocked { cached.deviceWrappedAK = nil }
         try sessions.saveAccount(cached)
+        biometricUnlockAvailable = cached.biometricWrappedAK != nil
         accountEmail = cached.email
         try openPersistence(userId: userId)
     }
@@ -427,8 +439,49 @@ final class AppModel {
         }
     }
 
+    func refreshBiometryLabel() async {
+        biometryLabel = await crypto.biometryName()
+        biometricUnlockAvailable = (try? sessions.loadAccount())?.biometricWrappedAK != nil
+    }
+
+    /// Enable Face ID / Touch ID unlock while the vault is open (PLAN §8.3).
+    func setBiometricUnlock(enabled: Bool) async {
+        guard phase == .unlocked else { return }
+        do {
+            guard var cached = try sessions.loadAccount() else { return }
+            if enabled {
+                let sealed = try await crypto.enableBiometricWrap()
+                cached.biometricWrappedAK = WrappedB64(sealed)
+                try sessions.saveAccount(cached)
+                biometricUnlockAvailable = true
+            } else {
+                try await crypto.disableBiometricWrap(userId: cached.userId)
+                cached.biometricWrappedAK = nil
+                try sessions.saveAccount(cached)
+                biometricUnlockAvailable = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            biometricUnlockAvailable = (try? sessions.loadAccount())?.biometricWrappedAK != nil
+        }
+    }
+
     func tryDeviceUnlock() async {
-        guard stayUnlocked,
+        await refreshBiometryLabel()
+        // Prefer biometric when enrolled; fall back to stay-unlocked device wrap.
+        if let cached = try? sessions.loadAccount(), let wrapped = cached.biometricWrappedAK {
+            do {
+                try await crypto.unlockFromBiometricWrap(
+                    userId: cached.userId,
+                    wrapped: try wrapped.sealed()
+                )
+                try await finishConvenienceUnlock(cached: cached)
+                return
+            } catch {
+                // User cancelled or biometry failed — stay on the password gate.
+            }
+        }
+        guard DeviceUnlockPrefs.stayUnlocked,
               let cached = try? sessions.loadAccount(),
               let wrapped = cached.deviceWrappedAK
         else { return }
@@ -437,19 +490,41 @@ final class AppModel {
                 userId: cached.userId,
                 wrapped: try wrapped.sealed()
             )
-            if let token = try sessions.loadToken() {
-                await api.setToken(token)
-            }
-            accountEmail = cached.email
-            email = cached.email
-            try openPersistence(userId: cached.userId)
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            try await finishConvenienceUnlock(cached: cached)
         } catch {
             errorMessage = error.localizedDescription
             phase = .locked
         }
+    }
+
+    func unlockWithBiometrics() async {
+        errorMessage = nil
+        guard let cached = try? sessions.loadAccount(),
+              let wrapped = cached.biometricWrappedAK
+        else { return }
+        phase = .unlocking
+        do {
+            try await crypto.unlockFromBiometricWrap(
+                userId: cached.userId,
+                wrapped: try wrapped.sealed()
+            )
+            try await finishConvenienceUnlock(cached: cached)
+        } catch {
+            phase = .locked
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func finishConvenienceUnlock(cached: SessionStore.CachedAccount) async throws {
+        if let token = try sessions.loadToken() {
+            await api.setToken(token)
+        }
+        accountEmail = cached.email
+        email = cached.email
+        try openPersistence(userId: cached.userId)
+        await refreshVault()
+        phase = .unlocked
+        bumpIdle()
     }
 
     func refreshVault() async {

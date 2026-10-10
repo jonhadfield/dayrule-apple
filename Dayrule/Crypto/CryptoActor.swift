@@ -7,8 +7,12 @@ actor CryptoActor {
     private var syncIdKey: SecureBuffer?
     private var userId: String?
     private let deviceStore = DeviceKeyStore()
+    private let biometricStore = BiometricKeyStore()
 
     var isUnlocked: Bool { accountKey != nil }
+
+    func biometryAvailable() -> Bool { biometricStore.biometryAvailable() }
+    func biometryName() -> String { biometricStore.biometryName() }
 
     func currentUserId() -> String? { userId }
 
@@ -71,6 +75,35 @@ actor CryptoActor {
             userId: userId
         )
         hold(ak: ak, userId: userId)
+    }
+
+    /// Wrap the in-memory AK under a biometric Keychain key (PLAN §8.3).
+    func enableBiometricWrap() throws -> Primitives.Sealed {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let bioKey = try biometricStore.loadOrCreate(userId: userId)
+        return try Primitives.wrapKey(
+            kek: bioKey,
+            key: ak,
+            label: Labels.wrapDevice,
+            userId: userId
+        )
+    }
+
+    func unlockFromBiometricWrap(userId: String, wrapped: Primitives.Sealed) throws {
+        guard let bioKey = try biometricStore.load(userId: userId) else {
+            throw CryptoError.notUnlocked
+        }
+        let ak = try Primitives.unwrapKey(
+            kek: bioKey,
+            wrapped: wrapped,
+            label: Labels.wrapDevice,
+            userId: userId
+        )
+        hold(ak: ak, userId: userId)
+    }
+
+    func disableBiometricWrap(userId: String) throws {
+        try biometricStore.delete(userId: userId)
     }
 
     func unlockFromRecovery(phrase: String, userId: String, wrappedRecovery: Primitives.Sealed) throws {

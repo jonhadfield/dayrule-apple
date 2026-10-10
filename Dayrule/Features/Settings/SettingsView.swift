@@ -60,6 +60,17 @@ struct SettingsView: View {
                         .accessibilityIdentifier("settings.logCompleted")
                     }
                 }
+                Section("Unlock") {
+                    Toggle("Unlock with \(model.biometryLabel)", isOn: biometricBinding)
+                        .accessibilityIdentifier("settings.biometric")
+                        .disabled(model.phase != .unlocked)
+                    Text("Uses this device’s biometrics to open the Keychain item that unwraps your account key. Password and recovery stay authoritative.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
+                    Text("Stay unlocked keeps a device wrap key without biometrics — anyone who can unlock the phone can open Dayrule.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
+                }
                 Section("Reminders") {
                     Toggle("Local reminders", isOn: $remindersOn)
                         .accessibilityIdentifier("settings.remindersEnabled")
@@ -215,6 +226,15 @@ struct SettingsView: View {
                     Commands.setDoneMode(d, mode: mode)
                 }
                 model.noteEntitiesChanged()
+            }
+        )
+    }
+
+    private var biometricBinding: Binding<Bool> {
+        Binding(
+            get: { model.biometricUnlockAvailable },
+            set: { on in
+                Task { await model.setBiometricUnlock(enabled: on) }
             }
         )
     }
