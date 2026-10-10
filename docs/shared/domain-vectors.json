@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "parseWhen": [
     {
       "input": "today",
@@ -256,6 +256,140 @@
         "op": "tick",
         "now": 1000000000100,
         "result": "0cre66ick-0001-dev1"
+      }
+    ]
+  },
+  "merge": {
+    "triples": [
+      {
+        "local": {
+          "id": "1",
+          "title": "L",
+          "notes": "L",
+          "clock": {
+            "id": "1",
+            "title": "3",
+            "notes": "1"
+          }
+        },
+        "remote": {
+          "id": "1",
+          "title": "R",
+          "notes": "R",
+          "clock": {
+            "id": "1",
+            "title": "2",
+            "notes": "4"
+          }
+        },
+        "result": {
+          "id": "1",
+          "title": "L",
+          "notes": "R",
+          "clock": {
+            "id": "1",
+            "title": "3",
+            "notes": "4"
+          }
+        }
+      },
+      {
+        "local": {
+          "id": "1",
+          "title": "x",
+          "clock": {
+            "id": "1",
+            "title": "1"
+          }
+        },
+        "remote": {
+          "id": "1",
+          "clock": {
+            "id": "1",
+            "title": "2"
+          }
+        },
+        "result": {
+          "id": "1",
+          "clock": {
+            "id": "1",
+            "title": "2"
+          }
+        }
+      },
+      {
+        "local": null,
+        "remote": {
+          "id": "1",
+          "title": "R",
+          "notes": "R",
+          "clock": {
+            "id": "1",
+            "title": "2",
+            "notes": "4"
+          }
+        },
+        "result": {
+          "id": "1",
+          "title": "R",
+          "notes": "R",
+          "clock": {
+            "id": "1",
+            "title": "2",
+            "notes": "4"
+          }
+        }
+      }
+    ],
+    "tombstones": [
+      {
+        "entity": {
+          "id": "1",
+          "title": "x",
+          "clock": {
+            "id": "1",
+            "title": "5"
+          }
+        },
+        "tombstone": "6",
+        "result": {
+          "kind": "delete"
+        }
+      },
+      {
+        "entity": {
+          "id": "1",
+          "title": "x",
+          "clock": {
+            "id": "1",
+            "title": "5"
+          }
+        },
+        "tombstone": "4",
+        "result": {
+          "kind": "keep",
+          "value": {
+            "id": "1",
+            "title": "x",
+            "clock": {
+              "id": "1",
+              "title": "5"
+            }
+          }
+        }
+      }
+    ],
+    "latestStamp": [
+      {
+        "entity": {
+          "id": "1",
+          "title": "x",
+          "clock": {
+            "id": "1",
+            "title": "5"
+          }
+        },
+        "result": "5"
       }
     ]
   }
