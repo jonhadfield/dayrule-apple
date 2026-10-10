@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// Short in-app Help with links to the public site (M5). Full Privacy / Terms
-/// copy lands with M6; here we open the same URLs in Safari.
+/// Help plus in-app Privacy / Terms (M6).
 struct HelpView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.openURL) private var openURL
+    @State private var legal: LegalDocument?
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -19,11 +19,19 @@ struct HelpView: View {
                     labeled("Lists", "Inbox, Today, Scheduled, Backlog, Not now, Done, Trash.")
                     labeled("Find", "Quick Find searches unlocked data on this device.")
                     labeled("Export", "Settings → Your data. Exports are plaintext — keep them safe.")
+                    labeled("Reminders", "Settings → Reminders. Local notifications; the server never sees what they’re for.")
+                    labeled("Unlock", "Password, biometrics, or a device passkey (PRF). Stay unlocked is less locked.")
+                }
+                Section("Legal") {
+                    Button("Privacy") { legal = .privacy }
+                        .foregroundStyle(colors.accent)
+                        .accessibilityIdentifier("help.privacy")
+                    Button("Terms") { legal = .terms }
+                        .foregroundStyle(colors.accent)
+                        .accessibilityIdentifier("help.terms")
                 }
                 Section("On the web") {
                     linkRow("Help articles", url: "https://dayrule.app/help")
-                    linkRow("Privacy", url: "https://dayrule.app/privacy")
-                    linkRow("Terms", url: "https://dayrule.app/terms")
                 }
             }
             .scrollContentBackground(.hidden)
@@ -37,6 +45,9 @@ struct HelpView: View {
                     Button("Done") { dismiss() }
                         .foregroundStyle(colors.accent)
                 }
+            }
+            .sheet(item: $legal) { doc in
+                LegalDocumentView(document: doc)
             }
         }
     }

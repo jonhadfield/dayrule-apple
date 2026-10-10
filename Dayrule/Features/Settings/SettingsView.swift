@@ -268,6 +268,9 @@ struct SettingsView: View {
             DeviceReminderPrefs.enabled = false
             await ReminderScheduler.clearAll()
         }
+        #if os(iOS)
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+        #endif
     }
 }
 

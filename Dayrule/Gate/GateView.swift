@@ -79,6 +79,9 @@ struct GateView: View {
                     .foregroundStyle(colors.textSecondary)
                     .onChange(of: model.stayUnlocked) { _, on in
                         DeviceUnlockPrefs.stayUnlocked = on
+                        #if os(iOS)
+                        ReminderBackgroundRefresh.scheduleIfNeeded()
+                        #endif
                     }
                     .accessibilityIdentifier("gate.stayUnlocked")
 

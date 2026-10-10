@@ -73,7 +73,44 @@ final class AppModel {
         guard phase == .unlocked else { return }
         let snapshot = store.entities
         Task { await ReminderScheduler.reschedule(entities: snapshot) }
+        #if os(iOS)
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+        #endif
     }
+
+    #if os(iOS)
+    /// BGAppRefresh: refresh the nearest 64 while stay-unlocked (PLAN §11).
+    func handleBackgroundReminderRefresh() async {
+        guard DeviceReminderPrefs.enabled, DeviceUnlockPrefs.stayUnlocked else { return }
+        if phase == .unlocked {
+            await ReminderScheduler.reschedule(entities: store.entities)
+            ReminderBackgroundRefresh.scheduleIfNeeded()
+            return
+        }
+        guard let cached = try? sessions.loadAccount(),
+              let wrapped = cached.deviceWrappedAK
+        else { return }
+        do {
+            try await crypto.unlockFromDeviceWrap(
+                userId: cached.userId,
+                wrapped: try wrapped.sealed()
+            )
+            try openPersistence(userId: cached.userId)
+            if let cipherStore {
+                let entities = try await cipherStore.load()
+                await ReminderScheduler.reschedule(entities: entities)
+            }
+            cipherStore = nil
+            syncEngine = nil
+            await crypto.lock()
+        } catch {
+            cipherStore = nil
+            syncEngine = nil
+            await crypto.lock()
+        }
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+    }
+    #endif
 
     init() {
         let env = ProcessInfo.processInfo.environment

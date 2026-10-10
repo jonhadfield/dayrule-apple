@@ -6,6 +6,12 @@ struct DayruleApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPrivacyCover = false
 
+    init() {
+        #if os(iOS)
+        ReminderBackgroundRefresh.registerLauncher()
+        #endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -14,6 +20,11 @@ struct DayruleApp: App {
                     PrivacyCover()
                         .transition(.opacity)
                 }
+            }
+            .onAppear {
+                #if os(iOS)
+                ReminderBackgroundRefresh.bind(model)
+                #endif
             }
             .onChange(of: scenePhase) { _, phase in
                 model.scenePhaseChanged(phase)
