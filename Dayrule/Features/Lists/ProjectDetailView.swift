@@ -12,6 +12,8 @@ struct ProjectDetailView: View {
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
+    @State private var repeatTarget: EditTarget?
+    @State private var reminderTarget: EditTarget?
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -109,6 +111,12 @@ struct ProjectDetailView: View {
         .sheet(item: $tagTarget) { target in
             TagSheetView(model: model, ids: target.ids)
         }
+        .sheet(item: $repeatTarget) { target in
+            RepeatSheetView(model: model, todoId: target.id)
+        }
+        .sheet(item: $reminderTarget) { target in
+            ReminderSheetView(model: model, todoId: target.id)
+        }
     }
 
     private var ctx: Lists.Context {
@@ -139,6 +147,8 @@ struct ProjectDetailView: View {
             Button("When…") { whenTarget = WhenTarget(ids: [todo.id]) }
             Button("Deadline…") { deadlineTarget = WhenTarget(ids: [todo.id]) }
             Button("Tags…") { tagTarget = WhenTarget(ids: [todo.id]) }
+            Button("Repeat…") { repeatTarget = EditTarget(id: todo.id) }
+            Button("Reminder…") { reminderTarget = EditTarget(id: todo.id) }
             if todo.status == .open {
                 Button("Complete") { toggleComplete(todo.id) }
             }

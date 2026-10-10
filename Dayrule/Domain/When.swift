@@ -170,4 +170,15 @@ enum When {
         }
         return validDate(year + 1, m, d, calendar: calendar)
     }
+
+    /// Round `HH:mm` to the nearest quarter hour (web `roundToQuarter`).
+    static func roundToQuarter(_ time: String) -> String {
+        let parts = time.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2 else { return "09:00" }
+        let h = parts[0]
+        let m = parts[1]
+        let quarters = min(Int(round(Double(h * 60 + m) / 15.0)), 24 * 4 - 1)
+        let mins = quarters * 15
+        return String(format: "%02d:%02d", mins / 60, mins % 60)
+    }
 }

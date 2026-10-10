@@ -332,6 +332,27 @@ enum Commands {
         }
     }
 
+    /// Set or clear a reminder (`YYYY-MM-DDTHH:mm`, or nil). On a repeat
+    /// template, stores `HH:mm` in `repeat.reminderTime` (web `setReminder`).
+    static func setReminder(_ d: Draft, _ env: EntityStore.Env, ids: [ID], at: String?) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            guard var t = d.getTodo(id) else { continue }
+            if var rule = t.repeat {
+                if let at, at.count >= 16 {
+                    rule.reminderTime = String(at.dropFirst(11).prefix(5))
+                } else {
+                    rule.reminderTime = nil
+                }
+                t.repeat = rule
+            } else {
+                t.reminderAt = at
+            }
+            t.updatedAt = ts
+            d.putTodo(t)
+        }
+    }
+
     /// Permanently delete trashed items and everything inside them (web `emptyTrash`).
     static func emptyTrash(_ d: Draft) {
         let areaIds = Set(d.allAreas().filter { $0.trashedAt != nil }.map(\.id))

@@ -57,12 +57,14 @@
 		88DDAAD2A9D4C431A5762B6F /* SyncEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF7F65FB80AA94DB79E66B6 /* SyncEngine.swift */; };
 		8AB5490936714AEF0B2A2421 /* VaultToEntitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9DB67593F5F177017269F6B /* VaultToEntitiesTests.swift */; };
 		8F88FCD904DA13658C8038DE /* Repeats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719D685FDE95FE6C63E90CB5 /* Repeats.swift */; };
+		92C1E6F585E476513C3404D0 /* RepeatSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */; };
 		96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08878191201EF746BA57A180 /* AppDatabase.swift */; };
 		9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D31E62FE3120AF9311906 /* FractionalIndexing.swift */; };
 		9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60D1DD770A2B75C5501341ED /* AppModel.swift */; };
 		A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDA8099CD51FDF8947583529 /* SecureBuffer.swift */; };
 		A1ADF984C09C62EBD6CCB462 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C9377E81FBB2D6C813497B /* Types.swift */; };
 		A1B4EF1B5CB228859D0FC81B /* QuickFindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */; };
+		A2CFACFAC1A936AB6B5B5ABB /* ReminderSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */; };
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
 		A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */; };
 		AA554C553310463AD0D2FD75 /* Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19069DB52AC6606DCAFA09FC /* Commands.swift */; };
@@ -165,10 +167,12 @@
 		7EDA6EB07F5EF2CD6EE40649 /* Order.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Order.swift; sourceTree = "<group>"; };
 		81C6612B5F8DF84210CAE14D /* Find.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find.swift; sourceTree = "<group>"; };
 		8438C0E4D3766BEAE5D0763A /* EntityJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityJSON.swift; sourceTree = "<group>"; };
+		907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatSheetView.swift; sourceTree = "<group>"; };
 		90ED870FC5811C8C825D9E3C /* EntityJSONTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityJSONTests.swift; sourceTree = "<group>"; };
 		92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatform.swift; sourceTree = "<group>"; };
 		951105343C5D083C09317947 /* RecordCipher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecordCipher.swift; sourceTree = "<group>"; };
 		97824AB22FF60471D9B4E963 /* DayruleCheckbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleCheckbox.swift; sourceTree = "<group>"; };
+		9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderSheetView.swift; sourceTree = "<group>"; };
 		9AF7F65FB80AA94DB79E66B6 /* SyncEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngine.swift; sourceTree = "<group>"; };
 		9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemEditorSheet.swift; sourceTree = "<group>"; };
 		A022752FC1044F75EE926924 /* When.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = When.swift; sourceTree = "<group>"; };
@@ -237,6 +241,8 @@
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
 				CFF7B27C792AA9376304425B /* ProjectDetailView.swift */,
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
+				9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */,
+				907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */,
 				3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */,
 				5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */,
 				A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */,
@@ -647,7 +653,9 @@
 				D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */,
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,
 				51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */,
+				A2CFACFAC1A936AB6B5B5ABB /* ReminderSheetView.swift in Sources */,
 				25DDF1AF78AB49C5AE465457 /* Repeat.swift in Sources */,
+				92C1E6F585E476513C3404D0 /* RepeatSheetView.swift in Sources */,
 				8F88FCD904DA13658C8038DE /* Repeats.swift in Sources */,
 				12C2447A0BBEBFD64F6DDD97 /* Restamp.swift in Sources */,
 				1FEB0C7B35784ED70726081E /* RuledRow.swift in Sources */,

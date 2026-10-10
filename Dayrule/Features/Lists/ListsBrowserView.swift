@@ -14,6 +14,8 @@ struct ListsBrowserView: View {
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
+    @State private var repeatTarget: EditTarget?
+    @State private var reminderTarget: EditTarget?
     @State private var editTarget: EditTarget?
     @State private var projectPath: [ID] = []
     @State private var showFind = false
@@ -148,6 +150,10 @@ struct ListsBrowserView: View {
                                     Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
                                     Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
                                     Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
+                                    if row.isTodo {
+                                        Button("Repeat…") { repeatTarget = EditTarget(id: row.id) }
+                                        Button("Reminder…") { reminderTarget = EditTarget(id: row.id) }
+                                    }
                                     if row.isTodo, row.status == .open {
                                         Button("Complete") { toggleComplete(row.id) }
                                     }
@@ -212,6 +218,12 @@ struct ListsBrowserView: View {
                 }
                 .sheet(item: $tagTarget) { target in
                     TagSheetView(model: model, ids: target.ids)
+                }
+                .sheet(item: $repeatTarget) { target in
+                    RepeatSheetView(model: model, todoId: target.id)
+                }
+                .sheet(item: $reminderTarget) { target in
+                    ReminderSheetView(model: model, todoId: target.id)
                 }
                 .sheet(item: $editTarget) { target in
                     ItemEditorSheet(model: model, id: target.id)

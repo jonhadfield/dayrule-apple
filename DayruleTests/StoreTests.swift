@@ -216,4 +216,53 @@ struct StoreTests {
         #expect(store.entities.settings.lastMovedToDoneAt != nil)
         #expect(Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
     }
+
+    @Test func setReminderPlainAndOnTemplate() throws {
+        #expect(When.roundToQuarter("09:07") == "09:00")
+        #expect(When.roundToQuarter("09:08") == "09:15")
+        #expect(When.roundToQuarter("23:53") == "23:45")
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let plain = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Call", placement: .inbox))
+        }
+        store.run("Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [plain.id], at: "2026-10-10T09:07")
+        }
+        #expect(store.entities.todos[plain.id]?.reminderAt == "2026-10-10T09:07")
+        store.run("Clear Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [plain.id], at: nil)
+        }
+        #expect(store.entities.todos[plain.id]?.reminderAt == nil)
+
+        let template = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Standup", placement: .today))
+        }
+        store.run("Repeat") { d, env in
+            Repeats.setRepeat(
+                d, env, id: template.id,
+                rule: RepeatRule(
+                    freq: .week, every: 1, weekdays: [0], mode: .fixed,
+                    anchor: env.today, next: nil, reminderTime: nil
+                )
+            )
+        }
+        store.run("Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [template.id], at: "2026-10-10T08:30")
+        }
+        #expect(store.entities.todos[template.id]?.repeat?.reminderTime == "08:30")
+        #expect(store.entities.todos[template.id]?.reminderAt == nil)
+    }
 }
