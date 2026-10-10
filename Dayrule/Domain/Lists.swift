@@ -332,4 +332,67 @@ enum Lists {
             overdue: open.filter { isOverdue($0, ctx) }.count
         )
     }
+
+    // MARK: - Project / area views
+
+    struct HeadingGroup: Equatable, Sendable {
+        var heading: Heading
+        var todos: [Todo]
+    }
+
+    struct ProjectView: Equatable, Sendable {
+        var project: Project
+        /// Project to-dos not under an active (non-archived) heading.
+        var todos: [Todo]
+        var headings: [HeadingGroup]
+    }
+
+    /// Group a project's visible to-dos under non-archived headings (web `projectView`).
+    static func projectView(_ e: Entities, _ projectId: ID, _ ctx: Context) -> ProjectView? {
+        guard let project = e.projects[projectId] else { return nil }
+
+        let todos = e.todos.values
+            .filter {
+                $0.projectId == projectId
+                    && !isTrashed(e, .todo($0))
+                    && !isInDone(e, .todo($0), ctx)
+            }
+            .sorted { byOrder(.todo($0), .todo($1)) }
+
+        let headings = e.headings.values
+            .filter { $0.projectId == projectId && !$0.archived }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+
+        let headingIds = Set(headings.map(\.id))
+        return ProjectView(
+            project: project,
+            todos: todos.filter { t in
+                guard let hid = t.headingId else { return true }
+                return !headingIds.contains(hid)
+            },
+            headings: headings.map { heading in
+                HeadingGroup(
+                    heading: heading,
+                    todos: todos.filter { $0.headingId == heading.id }
+                )
+            }
+        )
+    }
+
+    struct Progress: Equatable, Sendable {
+        var done: Int
+        var total: Int
+    }
+
+    static func projectProgress(_ e: Entities, _ projectId: ID) -> Progress {
+        var done = 0
+        var total = 0
+        for t in e.todos.values {
+            guard t.projectId == projectId, t.trashedAt == nil else { continue }
+            if t.status == .canceled { continue }
+            total += 1
+            if t.status == .completed { done += 1 }
+        }
+        return Progress(done: done, total: total)
+    }
 }

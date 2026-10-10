@@ -64,6 +64,7 @@
 		A1ADF984C09C62EBD6CCB462 /* Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58C9377E81FBB2D6C813497B /* Types.swift */; };
 		A1B4EF1B5CB228859D0FC81B /* QuickFindView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */; };
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
+		A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */; };
 		AA554C553310463AD0D2FD75 /* Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19069DB52AC6606DCAFA09FC /* Commands.swift */; };
 		AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04DD9593EDD04B386E31B09 /* BIP39.swift */; };
 		AEDF21E5F48B258B5EAD7398 /* Change.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F60414FCD654000D6F6DF80 /* Change.swift */; };
@@ -72,6 +73,7 @@
 		B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36B87A1F0A8515AFC2411AC /* VaultPull.swift */; };
 		B92BC3DEDEE1C309337B6152 /* CipherStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */; };
 		BACDBC180DF1DD4AD49FCA60 /* Lists.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D74A31D06E83A0F0DD471D /* Lists.swift */; };
+		BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF7B27C792AA9376304425B /* ProjectDetailView.swift */; };
 		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
 		BEC639BA3492EB472E585D16 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED491D92E219DF041A432C75 /* SettingsView.swift */; };
 		C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */; };
@@ -178,6 +180,7 @@
 		A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateRepeatsTests.swift; sourceTree = "<group>"; };
 		AB9A6D321AF398DD22A708FC /* World.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = World.swift; sourceTree = "<group>"; };
 		ABA59A162F972005C49AB993 /* UuidV5Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UuidV5Tests.swift; sourceTree = "<group>"; };
+		B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadingSheetView.swift; sourceTree = "<group>"; };
 		B5D74A31D06E83A0F0DD471D /* Lists.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Lists.swift; sourceTree = "<group>"; };
 		B6A9CCB3D751BB5F83672A3E /* Recovery.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Recovery.swift; sourceTree = "<group>"; };
 		BACF7F93D8F4348B70B1292C /* VaultToEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultToEntities.swift; sourceTree = "<group>"; };
@@ -188,6 +191,7 @@
 		CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		CD1D7D219429FAD1F65665F1 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		CDA8099CD51FDF8947583529 /* SecureBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureBuffer.swift; sourceTree = "<group>"; };
+		CFF7B27C792AA9376304425B /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
 		D290020145AAD6D0ED81B565 /* Fraunces-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-Variable.ttf"; sourceTree = "<group>"; };
 		D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychain.swift; sourceTree = "<group>"; };
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
@@ -228,8 +232,10 @@
 			children = (
 				97824AB22FF60471D9B4E963 /* DayruleCheckbox.swift */,
 				E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */,
+				B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */,
 				9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */,
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
+				CFF7B27C792AA9376304425B /* ProjectDetailView.swift */,
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
 				3B6FC1C2F0B88BBF136C6876 /* RuledRow.swift */,
 				5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */,
@@ -622,6 +628,7 @@
 				9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */,
 				66B3AE7E8A5FD9422E1DF140 /* GateView.swift in Sources */,
 				74D504A712940E1EDF9D4FE1 /* HLC.swift in Sources */,
+				A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */,
 				181A8D17F279AFCBCD6A58E0 /* Hex.swift in Sources */,
 				86D384A0480998C95EF5FE25 /* ISOStamp.swift in Sources */,
 				F1BAB03732D8621115934C26 /* Incoming.swift in Sources */,
@@ -635,6 +642,7 @@
 				2BF4C47D521435E78A947EF1 /* Order.swift in Sources */,
 				E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */,
 				65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */,
+				BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */,
 				A1B4EF1B5CB228859D0FC81B /* QuickFindView.swift in Sources */,
 				D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */,
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,

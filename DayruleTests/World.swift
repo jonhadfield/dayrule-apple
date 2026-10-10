@@ -88,10 +88,27 @@ final class World {
     }
 
     @discardableResult
+    func heading(projectId: ID, title: String = "Heading", archived: Bool = false) -> Heading {
+        let h = Heading(
+            id: nextId("head"),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            projectId: projectId,
+            title: title,
+            order: orderIn(e.headings.values.filter { $0.projectId == projectId }.map(\.order)),
+            archived: archived
+        )
+        e.headings[h.id] = h
+        return h
+    }
+
+    @discardableResult
     func todo(
         title: String = "To-do",
         notes: String = "",
         projectId: ID? = nil,
+        headingId: ID? = nil,
         areaId: ID? = nil,
         status: Status = .open,
         start: StartBucket = .inbox,
@@ -111,7 +128,7 @@ final class World {
             title: title,
             notes: notes,
             projectId: projectId,
-            headingId: nil,
+            headingId: headingId,
             areaId: areaId,
             status: status,
             start: start,

@@ -15,6 +15,7 @@ struct ListsBrowserView: View {
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
     @State private var editTarget: EditTarget?
+    @State private var projectPath: [ID] = []
     @State private var showFind = false
 
     private struct EditTarget: Identifiable {
@@ -76,136 +77,153 @@ struct ListsBrowserView: View {
                 SettingsView(model: model)
             }
         } detail: {
-            List {
-                // Never replace existing rows with a sync banner — that races Add in e2e
-                // and hides todos for the whole push/pull.
-                if rows(for: activeList).isEmpty {
-                    if model.syncStatus == .syncing || model.vaultLoading {
-                        Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
-                            .foregroundStyle(colors.textSecondary)
-                    } else if let errorMessage = model.errorMessage, model.vault == nil {
-                        Text(errorMessage)
-                            .foregroundStyle(Tokens.Light.deadline)
-                    } else {
-                        RuledRow {
-                            Text(emptyCopy(for: activeList))
+            NavigationStack(path: $projectPath) {
+                List {
+                    // Never replace existing rows with a sync banner — that races Add in e2e
+                    // and hides todos for the whole push/pull.
+                    if rows(for: activeList).isEmpty {
+                        if model.syncStatus == .syncing || model.vaultLoading {
+                            Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                                 .foregroundStyle(colors.textSecondary)
+                        } else if let errorMessage = model.errorMessage, model.vault == nil {
+                            Text(errorMessage)
+                                .foregroundStyle(Tokens.Light.deadline)
+                        } else {
+                            RuledRow {
+                                Text(emptyCopy(for: activeList))
+                                    .foregroundStyle(colors.textSecondary)
+                            }
+                        }
+                    } else {
+                        ForEach(rows(for: activeList), id: \.id) { row in
+                            RuledRow {
+                                HStack(alignment: .center, spacing: 10) {
+                                    if row.isTodo {
+                                        DayruleCheckbox(
+                                            status: row.status,
+                                            label: row.status == .open ? "Complete" : "Reopen"
+                                        ) {
+                                            toggleComplete(row.id)
+                                        }
+                                    }
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(row.title)
+                                            .foregroundStyle(colors.text)
+                                            .strikethrough(row.status != .open)
+                                            .accessibilityLabel(row.title)
+                                            .accessibilityIdentifier("list.todo.\(row.id)")
+                                        if let subtitle = row.subtitle {
+                                            Text(subtitle)
+                                                .font(.caption)
+                                                .foregroundStyle(
+                                                    row.deadlineOverdue
+                                                        ? Tokens.Light.deadline
+                                                        : colors.textSecondary
+                                                )
+                                        }
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                guard activeList != .trash else { return }
+                                if !row.isTodo, model.entities.projects[row.id] != nil {
+                                    projectPath = [row.id]
+                                } else {
+                                    editTarget = EditTarget(id: row.id)
+                                }
+                            }
+                            .contextMenu {
+                                if activeList == .trash {
+                                    Button("Restore") { restore(row.id) }
+                                } else {
+                                    if !row.isTodo, model.entities.projects[row.id] != nil {
+                                        Button("Open") { projectPath = [row.id] }
+                                    }
+                                    if row.isTodo, let pid = model.entities.todos[row.id]?.projectId {
+                                        Button("Open Project") { projectPath = [pid] }
+                                    }
+                                    Button("Edit") { editTarget = EditTarget(id: row.id) }
+                                    Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
+                                    Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
+                                    Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
+                                    if row.isTodo, row.status == .open {
+                                        Button("Complete") { toggleComplete(row.id) }
+                                    }
+                                    Button("Trash", role: .destructive) { trash(row.id) }
+                                }
+                            }
                         }
                     }
-                } else {
-                    ForEach(rows(for: activeList), id: \.id) { row in
+                    if activeList == .inbox || activeList == .today {
                         RuledRow {
-                            HStack(alignment: .center, spacing: 10) {
-                                if row.isTodo {
-                                    DayruleCheckbox(
-                                        status: row.status,
-                                        label: row.status == .open ? "Complete" : "Reopen"
-                                    ) {
-                                        toggleComplete(row.id)
-                                    }
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(row.title)
-                                        .foregroundStyle(colors.text)
-                                        .strikethrough(row.status != .open)
-                                        .accessibilityLabel(row.title)
-                                        .accessibilityIdentifier("list.todo.\(row.id)")
-                                    if let subtitle = row.subtitle {
-                                        Text(subtitle)
-                                            .font(.caption)
-                                            .foregroundStyle(
-                                                row.deadlineOverdue
-                                                    ? Tokens.Light.deadline
-                                                    : colors.textSecondary
-                                            )
-                                    }
-                                }
-                                Spacer(minLength: 0)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if activeList != .trash { editTarget = EditTarget(id: row.id) }
-                        }
-                        .contextMenu {
-                            if activeList == .trash {
-                                Button("Restore") { restore(row.id) }
-                            } else {
-                                Button("Edit") { editTarget = EditTarget(id: row.id) }
-                                Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
-                                Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
-                                Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
-                                if row.isTodo, row.status == .open {
-                                    Button("Complete") { toggleComplete(row.id) }
-                                }
-                                Button("Trash", role: .destructive) { trash(row.id) }
+                            HStack {
+                                TextField("Add", text: $draftTitle)
+                                    .accessibilityIdentifier("list.addField")
+                                    .onSubmit(addTodo)
+                                Button("Add", action: addTodo)
+                                    .accessibilityIdentifier("list.addButton")
+                                    .foregroundStyle(colors.accent)
+                                    .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                    // List rows can swallow Button actions; explicit role helps XCUITest.
+                                    .buttonStyle(.borderless)
                             }
                         }
                     }
                 }
-                if activeList == .inbox || activeList == .today {
-                    RuledRow {
-                        HStack {
-                            TextField("Add", text: $draftTitle)
-                                .accessibilityIdentifier("list.addField")
-                                .onSubmit(addTodo)
-                            Button("Add", action: addTodo)
-                                .accessibilityIdentifier("list.addButton")
-                                .foregroundStyle(colors.accent)
-                                .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                                // List rows can swallow Button actions; explicit role helps XCUITest.
-                                .buttonStyle(.borderless)
+                .listStyle(.plain)
+                .navigationTitle(activeList.title)
+                .scrollContentBackground(.hidden)
+                .background(colors.bg)
+                .toolbar {
+                    ToolbarItemGroup(placement: .automatic) {
+                        Button("Find") { showFind = true }
+                            .accessibilityIdentifier("list.find")
+                        Button("Undo") {
+                            _ = model.store.undo()
+                            model.noteEntitiesChanged()
+                        }
+                        .disabled(!model.store.canUndo)
+                        Button("Redo") {
+                            _ = model.store.redo()
+                            model.noteEntitiesChanged()
+                        }
+                        .disabled(!model.store.canRedo)
+                        if activeList == .trash {
+                            Button("Empty Trash", role: .destructive) { emptyTrash() }
+                                .accessibilityIdentifier("list.emptyTrash")
+                                .disabled(rows(for: .trash).isEmpty)
+                        }
+                        if activeList == .done, model.entities.settings.moveToDone == .manually {
+                            Button("Log Completed") { logCompleted() }
+                                .accessibilityIdentifier("list.logCompleted")
                         }
                     }
                 }
-            }
-            .listStyle(.plain)
-            .navigationTitle(activeList.title)
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .toolbar {
-                ToolbarItemGroup(placement: .automatic) {
-                    Button("Find") { showFind = true }
-                        .accessibilityIdentifier("list.find")
-                    Button("Undo") {
-                        _ = model.store.undo()
-                        model.noteEntitiesChanged()
-                    }
-                    .disabled(!model.store.canUndo)
-                    Button("Redo") {
-                        _ = model.store.redo()
-                        model.noteEntitiesChanged()
-                    }
-                    .disabled(!model.store.canRedo)
-                    if activeList == .trash {
-                        Button("Empty Trash", role: .destructive) { emptyTrash() }
-                            .accessibilityIdentifier("list.emptyTrash")
-                            .disabled(rows(for: .trash).isEmpty)
-                    }
-                    if activeList == .done, model.entities.settings.moveToDone == .manually {
-                        Button("Log Completed") { logCompleted() }
-                            .accessibilityIdentifier("list.logCompleted")
-                    }
+                .navigationDestination(for: ID.self) { projectId in
+                    ProjectDetailView(model: model, projectId: projectId)
                 }
-            }
-            .sheet(item: $whenTarget) { target in
-                WhenSheetView(model: model, ids: target.ids)
-            }
-            .sheet(item: $deadlineTarget) { target in
-                DeadlineSheetView(model: model, ids: target.ids)
-            }
-            .sheet(item: $tagTarget) { target in
-                TagSheetView(model: model, ids: target.ids)
-            }
-            .sheet(item: $editTarget) { target in
-                ItemEditorSheet(model: model, id: target.id)
-            }
-            .sheet(isPresented: $showFind) {
-                QuickFindView(model: model) { result in
-                    applyFind(result)
+                .sheet(item: $whenTarget) { target in
+                    WhenSheetView(model: model, ids: target.ids)
+                }
+                .sheet(item: $deadlineTarget) { target in
+                    DeadlineSheetView(model: model, ids: target.ids)
+                }
+                .sheet(item: $tagTarget) { target in
+                    TagSheetView(model: model, ids: target.ids)
+                }
+                .sheet(item: $editTarget) { target in
+                    ItemEditorSheet(model: model, id: target.id)
+                }
+                .sheet(isPresented: $showFind) {
+                    QuickFindView(model: model) { result in
+                        applyFind(result)
+                    }
                 }
             }
         }
+        .onChange(of: selection) { _, _ in projectPath = [] }
         #if os(iOS)
         .simultaneousGesture(
             DragGesture(minimumDistance: 0).onChanged { _ in model.bumpIdle() }
@@ -355,14 +373,17 @@ struct ListsBrowserView: View {
         switch result.destination {
         case .list(let name):
             selection = name
+            projectPath = []
         case .todo(let id, let home):
             selection = home
+            projectPath = []
             editTarget = EditTarget(id: id)
         case .project(let id):
             selection = .backlog
-            editTarget = EditTarget(id: id)
+            projectPath = [id]
         case .area:
             selection = .backlog
+            projectPath = []
         }
     }
 
