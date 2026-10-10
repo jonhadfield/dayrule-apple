@@ -5,6 +5,7 @@ struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
     @State private var selection: ListName = .inbox
+    @State private var draftTitle = ""
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -50,21 +51,57 @@ struct ListsBrowserView: View {
                         .foregroundStyle(colors.textSecondary)
                 } else {
                     ForEach(rows(for: selection), id: \.id) { row in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title)
-                                .foregroundStyle(colors.text)
-                            if let subtitle = row.subtitle {
-                                Text(subtitle)
-                                    .font(.caption)
-                                    .foregroundStyle(colors.textSecondary)
+                        HStack(alignment: .top, spacing: 10) {
+                            if row.isTodo {
+                                Button {
+                                    toggleComplete(row.id)
+                                } label: {
+                                    Image(systemName: row.completed ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(colors.accent)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(row.completed ? "Reopen" : "Complete")
+                            }
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.title)
+                                    .foregroundStyle(colors.text)
+                                    .strikethrough(row.completed)
+                                if let subtitle = row.subtitle {
+                                    Text(subtitle)
+                                        .font(.caption)
+                                        .foregroundStyle(colors.textSecondary)
+                                }
                             }
                         }
+                    }
+                }
+                if selection == .inbox || selection == .today {
+                    HStack {
+                        TextField("Add", text: $draftTitle)
+                            .onSubmit(addTodo)
+                        Button("Add", action: addTodo)
+                            .foregroundStyle(colors.accent)
+                            .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                 }
             }
             .navigationTitle(selection.title)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
+            .toolbar {
+                ToolbarItemGroup(placement: .automatic) {
+                    Button("Undo") {
+                        _ = model.store.undo()
+                        model.noteEntitiesChanged()
+                    }
+                    .disabled(!model.store.canUndo)
+                    Button("Redo") {
+                        _ = model.store.redo()
+                        model.noteEntitiesChanged()
+                    }
+                    .disabled(!model.store.canRedo)
+                }
+            }
         }
         #if os(iOS)
         .simultaneousGesture(
@@ -93,36 +130,81 @@ struct ListsBrowserView: View {
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
-                Row(id: $0.id, title: $0.title, subtitle: nil)
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, completed: $0.status != .open)
             }
         case .today:
             return Lists.today(model.entities, ctx).map {
-                Row(id: $0.id, title: $0.title, subtitle: $0.isTodo ? nil : "Project")
+                Row(
+                    id: $0.id,
+                    title: $0.title,
+                    subtitle: $0.isTodo ? nil : "Project",
+                    isTodo: $0.isTodo,
+                    completed: $0.status != .open
+                )
             }
         case .scheduled:
             let s = Lists.scheduled(model.entities, ctx)
             return s.days.flatMap { day in
-                day.items.map { Row(id: $0.id, title: $0.title, subtitle: day.date) }
+                day.items.map {
+                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, completed: $0.status != .open)
+                }
             }
         case .backlog:
             return Lists.backlog(model.entities, ctx).flatMap { g in
                 g.todos.map {
-                    Row(id: $0.id, title: $0.title, subtitle: containerLabel(g.container))
+                    Row(
+                        id: $0.id,
+                        title: $0.title,
+                        subtitle: containerLabel(g.container),
+                        isTodo: true,
+                        completed: $0.status != .open
+                    )
                 }
             }
         case .notNow:
             let n = Lists.notNow(model.entities, ctx)
-            return n.projects.map { Row(id: $0.id, title: $0.title, subtitle: "Project") }
-                + n.todos.map { Row(id: $0.id, title: $0.title, subtitle: nil) }
+            return n.projects.map {
+                Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, completed: $0.status != .open)
+            } + n.todos.map {
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: true, completed: $0.status != .open)
+            }
         case .done:
             return Lists.doneList(model.entities, ctx).flatMap { day in
-                day.items.map { Row(id: $0.id, title: $0.title, subtitle: day.date) }
+                day.items.map {
+                    Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: $0.isTodo, completed: true)
+                }
             }
         case .trash:
             let t = Lists.trash(model.entities)
-            return t.areas.map { Row(id: $0.id, title: $0.title, subtitle: "Area") }
-                + t.items.map { Row(id: $0.id, title: $0.title, subtitle: nil) }
+            return t.areas.map {
+                Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, completed: false)
+            } + t.items.map {
+                Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, completed: $0.status != .open)
+            }
         }
+    }
+
+    private func addTodo() {
+        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        let placement: Commands.Placement = selection == .today ? .today : .inbox
+        do {
+            _ = try model.store.run("Add") { d, env in
+                try Commands.createTodo(d, env, .init(title: title, placement: placement))
+            }
+            draftTitle = ""
+            model.noteEntitiesChanged()
+        } catch {
+            model.errorMessage = error.localizedDescription
+        }
+    }
+
+    private func toggleComplete(_ id: ID) {
+        let status: Status = model.entities.todos[id]?.status == .open ? .completed : .open
+        model.store.run(status == .completed ? "Complete" : "Reopen") { d, env in
+            Commands.setStatus(d, env, ids: [id], status: status)
+        }
+        model.noteEntitiesChanged()
     }
 
     private func containerLabel(_ c: Lists.Container) -> String? {
@@ -142,6 +224,8 @@ struct ListsBrowserView: View {
         var id: String
         var title: String
         var subtitle: String?
+        var isTodo: Bool
+        var completed: Bool
     }
 }
 

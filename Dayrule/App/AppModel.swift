@@ -18,14 +18,25 @@ final class AppModel {
     var email = ""
     var apiBaseURLString = "http://127.0.0.1:8080"
     var vault: VaultSnapshot?
-    var entities = Entities.empty()
     var vaultLoading = false
     var accountEmail: String?
 
     let crypto = CryptoActor()
+    let store = EntityStore()
+    /// Bumped when `store.entities` changes so Observation refreshes views.
+    private(set) var entitiesEpoch = 0
     private let sessions = SessionStore()
     private var api: APIClient
     private var idleTask: Task<Void, Never>?
+
+    var entities: Entities {
+        _ = entitiesEpoch
+        return store.entities
+    }
+
+    func noteEntitiesChanged() {
+        entitiesEpoch += 1
+    }
 
     init() {
         api = APIClient(baseURL: URL(string: "http://127.0.0.1:8080")!)
@@ -200,7 +211,8 @@ final class AppModel {
         do {
             let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
             vault = snap
-            entities = VaultToEntities.build(from: snap)
+            store.hydrate(VaultToEntities.build(from: snap))
+            noteEntitiesChanged()
             errorMessage = nil
         } catch {
             if vault == nil {
@@ -213,7 +225,8 @@ final class AppModel {
         idleTask?.cancel()
         idleTask = nil
         vault = nil
-        entities = .empty()
+        store.hydrate(.empty())
+        noteEntitiesChanged()
         Task {
             try? await api.logout()
             await api.setToken(nil)
