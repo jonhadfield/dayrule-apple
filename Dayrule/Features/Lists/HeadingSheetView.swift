@@ -16,6 +16,13 @@ struct HeadingSheetView: View {
                     TextField("Title", text: $title)
                         .accessibilityIdentifier("heading.title")
                 }
+                Section {
+                    Button("Archive") { archive() }
+                        .foregroundStyle(colors.textSecondary)
+                        .accessibilityIdentifier("heading.archive")
+                    Button("Delete", role: .destructive) { deleteHeading() }
+                        .accessibilityIdentifier("heading.delete")
+                }
             }
             .scrollContentBackground(.hidden)
             .background(colors.bg)
@@ -33,14 +40,6 @@ struct HeadingSheetView: View {
                         .foregroundStyle(colors.accent)
                         .accessibilityIdentifier("heading.save")
                         .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Button("Archive") { archive() }
-                        .foregroundStyle(colors.textSecondary)
-                        .accessibilityIdentifier("heading.archive")
-                    Spacer()
-                    Button("Delete", role: .destructive) { deleteHeading() }
-                        .accessibilityIdentifier("heading.delete")
                 }
             }
             .onAppear(perform: load)
