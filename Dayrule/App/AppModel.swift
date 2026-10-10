@@ -60,6 +60,14 @@ final class AppModel {
 
     func noteEntitiesChanged() {
         entitiesEpoch += 1
+        scheduleRemindersIfUnlocked()
+    }
+
+    /// Reschedule local notifications while unlocked (PLAN §11).
+    func scheduleRemindersIfUnlocked() {
+        guard phase == .unlocked else { return }
+        let snapshot = store.entities
+        Task { await ReminderScheduler.reschedule(entities: snapshot) }
     }
 
     init() {
@@ -76,6 +84,13 @@ final class AppModel {
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSSystemTimeZoneDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.scheduleRemindersIfUnlocked() }
         }
     }
 
@@ -481,15 +496,16 @@ final class AppModel {
         syncEngine = nil
         syncStatus = .idle
         showSettings = false
+        // Lock first so noteEntitiesChanged does not clear pending notifications.
+        phase = .locked
         store.hydrate(.empty())
-        noteEntitiesChanged()
+        entitiesEpoch += 1
         Task {
             try? await api.logout()
             await api.setToken(nil)
             await crypto.lock()
         }
         try? sessions.deleteToken()
-        phase = .locked
     }
 
     func bumpIdle() {
@@ -503,6 +519,9 @@ final class AppModel {
     }
 
     func scenePhaseChanged(_ scene: ScenePhase) {
-        if scene == .active { bumpIdle() }
+        if scene == .active {
+            bumpIdle()
+            scheduleRemindersIfUnlocked()
+        }
     }
 }

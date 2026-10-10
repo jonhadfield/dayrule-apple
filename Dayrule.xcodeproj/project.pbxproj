@@ -24,6 +24,7 @@
 		2BC1B7839FA00D34CB9D3159 /* ExchangeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9768B05C34F23899AB96D4A8 /* ExchangeTests.swift */; };
 		2BF4C47D521435E78A947EF1 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDA6EB07F5EF2CD6EE40649 /* Order.swift */; };
 		30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B739D187E09BA80EF8304B /* DayruleApp.swift */; };
+		319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */; };
 		323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */; };
 		33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */; };
 		34FED0087086C173E8D97B31 /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9A6D321AF398DD22A708FC /* World.swift */; };
@@ -52,6 +53,7 @@
 		72DF698BFC2789D563A8D443 /* CipherStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E767FC5D7B9C015AD0AF761 /* CipherStore.swift */; };
 		74D504A712940E1EDF9D4FE1 /* HLC.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47D18259248FBC451348D37 /* HLC.swift */; };
 		7738646857613F1FEF1643A7 /* DayruleCheckbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97824AB22FF60471D9B4E963 /* DayruleCheckbox.swift */; };
+		7C55FEF2A877C6CC61ECD4AC /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B47D6F2B18C56FC075A3633 /* ReminderScheduler.swift */; };
 		80922857903AEA08BFBDBABE /* ItemEditorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */; };
 		85124F6031198380233EA8D5 /* CryptoVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */; };
 		86D384A0480998C95EF5FE25 /* ISOStamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DBDE6106B1405EEE9CD140F /* ISOStamp.swift */; };
@@ -75,9 +77,11 @@
 		AEDF21E5F48B258B5EAD7398 /* Change.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F60414FCD654000D6F6DF80 /* Change.swift */; };
 		AFB1F4F6DFC086E0676BDC37 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6444C067943071E16537A325 /* GRDB */; };
 		B206B81AA34A975D008567EA /* VaultPullTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */; };
+		B45AC67AF22E7122D0F81365 /* ReminderPlanTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */; };
 		B6AE29F4D697D48B75FFE4D5 /* VaultPull.swift in Sources */ = {isa = PBXBuildFile; fileRef = A36B87A1F0A8515AFC2411AC /* VaultPull.swift */; };
 		B92BC3DEDEE1C309337B6152 /* CipherStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */; };
 		BACDBC180DF1DD4AD49FCA60 /* Lists.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5D74A31D06E83A0F0DD471D /* Lists.swift */; };
+		BCDF26946850620BA7CAE6B3 /* DeviceReminderPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */; };
 		BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF7B27C792AA9376304425B /* ProjectDetailView.swift */; };
 		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
 		BEC639BA3492EB472E585D16 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED491D92E219DF041A432C75 /* SettingsView.swift */; };
@@ -135,15 +139,19 @@
 		11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorRecordCipher.swift; sourceTree = "<group>"; };
 		125829DF9F4D7E9BBA487D14 /* Restamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Restamp.swift; sourceTree = "<group>"; };
 		15015B5511061101944C5356 /* CryptoActor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoActor.swift; sourceTree = "<group>"; };
+		178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlanTests.swift; sourceTree = "<group>"; };
 		19069DB52AC6606DCAFA09FC /* Commands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Commands.swift; sourceTree = "<group>"; };
+		1B47D6F2B18C56FC075A3633 /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		20E90060E82A89E4BE7636F7 /* UuidV7.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UuidV7.swift; sourceTree = "<group>"; };
 		21624A016DAA93040A515E60 /* UuidV7Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UuidV7Tests.swift; sourceTree = "<group>"; };
 		221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
+		2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderPlan.swift; sourceTree = "<group>"; };
 		2615E69994B9E14732EB74AC /* DayruleUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DayruleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		27CAF46F7EBC5CEC5D22EBC3 /* Labels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Labels.swift; sourceTree = "<group>"; };
 		28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsBrowserView.swift; sourceTree = "<group>"; };
 		2926027C49B5BEDF339EC385 /* EnvelopeB64.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvelopeB64.swift; sourceTree = "<group>"; };
 		29C225964995BA55648E51D5 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
+		32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceReminderPrefs.swift; sourceTree = "<group>"; };
 		336000FBB2DB5AD70D51A33A /* RepeatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatTests.swift; sourceTree = "<group>"; };
 		340184C820B58937291F1AB9 /* SyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncTransport.swift; sourceTree = "<group>"; };
 		34DACE485DAF6FB4AB18C160 /* Dayrule.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Dayrule.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -316,6 +324,7 @@
 				53310EF47871235719F05123 /* Networking */,
 				EC422F94776004CF67A227AC /* Persistence */,
 				635E6DDC35C09B3A4F0D64AA /* Platform */,
+				EAA2633A94D21B682B687B85 /* Reminders */,
 				4F3A6258F8325DB79A1B6D06 /* Resources */,
 				7BA4B2C06CD4DE90E517BED9 /* Store */,
 				D5BC0780B24063ECC15F69DA /* Sync */,
@@ -363,6 +372,7 @@
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
+				178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */,
 				BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */,
 				336000FBB2DB5AD70D51A33A /* RepeatTests.swift */,
 				1160CD5B09CB87451563810B /* StoreTests.swift */,
@@ -473,6 +483,16 @@
 				6CE93B71E4258F313852B837 /* OFL.txt */,
 			);
 			path = Fonts;
+			sourceTree = "<group>";
+		};
+		EAA2633A94D21B682B687B85 /* Reminders */ = {
+			isa = PBXGroup;
+			children = (
+				32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */,
+				2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */,
+				1B47D6F2B18C56FC075A3633 /* ReminderScheduler.swift */,
+			);
+			path = Reminders;
 			sourceTree = "<group>";
 		};
 		EC422F94776004CF67A227AC /* Persistence */ = {
@@ -638,6 +658,7 @@
 				7738646857613F1FEF1643A7 /* DayruleCheckbox.swift in Sources */,
 				4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */,
 				1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */,
+				BCDF26946850620BA7CAE6B3 /* DeviceReminderPrefs.swift in Sources */,
 				16D9A8632A3B7BEF825EB2EC /* Draft.swift in Sources */,
 				256FEEB655F2D4F0863BD232 /* EntityJSON.swift in Sources */,
 				87CB98D2087F020ED18D6C2C /* EntityStore.swift in Sources */,
@@ -667,6 +688,8 @@
 				D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */,
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,
 				51082511132EABFE3C5BA7BD /* RecoveryPhraseView.swift in Sources */,
+				319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */,
+				7C55FEF2A877C6CC61ECD4AC /* ReminderScheduler.swift in Sources */,
 				A2CFACFAC1A936AB6B5B5ABB /* ReminderSheetView.swift in Sources */,
 				25DDF1AF78AB49C5AE465457 /* Repeat.swift in Sources */,
 				92C1E6F585E476513C3404D0 /* RepeatSheetView.swift in Sources */,
@@ -719,6 +742,7 @@
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
+				B45AC67AF22E7122D0F81365 /* ReminderPlanTests.swift in Sources */,
 				DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */,
 				F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */,
 				FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */,

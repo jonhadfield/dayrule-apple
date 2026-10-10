@@ -17,6 +17,8 @@ struct SettingsView: View {
     @State private var shareURL: URL?
     @State private var showShare = false
     #endif
+    @State private var remindersOn = DeviceReminderPrefs.enabled
+    @State private var showReminderTitles = DeviceReminderPrefs.showTitles
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -57,6 +59,27 @@ struct SettingsView: View {
                         .foregroundStyle(colors.accent)
                         .accessibilityIdentifier("settings.logCompleted")
                     }
+                }
+                Section("Reminders") {
+                    Toggle("Local reminders", isOn: $remindersOn)
+                        .accessibilityIdentifier("settings.remindersEnabled")
+                        .onChange(of: remindersOn) { _, on in
+                            Task { await setRemindersEnabled(on) }
+                        }
+                    if remindersOn {
+                        Toggle("Show titles in notifications", isOn: $showReminderTitles)
+                            .accessibilityIdentifier("settings.reminderTitles")
+                            .onChange(of: showReminderTitles) { _, on in
+                                DeviceReminderPrefs.showTitles = on
+                                model.scheduleRemindersIfUnlocked()
+                            }
+                        Text("Titles are stored by the OS on this device. Leave off to keep only the time.")
+                            .font(.footnote)
+                            .foregroundStyle(colors.textSecondary)
+                    }
+                    Text("Reminders stay on this device. The account reminder channel on the web still drives email / browser push only.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
                 }
                 Section("Your data") {
                     Text("Exports are made on this device and are not encrypted. Keep the files safe.")
@@ -194,6 +217,22 @@ struct SettingsView: View {
                 model.noteEntitiesChanged()
             }
         )
+    }
+
+    private func setRemindersEnabled(_ on: Bool) async {
+        if on {
+            let ok = await ReminderScheduler.requestAuthorization()
+            DeviceReminderPrefs.enabled = ok
+            remindersOn = ok
+            if !ok {
+                importError = "Notifications aren’t allowed for Dayrule."
+            } else {
+                model.scheduleRemindersIfUnlocked()
+            }
+        } else {
+            DeviceReminderPrefs.enabled = false
+            await ReminderScheduler.clearAll()
+        }
     }
 }
 
