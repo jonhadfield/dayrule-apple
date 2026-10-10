@@ -1,6 +1,6 @@
 name: Dayrule
 options:
-  bundleIdPrefix: app.dayrule
+  bundleIdPrefix: uk.co.lessknown
   deploymentTarget:
     iOS: "18.0"
     macOS: "15.0"
@@ -47,7 +47,7 @@ targets:
         product: GRDB
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.Dayrule
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Dayrule/Resources/Info.plist
         ENABLE_PREVIEWS: YES
@@ -71,7 +71,7 @@ targets:
       - target: Dayrule
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleTests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.tests
         GENERATE_INFOPLIST_FILE: YES
         # Multiplatform host path: iOS puts the binary at .app root; macOS under Contents/MacOS.
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Dayrule.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayrule"
@@ -85,7 +85,7 @@ targets:
       - target: Dayrule
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleUITests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.uitests
         GENERATE_INFOPLIST_FILE: YES
         # XCUIApplication is MainActor-isolated on Xcode 16.4; keep tests annotated @MainActor.
         SWIFT_STRICT_CONCURRENCY: complete

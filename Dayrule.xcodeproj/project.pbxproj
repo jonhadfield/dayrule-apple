@@ -910,7 +910,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.Dayrule;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -931,7 +931,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule.uitests;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -953,7 +953,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleTests;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule.tests;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -1042,7 +1042,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule.uitests;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -1064,7 +1064,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.DayruleTests;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule.tests;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
@@ -1091,7 +1091,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = app.dayrule.Dayrule;
+				PRODUCT_BUNDLE_IDENTIFIER = uk.co.lessknown.dayrule;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;

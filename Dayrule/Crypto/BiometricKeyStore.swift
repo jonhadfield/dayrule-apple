@@ -5,7 +5,7 @@ import Security
 /// Biometric-gated wrap key (PLAN §8.3). The gate is the Keychain read —
 /// never a standalone `LAContext.evaluatePolicy` boolean.
 struct BiometricKeyStore: Sendable {
-    private let service = "app.dayrule.biometric-wrap"
+    private let service = "uk.co.lessknown.dayrule.biometric-wrap"
 
     /// True when the device can use biometrics (UI only; unlock still goes
     /// through Keychain).

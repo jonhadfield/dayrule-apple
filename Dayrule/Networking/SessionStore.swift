@@ -3,7 +3,7 @@ import Security
 
 /// Session token + cached unlock material in the Keychain (M2).
 struct SessionStore: Sendable {
-    private let service = "app.dayrule.session"
+    private let service = "uk.co.lessknown.dayrule.session"
 
     struct CachedAccount: Codable, Sendable {
         var userId: String
