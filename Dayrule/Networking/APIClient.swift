@@ -126,8 +126,6 @@ struct PushResponse: Codable, Sendable {
 actor APIClient {
     var baseURL: URL
     private(set) var token: String?
-    /// Override platform segment of `X-Dayrule-Client` (tests; server mints body tokens for `ios/`).
-    var clientKind: String?
     private let session: URLSession
     private let build: String
 
@@ -140,16 +138,10 @@ actor APIClient {
         self.session = URLSession(configuration: config)
     }
 
-    private var clientHeader: String {
-        "\(clientKind ?? ClientPlatform.kind)/\(build)"
-    }
+    private var clientHeader: String { ClientPlatform.clientHeader(build: build) }
 
     func setToken(_ token: String?) {
         self.token = token
-    }
-
-    func setClientKind(_ kind: String?) {
-        clientKind = kind
     }
 
     func setBaseURL(_ url: URL) {

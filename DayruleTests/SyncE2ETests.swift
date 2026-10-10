@@ -3,9 +3,9 @@ import Testing
 @testable import Dayrule
 
 #if os(macOS)
-/// Live sync against local Go (`scripts/local-sync-e2e.sh`). Skipped unless `DAYRULE_E2E=1`.
-/// macOS-only: needs `Process` for `invite` / `plaintext-check`. Forces `ios/` client header
-/// so register returns a bearer token (server `wantsBearerToken`).
+/// Live sync against local Go (`scripts/local-sync-e2e.sh`). Skipped unless config sidecar is present.
+/// macOS-only: needs `Process` for `invite` / `plaintext-check`. Uses real `macos/<build>`
+/// client header (dayrule #33 accepts it for Bearer body tokens).
 @Suite("Sync e2e")
 @MainActor
 struct SyncE2ETests {
@@ -45,7 +45,6 @@ struct SyncE2ETests {
         #expect(!invite.isEmpty)
 
         let api = APIClient(baseURL: URL(string: apiBase)!, build: "e2e")
-        await api.setClientKind("ios")
         try await api.signupStart(email: email, inviteCode: invite)
         let code = try await waitForEmailCode(email: email, logPath: (outDir as NSString).appendingPathComponent("api.log"))
         let verified = try await api.signupVerify(email: email, code: code)
@@ -66,7 +65,7 @@ struct SyncE2ETests {
             wrappedPassword: WrappedB64(created.wrappedPassword),
             wrappedRecovery: WrappedB64(created.wrappedRecovery),
             recoveryProofB64: Base64Std.encode(created.recoveryProof),
-            deviceLabel: "iOS"
+            deviceLabel: ClientPlatform.deviceLabel
         )
         guard let token = registered.token else {
             throw APIError.http(
