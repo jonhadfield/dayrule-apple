@@ -96,6 +96,80 @@ enum Commands {
         d.putTodo(t)
     }
 
+    static func updateProject(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String?, notes: String?) {
+        guard var p = d.getProject(id) else { return }
+        if let title { p.title = title }
+        if let notes { p.notes = notes }
+        p.updatedAt = ISOStamp.format(env.now)
+        d.putProject(p)
+    }
+
+    @discardableResult
+    static func createProject(_ d: Draft, _ env: EntityStore.Env, title: String, areaId: ID? = nil) throws -> Project {
+        let siblings = d.allProjects().filter { $0.areaId == areaId }
+        let ts = ISOStamp.format(env.now)
+        let project = Project(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            notes: "",
+            areaId: areaId,
+            status: .open,
+            start: .ready,
+            startDate: nil,
+            tonight: false,
+            deadline: nil,
+            tagIds: [],
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            todayOrder: nil,
+            completedAt: nil,
+            trashedAt: nil
+        )
+        d.putProject(project)
+        return project
+    }
+
+    @discardableResult
+    static func createArea(_ d: Draft, _ env: EntityStore.Env, title: String) throws -> Area {
+        let ts = ISOStamp.format(env.now)
+        let area = Area(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            order: try Order.keyAfterLast(d.allAreas().map(\.order)),
+            tagIds: [],
+            trashedAt: nil
+        )
+        d.putArea(area)
+        return area
+    }
+
+    static func renameArea(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String) {
+        guard var a = d.getArea(id) else { return }
+        a.title = title
+        a.updatedAt = ISOStamp.format(env.now)
+        d.putArea(a)
+    }
+
+    static func setDeadline(_ d: Draft, _ env: EntityStore.Env, ids: [ID], deadline: LocalDate?) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            if var t = d.getTodo(id) {
+                t.deadline = deadline
+                t.updatedAt = ts
+                d.putTodo(t)
+            } else if var p = d.getProject(id) {
+                p.deadline = deadline
+                p.updatedAt = ts
+                d.putProject(p)
+            }
+        }
+    }
+
     static func setStatus(_ d: Draft, _ env: EntityStore.Env, ids: [ID], status: Status) {
         let completedAt: Timestamp? = status == .open ? nil : ISOStamp.format(env.now)
         for id in ids {
@@ -175,6 +249,34 @@ enum Commands {
                 area.updatedAt = ts
                 d.putArea(area)
             }
+        }
+    }
+
+    /// Permanently delete trashed items and everything inside them (web `emptyTrash`).
+    static func emptyTrash(_ d: Draft) {
+        let areaIds = Set(d.allAreas().filter { $0.trashedAt != nil }.map(\.id))
+        let projectIds = Set(
+            d.allProjects()
+                .filter { $0.trashedAt != nil || ($0.areaId.map { areaIds.contains($0) } ?? false) }
+                .map(\.id)
+        )
+        let todoIds = Set(
+            d.allTodos()
+                .filter {
+                    $0.trashedAt != nil
+                        || ($0.projectId.map { projectIds.contains($0) } ?? false)
+                        || ($0.areaId.map { areaIds.contains($0) } ?? false)
+                }
+                .map(\.id)
+        )
+        for id in areaIds { d.remove(.areas, id: id) }
+        for id in projectIds { d.remove(.projects, id: id) }
+        for id in todoIds { d.remove(.todos, id: id) }
+        for h in d.allHeadings() where projectIds.contains(h.projectId) {
+            d.remove(.headings, id: h.id)
+        }
+        for c in d.allChecklistItems() where todoIds.contains(c.todoId) {
+            d.remove(.checklistItems, id: c.id)
         }
     }
 

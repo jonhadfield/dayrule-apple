@@ -54,6 +54,14 @@ final class Draft {
         }
     }
 
+    func allHeadings() -> [Heading] {
+        all(collection: .headings, baseMap: base.headings) { EntityJSON.decodeHeading($0, id: $1) }
+    }
+
+    func allAreas() -> [Area] {
+        all(collection: .areas, baseMap: base.areas) { EntityJSON.decodeArea($0, id: $1) }
+    }
+
     func putTodo(_ t: Todo) {
         record(.todos, id: t.id, after: JSONDict.fromAny(EntityJSON.encode(t)))
     }
@@ -64,6 +72,10 @@ final class Draft {
 
     func putArea(_ a: Area) {
         record(.areas, id: a.id, after: JSONDict.fromAny(EntityJSON.encode(a)))
+    }
+
+    func putHeading(_ h: Heading) {
+        record(.headings, id: h.id, after: JSONDict.fromAny(EntityJSON.encode(h)))
     }
 
     func putChecklistItem(_ c: ChecklistItem) {
@@ -132,8 +144,8 @@ final class Draft {
         case .projects: base.projects[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
         case .areas: base.areas[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
         case .checklistItems: base.checklistItems[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
-        case .headings: nil
-        case .tags: nil
+        case .headings: base.headings[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
+        case .tags: base.tags[id].map { JSONDict.fromAny(EntityJSON.encode($0)) }
         }
     }
 

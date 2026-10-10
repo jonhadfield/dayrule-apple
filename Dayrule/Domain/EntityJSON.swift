@@ -152,6 +152,37 @@ enum EntityJSON {
         return d
     }
 
+    static func encode(_ h: Heading) -> [String: Any] {
+        var d: [String: Any] = [
+            "type": "heading",
+            "id": h.id,
+            "createdAt": h.createdAt,
+            "updatedAt": h.updatedAt,
+            "projectId": h.projectId,
+            "title": h.title,
+            "order": h.order,
+            "archived": h.archived,
+        ]
+        putOptional(&d, "clock", h.clock)
+        for (k, v) in h.unknown { d[k] = v.toAny() }
+        return d
+    }
+
+    static func encode(_ t: Tag) -> [String: Any] {
+        var d: [String: Any] = [
+            "type": "tag",
+            "id": t.id,
+            "createdAt": t.createdAt,
+            "updatedAt": t.updatedAt,
+            "title": t.title,
+            "order": t.order,
+        ]
+        putOptional(&d, "clock", t.clock)
+        putOptional(&d, "parentId", t.parentId)
+        for (k, v) in t.unknown { d[k] = v.toAny() }
+        return d
+    }
+
     // MARK: - Decode
 
     static func decodeTodo(_ v: [String: Any], id: ID) -> Todo {

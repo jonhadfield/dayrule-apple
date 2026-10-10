@@ -12,6 +12,11 @@ struct ListsBrowserView: View {
     @State private var selection: ListName? = .inbox
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
+    @State private var editTarget: EditTarget?
+
+    private struct EditTarget: Identifiable {
+        var id: ID
+    }
 
     private var activeList: ListName { selection ?? .inbox }
 
@@ -106,12 +111,21 @@ struct ListsBrowserView: View {
                                 Spacer(minLength: 0)
                             }
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if activeList != .trash { editTarget = EditTarget(id: row.id) }
+                        }
                         .contextMenu {
-                            Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
-                            if row.isTodo, row.status == .open {
-                                Button("Complete") { toggleComplete(row.id) }
+                            if activeList == .trash {
+                                Button("Restore") { restore(row.id) }
+                            } else {
+                                Button("Edit") { editTarget = EditTarget(id: row.id) }
+                                Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
+                                if row.isTodo, row.status == .open {
+                                    Button("Complete") { toggleComplete(row.id) }
+                                }
+                                Button("Trash", role: .destructive) { trash(row.id) }
                             }
-                            Button("Trash", role: .destructive) { trash(row.id) }
                         }
                     }
                 }
@@ -147,10 +161,18 @@ struct ListsBrowserView: View {
                         model.noteEntitiesChanged()
                     }
                     .disabled(!model.store.canRedo)
+                    if activeList == .trash {
+                        Button("Empty Trash", role: .destructive) { emptyTrash() }
+                            .accessibilityIdentifier("list.emptyTrash")
+                            .disabled(rows(for: .trash).isEmpty)
+                    }
                 }
             }
             .sheet(item: $whenTarget) { target in
                 WhenSheetView(model: model, ids: target.ids)
+            }
+            .sheet(item: $editTarget) { target in
+                ItemEditorSheet(model: model, id: target.id)
             }
         }
         #if os(iOS)
@@ -262,6 +284,20 @@ struct ListsBrowserView: View {
     private func trash(_ id: ID) {
         model.store.run("Trash") { d, env in
             Commands.trashItems(d, env, ids: [id])
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func restore(_ id: ID) {
+        model.store.run("Restore") { d, env in
+            Commands.restoreItems(d, env, ids: [id])
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func emptyTrash() {
+        model.store.run("Empty Trash") { d, _ in
+            Commands.emptyTrash(d)
         }
         model.noteEntitiesChanged()
     }

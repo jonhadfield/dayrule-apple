@@ -91,4 +91,63 @@ struct StoreTests {
         #expect(store.entities.todos["t1"]?.clock?["title"] != nil)
         #expect(store.entities.todos["t1"]?.clock?["futureField"] == nil)
     }
+
+    @Test func createProjectUpdateAndEmptyTrash() throws {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Ship", areaId: nil)
+        }
+        #expect(store.entities.projects[project.id]?.title == "Ship")
+        #expect(store.entities.projects[project.id]?.start == .ready)
+
+        store.run("Rename project") { d, env in
+            Commands.updateProject(d, env, id: project.id, title: "Shipped", notes: "done notes")
+        }
+        #expect(store.entities.projects[project.id]?.title == "Shipped")
+        #expect(store.entities.projects[project.id]?.notes == "done notes")
+
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Nested", placement: .project(projectId: project.id, headingId: nil)))
+        }
+        #expect(todo.id != project.id)
+        store.run("Trash project") { d, env in
+            Commands.trashItems(d, env, ids: [project.id])
+        }
+        #expect(store.entities.projects[project.id]?.trashedAt != nil)
+
+        // emptyTrash also removes children of trashed areas/projects even if
+        // the child itself was not soft-trashed (web behaviour).
+        store.run("Empty Trash") { d, _ in
+            Commands.emptyTrash(d)
+        }
+        #expect(store.entities.projects[project.id] == nil)
+        #expect(store.entities.todos[todo.id] == nil)
+    }
+
+    @Test func emptyTrashRemovesSoftTrashedTodo() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Gone", placement: .inbox))
+        }
+        store.run("Trash") { d, env in
+            Commands.trashItems(d, env, ids: [todo.id])
+        }
+        store.run("Empty Trash") { d, _ in
+            Commands.emptyTrash(d)
+        }
+        #expect(store.entities.todos[todo.id] == nil)
+    }
 }
