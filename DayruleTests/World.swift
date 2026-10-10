@@ -73,8 +73,24 @@ final class World {
     }
 
     @discardableResult
+    func tag(title: String = "Tag", parentId: ID? = nil) -> Tag {
+        let t = Tag(
+            id: nextId("tag"),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            parentId: parentId,
+            order: orderIn(e.tags.values.map(\.order))
+        )
+        e.tags[t.id] = t
+        return t
+    }
+
+    @discardableResult
     func todo(
         title: String = "To-do",
+        notes: String = "",
         projectId: ID? = nil,
         areaId: ID? = nil,
         status: Status = .open,
@@ -93,7 +109,7 @@ final class World {
             updatedAt: ts,
             clock: nil,
             title: title,
-            notes: "",
+            notes: notes,
             projectId: projectId,
             headingId: nil,
             areaId: areaId,

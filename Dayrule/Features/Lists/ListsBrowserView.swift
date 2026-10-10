@@ -14,6 +14,7 @@ struct ListsBrowserView: View {
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var editTarget: EditTarget?
+    @State private var showFind = false
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -157,6 +158,8 @@ struct ListsBrowserView: View {
             .background(colors.bg)
             .toolbar {
                 ToolbarItemGroup(placement: .automatic) {
+                    Button("Find") { showFind = true }
+                        .accessibilityIdentifier("list.find")
                     Button("Undo") {
                         _ = model.store.undo()
                         model.noteEntitiesChanged()
@@ -182,6 +185,11 @@ struct ListsBrowserView: View {
             }
             .sheet(item: $editTarget) { target in
                 ItemEditorSheet(model: model, id: target.id)
+            }
+            .sheet(isPresented: $showFind) {
+                QuickFindView(model: model) { result in
+                    applyFind(result)
+                }
             }
         }
         #if os(iOS)
@@ -322,6 +330,21 @@ struct ListsBrowserView: View {
         model.noteEntitiesChanged()
     }
 
+    private func applyFind(_ result: Find.Result) {
+        switch result.destination {
+        case .list(let name):
+            selection = name
+        case .todo(let id, let home):
+            selection = home
+            editTarget = EditTarget(id: id)
+        case .project(let id):
+            selection = .backlog
+            editTarget = EditTarget(id: id)
+        case .area:
+            selection = .backlog
+        }
+    }
+
     private func containerLabel(_ c: Lists.Container) -> String? {
         switch c {
         case .none: nil
@@ -350,18 +373,3 @@ struct ListsBrowserView: View {
     }
 }
 
-private enum ListName: String, CaseIterable, Hashable {
-    case inbox, today, scheduled, backlog, notNow, done, trash
-
-    var title: String {
-        switch self {
-        case .inbox: "Inbox"
-        case .today: "Today"
-        case .scheduled: "Scheduled"
-        case .backlog: "Backlog"
-        case .notNow: "Not now"
-        case .done: "Done"
-        case .trash: "Trash"
-        }
-    }
-}
