@@ -446,9 +446,8 @@ struct ListsBrowserView: View {
                 if model.syncStatus == .syncing || model.vaultLoading {
                     Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                         .foregroundStyle(colors.textSecondary)
-                } else if let errorMessage = model.errorMessage, model.vault == nil {
-                    Text(errorMessage)
-                        .foregroundStyle(Tokens.Light.deadline)
+                } else if model.vault == nil, model.errorMessage != nil {
+                    vaultMissingRow(colors: colors)
                 } else {
                     RuledRow {
                         Text(emptyCopy(for: list))
@@ -516,9 +515,8 @@ struct ListsBrowserView: View {
             if model.syncStatus == .syncing || model.vaultLoading {
                 Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                     .foregroundStyle(colors.textSecondary)
-            } else if let errorMessage = model.errorMessage, model.vault == nil {
-                Text(errorMessage)
-                    .foregroundStyle(Tokens.Light.deadline)
+            } else if model.vault == nil, model.errorMessage != nil {
+                vaultMissingRow(colors: colors)
             } else {
                 RuledRow {
                     Text(emptyCopy(for: .scheduled))
@@ -578,6 +576,20 @@ struct ListsBrowserView: View {
         )
     }
 
+    @ViewBuilder
+    private func vaultMissingRow(colors: DayruleColors) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(model.errorMessage ?? "Sign in again")
+                .foregroundStyle(Tokens.Light.deadline)
+            Button("Sign in") {
+                model.showSignInGate()
+            }
+            .foregroundStyle(colors.accent)
+            .accessibilityIdentifier("list.signInAgain")
+        }
+        .padding(.vertical, 8)
+    }
+
     private func scheduledDayHeader(_ date: LocalDate) -> String {
         let tomorrow = When.addLocalDays(ctx.today, 1)
         if date == tomorrow { return "TOMORROW" }
@@ -596,6 +608,8 @@ struct ListsBrowserView: View {
             if model.syncStatus == .syncing || model.vaultLoading {
                 Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                     .foregroundStyle(colors.textSecondary)
+            } else if model.vault == nil, model.errorMessage != nil {
+                vaultMissingRow(colors: colors)
             } else {
                 RuledRow {
                     Text(emptyCopy(for: .backlog))

@@ -42,7 +42,7 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [x] Internal TestFlight build uploaded (signing + entitlements; build 4 with Browse/When + sodium_init + phone nav fixes)
+- [x] Internal TestFlight build uploaded (signing + entitlements; build 6 with session-gate recovery on iOS + macOS)
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)

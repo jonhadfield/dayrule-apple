@@ -286,9 +286,7 @@ final class AppModel {
             pendingRecoveryWords = []
             signupToken = nil
             // Pull before unlocking the list UI so hydrate can't wipe a concurrent Add.
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            await openUnlockedVault()
         } catch {
             errorMessage = error.localizedDescription
             phase = .confirmRecovery
@@ -325,8 +323,17 @@ final class AppModel {
         }
     }
 
+    private func hasBearerSession() -> Bool {
+        (try? sessions.loadToken()) != nil
+    }
+
     private func runSync() async {
         guard let syncEngine else { return }
+        // No Bearer → stay local; do not hit the API (401 would bounce to the gate).
+        guard hasBearerSession() else {
+            syncStatus = .offline("Sign in to sync.")
+            return
+        }
         syncStatus = .syncing
         do {
             try await syncEngine.sync()
@@ -361,6 +368,40 @@ final class AppModel {
         }
     }
 
+    /// Load local ciphertext (or pull if empty + signed in), then enter the lists.
+    /// Failures that leave nothing to show return to the password gate.
+    private func openUnlockedVault() async {
+        let ok = await refreshVault()
+        if ok {
+            phase = .unlocked
+            bumpIdle()
+            return
+        }
+        cipherStore = nil
+        syncEngine = nil
+        vault = nil
+        store.hydrate(.empty())
+        await crypto.lock()
+        phase = .locked
+        if !hasBearerSession() {
+            errorMessage = "Sign in again"
+        } else if errorMessage == nil {
+            errorMessage = "Can’t open your vault. Try Sign in again."
+        }
+    }
+
+    /// Leave the lists and show the password gate (stuck empty / session gone).
+    func showSignInGate() {
+        if hasBearerSession() {
+            errorMessage = "Sign in again"
+            signOut()
+        } else {
+            errorMessage = "Sign in again"
+            lock()
+            Task { await api.setToken(nil) }
+        }
+    }
+
     func unlock(password: String) async {
         errorMessage = nil
         guard password.count >= 10 else {
@@ -382,18 +423,14 @@ final class AppModel {
                     try await onlineLogin(password: password)
                 } catch APIError.offline {
                     try await offlineUnlock(password: password, cached: cached)
-                    await refreshVault()
-                    phase = .unlocked
-                    bumpIdle()
+                    await openUnlockedVault()
                     return
                 }
             } else {
                 try await onlineLogin(password: password)
             }
             if phase == .needsRecovery || phase == .needsSecondStep { return }
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            await openUnlockedVault()
         } catch {
             if phase != .needsRecovery && phase != .needsSecondStep {
                 phase = .locked
@@ -458,9 +495,7 @@ final class AppModel {
             let sessionLogin = try await completePasskeySecondStep(token: pending.token)
             try await finishOnlineSession(sessionLogin, kek: pending.kek)
             clearPendingSecondStep()
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            await openUnlockedVault()
         } catch PasskeySignIn.Error.cancelled {
             phase = .needsSecondStep
             errorMessage = "Confirm with your sign-in passkey, or use your recovery phrase."
@@ -577,9 +612,7 @@ final class AppModel {
             }
             accountEmail = email.lowercased()
             try openPersistence(userId: start.userId.lowercased())
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            await openUnlockedVault()
         } catch {
             phase = .needsRecovery
             errorMessage = error.localizedDescription
@@ -723,12 +756,12 @@ final class AppModel {
         accountEmail = cached.email
         email = cached.email
         try openPersistence(userId: cached.userId)
-        await refreshVault()
-        phase = .unlocked
-        bumpIdle()
+        await openUnlockedVault()
     }
 
-    func refreshVault() async {
+    /// Returns false when there is nothing useful to show (caller should stay on the gate).
+    @discardableResult
+    func refreshVault() async -> Bool {
         vaultLoading = true
         defer { vaultLoading = false }
         do {
@@ -736,9 +769,14 @@ final class AppModel {
                 try openPersistence(userId: userId)
             }
             guard let cipherStore else {
-                throw APIError.offline
+                errorMessage = "Sign in again"
+                return false
             }
             if try await cipherStore.isEmpty() {
+                guard hasBearerSession() else {
+                    errorMessage = "Sign in again"
+                    return false
+                }
                 let snap = try await VaultPull.pullAll(api: api, crypto: crypto)
                 vault = snap
                 let e = VaultToEntities.build(from: snap)
@@ -755,10 +793,14 @@ final class AppModel {
             noteEntitiesChanged()
             errorMessage = nil
             await runSync()
+            return true
         } catch {
             if store.entities.todos.isEmpty && store.entities.projects.isEmpty {
                 errorMessage = error.localizedDescription
+                return false
             }
+            // Local rows loaded earlier in this attempt — keep them.
+            return vault != nil || !store.entities.todos.isEmpty || !store.entities.projects.isEmpty
         }
     }
 
