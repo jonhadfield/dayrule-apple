@@ -18,7 +18,7 @@ final class AppModel {
     var errorMessage: String?
     var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
     var email = ""
-    var apiBaseURLString = "http://127.0.0.1:8080"
+    var apiBaseURLString = APIConfig.defaultBaseURLString
     var vault: VaultSnapshot?
     var vaultLoading = false
     var accountEmail: String?
@@ -113,10 +113,11 @@ final class AppModel {
     #endif
 
     init() {
-        let env = ProcessInfo.processInfo.environment
-        let defaultAPI = env["DAYRULE_API"] ?? "http://127.0.0.1:8080"
+        let defaultAPI = APIConfig.defaultBaseURLString
         apiBaseURLString = defaultAPI
-        api = APIClient(baseURL: URL(string: defaultAPI) ?? URL(string: "http://127.0.0.1:8080")!)
+        api = APIClient(
+            baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
+        )
         if let cached = try? sessions.loadAccount() {
             email = cached.email
             accountEmail = cached.email
@@ -191,12 +192,11 @@ final class AppModel {
     /// Derive keys and show the recovery phrase; `finishSignup` registers after confirm.
     func signupPrepareAccount(password: String, confirm: String) async {
         errorMessage = nil
-        guard password.count >= 10 else {
-            errorMessage = "Use at least 10 characters."
-            return
-        }
-        guard password == confirm else {
-            errorMessage = "Passwords don’t match."
+        if let problem = await PasswordValidation.newPasswordProblem(
+            password: password,
+            confirm: confirm
+        ) {
+            errorMessage = problem
             return
         }
         guard let token = signupToken else {
@@ -335,6 +335,10 @@ final class AppModel {
         } catch let err as SyncBlockedError {
             syncStatus = .blocked(err.localizedDescription)
             errorMessage = err.localizedDescription
+        } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
+            // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
+            syncStatus = .needsUpdate
+            errorMessage = message.isEmpty ? SyncStatus.needsUpdate.label : message
         } catch APIError.offline {
             syncStatus = .offline("Offline — changes stay on this device.")
         } catch {
@@ -385,6 +389,7 @@ final class AppModel {
     }
 
     private func onlineLogin(password: String) async throws {
+        Primitives.ready()
         let pre = try await api.prelogin(email: email)
         let kdf = pre.kdf.params
         try kdf.meetFloor()
@@ -442,6 +447,7 @@ final class AppModel {
     }
 
     private func offlineUnlock(password: String, cached: SessionStore.CachedAccount) async throws {
+        Primitives.ready()
         let kdf = cached.kdf.params
         try kdf.meetFloor()
         let salt = try Base64Std.decode(cached.saltB64)

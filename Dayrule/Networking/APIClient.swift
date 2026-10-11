@@ -129,13 +129,21 @@ actor APIClient {
     private let session: URLSession
     private let build: String
 
-    init(baseURL: URL, build: String = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1") {
+    init(
+        baseURL: URL,
+        build: String = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1",
+        session: URLSession? = nil
+    ) {
         self.baseURL = baseURL
         self.build = build
-        let config = URLSessionConfiguration.ephemeral
-        config.urlCache = nil
-        config.requestCachePolicy = .reloadIgnoringLocalCacheData
-        self.session = URLSession(configuration: config)
+        if let session {
+            self.session = session
+        } else {
+            let config = URLSessionConfiguration.ephemeral
+            config.urlCache = nil
+            config.requestCachePolicy = .reloadIgnoringLocalCacheData
+            self.session = URLSession(configuration: config)
+        }
     }
 
     private var clientHeader: String { ClientPlatform.clientHeader(build: build) }
@@ -182,6 +190,14 @@ actor APIClient {
         guard let http = response as? HTTPURLResponse else { throw APIError.offline }
         if http.statusCode == 204 { return Data() }
         if !(200..<300).contains(http.statusCode) {
+            // Vercel Firewall answers before our API; prefer a clear message (web api.ts).
+            if http.value(forHTTPHeaderField: "x-vercel-mitigated") != nil {
+                throw APIError.http(
+                    status: http.statusCode,
+                    code: "rate_limited",
+                    message: "Too many attempts from this network. Please wait a while and try again."
+                )
+            }
             let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             let message = obj?["error"] as? String ?? "Something went wrong."
             let code = obj?["code"] as? String ?? "error"

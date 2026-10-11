@@ -50,6 +50,16 @@ final class Draft {
         return base.headings[id]
     }
 
+    func getTag(_ id: ID) -> Tag? {
+        if case let .entity(_, _, _, after?, _) = touched["tags/\(id)"] {
+            return EntityJSON.decodeTag(JSONDict.toAny(after), id: id)
+        }
+        if case let .entity(_, _, _, nil, _) = touched["tags/\(id)"] {
+            return nil
+        }
+        return base.tags[id]
+    }
+
     func allTodos() -> [Todo] {
         all(collection: .todos, baseMap: base.todos) { EntityJSON.decodeTodo($0, id: $1) }
     }

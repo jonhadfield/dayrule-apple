@@ -102,6 +102,10 @@ struct SettingsView: View {
                     Text("Exports are made on this device and are not encrypted. Keep the files safe.")
                         .font(.footnote)
                         .foregroundStyle(colors.textSecondary)
+                    Text("Device backups may include your encrypted vault. Unlock keys stay on this device only, so a backup alone can’t open Dayrule on another phone or Mac.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
+                        .accessibilityIdentifier("settings.backupNote")
                     Button("Export JSON") { beginExport(json: true) }
                         .foregroundStyle(colors.accent)
                         .accessibilityIdentifier("settings.exportJson")

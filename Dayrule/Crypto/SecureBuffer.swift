@@ -8,8 +8,12 @@ final class SecureBuffer: @unchecked Sendable {
 
     init(bytes: [UInt8]) {
         precondition(bytes.count > 0)
+        // sodium_malloc aborts if sodium_init() has not run (libsodium assert).
+        Primitives.ready()
         count = bytes.count
-        let ptr = sodium_malloc(count)!
+        guard let ptr = sodium_malloc(count) else {
+            preconditionFailure("sodium_malloc failed")
+        }
         ptr.copyMemory(from: bytes, byteCount: count)
         pointer = ptr
     }

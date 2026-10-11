@@ -3,7 +3,7 @@ import Security
 
 /// Random 256-bit device wrap key in the Keychain (PLAN §8.2). No Secure Enclave.
 struct DeviceKeyStore: Sendable {
-    private let service = "app.dayrule.device-wrap"
+    private let service = "uk.co.lessknown.dayrule.device-wrap"
 
     func loadOrCreate(userId: String) throws -> [UInt8] {
         if let existing = try load(userId: userId) {

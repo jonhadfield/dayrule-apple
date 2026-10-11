@@ -35,6 +35,7 @@ actor CryptoActor {
 
     /// Derive AuthKey for login (KEK kept only for the subsequent unwrap).
     func beginLogin(password: String, salt: [UInt8], kdf: KdfParams) throws -> (authKey: [UInt8], kek: [UInt8]) {
+        Primitives.ready()
         try kdf.meetFloor()
         let mk = try Primitives.deriveMasterKey(password: password, salt: salt, kdf: kdf)
         let authKey = Primitives.hkdf(ikm: mk, label: Labels.auth)

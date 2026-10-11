@@ -6,7 +6,7 @@ import BackgroundTasks
 /// iOS BGAppRefresh to reschedule the nearest 64 reminders while stay-unlocked
 /// (PLAN §11). No-op on macOS.
 enum ReminderBackgroundRefresh {
-    static let taskIdentifier = "app.dayrule.reminders.refresh"
+    static let taskIdentifier = "uk.co.lessknown.dayrule.reminders.refresh"
 
     @MainActor
     private static weak var model: AppModel?

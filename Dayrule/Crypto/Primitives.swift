@@ -4,8 +4,10 @@ import Foundation
 
 /// Cryptographic building blocks matching `dayrule/web/src/crypto/primitives.ts`.
 enum Primitives {
+    /// Must run before `sodium_malloc` / libsodium APIs (idempotent).
     static func ready() {
-        _ = sodium_init()
+        // 0 = first init, 1 = already initialised; -1 = failure.
+        precondition(sodium_init() >= 0, "sodium_init failed")
     }
 
     static func randomBytes(_ n: Int) -> [UInt8] {

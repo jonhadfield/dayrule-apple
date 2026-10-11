@@ -46,6 +46,7 @@ struct GateView: View {
                     .foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center)
 
+                #if DEBUG
                 field(colors: colors, label: "API", text: $model.apiBaseURLString)
                     .accessibilityIdentifier("gate.api")
                     .autocorrectionDisabled()
@@ -53,6 +54,7 @@ struct GateView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
+                #endif
 
                 field(colors: colors, label: "Email", text: $model.email)
                     .accessibilityIdentifier("gate.email")
@@ -172,6 +174,7 @@ struct GateView: View {
                 Text("Invite-only for now. We’ll email a code, then show your recovery phrase.")
                     .foregroundStyle(colors.textSecondary)
 
+                #if DEBUG
                 field(colors: colors, label: "API", text: $model.apiBaseURLString)
                     .accessibilityIdentifier("signup.api")
                     .autocorrectionDisabled()
@@ -179,6 +182,7 @@ struct GateView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
+                #endif
 
                 field(colors: colors, label: "Invite code", text: $model.inviteCode)
                     .accessibilityIdentifier("signup.invite")
