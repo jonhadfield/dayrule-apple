@@ -162,21 +162,13 @@ struct ProjectDetailView: View {
         colors: DayruleColors,
         draft: Binding<String>
     ) -> some View {
-        RuledRow {
-            HStack {
-                TextField("Add", text: draft)
-                    .accessibilityIdentifier(
-                        headingId.map { "project.addField.\($0)" } ?? "project.addField"
-                    )
-                    .onSubmit { addTodo(headingId: headingId, draft: draft) }
-                Button("Add") { addTodo(headingId: headingId, draft: draft) }
-                    .foregroundStyle(colors.accent)
-                    .disabled(draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .buttonStyle(.borderless)
-                    .accessibilityIdentifier(
-                        headingId.map { "project.addButton.\($0)" } ?? "project.addButton"
-                    )
-            }
+        PaperAddRow(
+            title: draft,
+            colors: colors,
+            fieldIdentifier: headingId.map { "project.addField.\($0)" } ?? "project.addField",
+            buttonIdentifier: headingId.map { "project.addButton.\($0)" } ?? "project.addButton"
+        ) {
+            addTodo(headingId: headingId, draft: draft)
         }
     }
 

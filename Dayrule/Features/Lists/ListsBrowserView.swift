@@ -66,7 +66,8 @@ struct ListsBrowserView: View {
     @State private var phonePath: [PhoneRoute] = []
     @State private var phoneTab: PhoneTab = .inbox
     @State private var didApplyDefaultList = false
-    @State private var draftTitle = ""
+    /// Per-list Add drafts so switching tabs doesn’t leak half-typed titles.
+    @State private var draftTitles: [ListName: String] = [:]
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
@@ -149,28 +150,7 @@ struct ListsBrowserView: View {
             NavigationStack(path: $phonePath) {
                 phoneTabRoot(colors: colors)
                     .toolbar {
-                        if phoneTab == .browse {
-                            sidebarToolbar(colors: colors)
-                        } else {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button {
-                                    model.lock()
-                                } label: {
-                                    Image(systemName: "lock")
-                                }
-                                .foregroundStyle(colors.accent)
-                                .accessibilityLabel("Lock")
-                            }
-                            ToolbarItem(placement: .primaryAction) {
-                                Button {
-                                    model.showSettings = true
-                                } label: {
-                                    Image(systemName: "gearshape")
-                                }
-                                .foregroundStyle(colors.accent)
-                                .accessibilityLabel("Settings")
-                            }
-                        }
+                        phoneChromeToolbar(colors: colors)
                     }
                     .navigationDestination(for: PhoneRoute.self) { route in
                         switch route {
@@ -253,7 +233,7 @@ struct ListsBrowserView: View {
             sidebarList(colors: colors, phoneLinks: false)
                 .navigationTitle("Dayrule")
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
-                .toolbar { sidebarToolbar(colors: colors) }
+                .toolbar { phoneChromeToolbar(colors: colors) }
         } detail: {
             NavigationStack(path: $projectPath) {
                 listDetail(list: activeList, colors: colors)
@@ -264,8 +244,9 @@ struct ListsBrowserView: View {
         }
     }
 
+    /// Lock · Find · Settings on every phone tab (Refresh lives under Settings → Sync now).
     @ToolbarContentBuilder
-    private func sidebarToolbar(colors: DayruleColors) -> some ToolbarContent {
+    private func phoneChromeToolbar(colors: DayruleColors) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button {
                 model.lock()
@@ -285,7 +266,7 @@ struct ListsBrowserView: View {
             .accessibilityIdentifier("sidebar.find")
             .accessibilityLabel("Find")
         }
-        ToolbarItem(placement: .automatic) {
+        ToolbarItem(placement: .primaryAction) {
             Button {
                 model.showSettings = true
             } label: {
@@ -294,15 +275,13 @@ struct ListsBrowserView: View {
             .foregroundStyle(colors.accent)
             .accessibilityLabel("Settings")
         }
-        ToolbarItem(placement: .primaryAction) {
-            Button {
-                Task { await model.refreshVault() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
-            }
-            .foregroundStyle(colors.accent)
-            .accessibilityLabel("Refresh")
-        }
+    }
+
+    private func draftBinding(for list: ListName) -> Binding<String> {
+        Binding(
+            get: { draftTitles[list] ?? "" },
+            set: { draftTitles[list] = $0 }
+        )
     }
 
     @ViewBuilder
@@ -482,7 +461,7 @@ struct ListsBrowserView: View {
                 }
             }
             if list == .inbox || list == .today || list == .backlog || list == .scheduled {
-                PaperAddRow(title: $draftTitle, colors: colors) {
+                PaperAddRow(title: draftBinding(for: list), colors: colors) {
                     addTodo(to: list)
                 }
             }
@@ -493,9 +472,12 @@ struct ListsBrowserView: View {
         .scrollContentBackground(.hidden)
         .background(colors.bg)
         .toolbar {
+            // Pushed Browse destinations replace the tab-root toolbar — repeat chrome.
+            if isCompact, !phonePath.isEmpty {
+                phoneChromeToolbar(colors: colors)
+            }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
-                    Button("Find") { showFind = true }
                     Button("Undo") {
                         _ = model.store.undo()
                         model.noteEntitiesChanged()
@@ -925,7 +907,7 @@ struct ListsBrowserView: View {
     }
 
     private func addTodo(to list: ListName) {
-        let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = (draftTitles[list] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
         // Use the list on screen, not `selection` — on phone those can diverge.
         do {
@@ -944,7 +926,7 @@ struct ListsBrowserView: View {
                     return try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
                 }
             }
-            draftTitle = ""
+            draftTitles[list] = ""
             model.noteEntitiesChanged()
         } catch {
             model.errorMessage = error.localizedDescription

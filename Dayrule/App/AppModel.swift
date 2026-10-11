@@ -344,6 +344,11 @@ final class AppModel {
         } catch let err as SyncBlockedError {
             syncStatus = .blocked(err.localizedDescription)
             errorMessage = err.localizedDescription
+        } catch let APIError.http(status, code, _) where status == 401 || code == "unauthorized" {
+            // Session expired/revoked (PLAN §9.2). Keep ciphertext; clear Bearer.
+            // Server copy is "Sign in again." — drop the full stop for UI labels.
+            errorMessage = "Sign in again"
+            signOut()
         } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
             // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
             syncStatus = .needsUpdate
@@ -757,6 +762,8 @@ final class AppModel {
         }
     }
 
+    /// Lock the vault on this device. Keeps the Bearer session so sync works
+    /// after biometric / stay-unlocked reopen (unlike sign-out).
     func lock() {
         clearPendingSecondStep()
         idleTask?.cancel()
@@ -772,10 +779,18 @@ final class AppModel {
         phase = .locked
         store.hydrate(.empty())
         entitiesEpoch += 1
+        Task { await crypto.lock() }
+    }
+
+    /// Revoke the server session and clear the Keychain token (Settings / 401).
+    func signOut() {
+        let tokenStillPresent = (try? sessions.loadToken()) != nil
+        lock()
         Task {
-            try? await api.logout()
+            if tokenStillPresent {
+                try? await api.logout()
+            }
             await api.setToken(nil)
-            await crypto.lock()
         }
         try? sessions.deleteToken()
     }

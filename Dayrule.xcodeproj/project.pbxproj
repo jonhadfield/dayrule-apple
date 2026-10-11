@@ -71,6 +71,7 @@
 		8AB5490936714AEF0B2A2421 /* VaultToEntitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9DB67593F5F177017269F6B /* VaultToEntitiesTests.swift */; };
 		8F88FCD904DA13658C8038DE /* Repeats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 719D685FDE95FE6C63E90CB5 /* Repeats.swift */; };
 		910BF09EAAF5267C75FBC57B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C225964995BA55648E51D5 /* HelpView.swift */; };
+		919A8CB7BA0D8ACD5660A90D /* DeviceAppearancePrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */; };
 		92C1E6F585E476513C3404D0 /* RepeatSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */; };
 		96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08878191201EF746BA57A180 /* AppDatabase.swift */; };
 		9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D31E62FE3120AF9311906 /* FractionalIndexing.swift */; };
@@ -190,6 +191,7 @@
 		469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyAuthorization.swift; sourceTree = "<group>"; };
 		4E6C23642DCB6C41B26D8671 /* Merge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Merge.swift; sourceTree = "<group>"; };
 		50B739D187E09BA80EF8304B /* DayruleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleApp.swift; sourceTree = "<group>"; };
+		510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAppearancePrefs.swift; sourceTree = "<group>"; };
 		54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCover.swift; sourceTree = "<group>"; };
 		5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSheetView.swift; sourceTree = "<group>"; };
 		589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39Wordlist.swift; sourceTree = "<group>"; };
@@ -502,6 +504,7 @@
 			children = (
 				60D1DD770A2B75C5501341ED /* AppModel.swift */,
 				50B739D187E09BA80EF8304B /* DayruleApp.swift */,
+				510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */,
 				C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */,
 			);
 			path = App;
@@ -726,6 +729,7 @@
 				30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */,
 				7738646857613F1FEF1643A7 /* DayruleCheckbox.swift in Sources */,
 				4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */,
+				919A8CB7BA0D8ACD5660A90D /* DeviceAppearancePrefs.swift in Sources */,
 				1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */,
 				BCDF26946850620BA7CAE6B3 /* DeviceReminderPrefs.swift in Sources */,
 				3F451E3DB3CDA87366E1BED6 /* DeviceUnlockPrefs.swift in Sources */,
@@ -892,7 +896,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1024,7 +1028,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

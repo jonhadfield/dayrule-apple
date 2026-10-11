@@ -19,15 +19,35 @@ struct SettingsView: View {
     #endif
     @State private var remindersOn = DeviceReminderPrefs.enabled
     @State private var showReminderTitles = DeviceReminderPrefs.showTitles
+    @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
     @State private var deletePassword = ""
     @State private var deleteConfirm = ""
     @State private var deleteBusy = false
     @State private var deleteError: String?
 
+    private var appearanceBinding: Binding<AppearancePreference> {
+        Binding(
+            get: { AppearancePreference(rawValue: appearanceRaw) ?? .system },
+            set: { appearanceRaw = $0.rawValue }
+        )
+    }
+
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         NavigationStack {
             List {
+                Section("Appearance") {
+                    Picker("Appearance", selection: appearanceBinding) {
+                        ForEach(AppearancePreference.allCases) { pref in
+                            Text(pref.title).tag(pref)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("settings.appearance")
+                    Text("Light keeps the paper palette. System follows the device. This preference stays on this device only.")
+                        .font(.footnote)
+                        .foregroundStyle(colors.textSecondary)
+                }
                 Section("Sync") {
                     HStack {
                         Text("Status")
