@@ -42,8 +42,8 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [ ] Internal TestFlight build uploaded (signing + entitlements)
-- [ ] AASA served for `webcredentials:dayrule.app` (passkey QA)
+- [ ] Internal TestFlight build uploaded (signing + entitlements; build ≥ 2 with sodium_init + phone nav fixes)
+- [ ] AASA served for `webcredentials:dayrule.app` (passkey QA; web `feat/apple-app-site-association` — tick after production deploy)
 - [ ] App Review demo account + nutrition label (before external testers)
 - [ ] Confirm French encryption declaration rules before public store
 

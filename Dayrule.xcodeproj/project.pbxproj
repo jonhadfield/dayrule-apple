@@ -98,6 +98,7 @@
 		C775694CCF82018A1D9A5071 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6CE93B71E4258F313852B837 /* OFL.txt */; };
 		C8182DA2B1A801B357F38156 /* SyncStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6268525E0B35134C5447F43 /* SyncStatus.swift */; };
 		CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */; };
+		D0FAC27020AEE466C0F3B63D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10BAA0A24A1B4AE9481ABB64 /* Assets.xcassets */; };
 		D21D41CB86112AA455D78513 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4608F0B7201CE4C352E4294D /* Tokens.swift */; };
 		D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951105343C5D083C09317947 /* RecordCipher.swift */; };
 		D39DC922D37ACD64C4737AE0 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C10485E36552B5A2566472 /* APIConfig.swift */; };
@@ -149,6 +150,7 @@
 		08878191201EF746BA57A180 /* AppDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDatabase.swift; sourceTree = "<group>"; };
 		0E767FC5D7B9C015AD0AF761 /* CipherStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CipherStore.swift; sourceTree = "<group>"; };
 		0F6D31E62FE3120AF9311906 /* FractionalIndexing.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FractionalIndexing.swift; sourceTree = "<group>"; };
+		10BAA0A24A1B4AE9481ABB64 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1160CD5B09CB87451563810B /* StoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreTests.swift; sourceTree = "<group>"; };
 		11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorRecordCipher.swift; sourceTree = "<group>"; };
 		125829DF9F4D7E9BBA487D14 /* Restamp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Restamp.swift; sourceTree = "<group>"; };
@@ -316,6 +318,7 @@
 		4F3A6258F8325DB79A1B6D06 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				10BAA0A24A1B4AE9481ABB64 /* Assets.xcassets */,
 				E7E230BA135789962B607A3D /* PrivacyInfo.xcprivacy */,
 			);
 			path = Resources;
@@ -680,6 +683,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0FAC27020AEE466C0F3B63D /* Assets.xcassets in Resources */,
 				411FC4059DB401E59CD873E8 /* Fraunces-Variable.ttf in Resources */,
 				C775694CCF82018A1D9A5071 /* OFL.txt in Resources */,
 				E07D26082132443B3A2CF7A1 /* PrivacyInfo.xcprivacy in Resources */,
@@ -872,7 +876,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1004,7 +1008,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

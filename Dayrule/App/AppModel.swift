@@ -389,6 +389,7 @@ final class AppModel {
     }
 
     private func onlineLogin(password: String) async throws {
+        Primitives.ready()
         let pre = try await api.prelogin(email: email)
         let kdf = pre.kdf.params
         try kdf.meetFloor()
@@ -446,6 +447,7 @@ final class AppModel {
     }
 
     private func offlineUnlock(password: String, cached: SessionStore.CachedAccount) async throws {
+        Primitives.ready()
         let kdf = cached.kdf.params
         try kdf.meetFloor()
         let salt = try Base64Std.decode(cached.saltB64)

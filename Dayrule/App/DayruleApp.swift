@@ -7,6 +7,7 @@ struct DayruleApp: App {
     @State private var showPrivacyCover = false
 
     init() {
+        Primitives.ready()
         #if os(iOS)
         ReminderBackgroundRefresh.registerLauncher()
         #endif
