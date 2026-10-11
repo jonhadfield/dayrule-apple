@@ -8,6 +8,7 @@ final class AppModel {
     enum Phase: Equatable {
         case locked
         case unlocking
+        case needsSecondStep
         case needsRecovery
         case signup
         case confirmRecovery
@@ -57,6 +58,14 @@ final class AppModel {
         var salt: [UInt8]
         var created: UnlockResult
     }
+
+    /// Held only while the passkey second-step sheet can still finish login (PLAN §9.3).
+    private struct PendingSecondStep {
+        var token: String
+        var kek: [UInt8]
+    }
+
+    private var pendingSecondStep: PendingSecondStep?
 
     var entities: Entities {
         _ = entitiesEpoch
@@ -376,12 +385,12 @@ final class AppModel {
             } else {
                 try await onlineLogin(password: password)
             }
-            if phase == .needsRecovery { return }
+            if phase == .needsRecovery || phase == .needsSecondStep { return }
             await refreshVault()
             phase = .unlocked
             bumpIdle()
         } catch {
-            if phase != .needsRecovery {
+            if phase != .needsRecovery && phase != .needsSecondStep {
                 phase = .locked
             }
             errorMessage = error.localizedDescription
@@ -389,12 +398,13 @@ final class AppModel {
     }
 
     private func onlineLogin(password: String) async throws {
+        clearPendingSecondStep()
         Primitives.ready()
         let pre = try await api.prelogin(email: email)
         let kdf = pre.kdf.params
         try kdf.meetFloor()
         let salt = try Base64Std.decode(pre.salt)
-        let (authKey, kek) = try await crypto.beginLogin(password: password, salt: salt, kdf: kdf)
+        var (authKey, kek) = try await crypto.beginLogin(password: password, salt: salt, kdf: kdf)
 
         let passwordLogin = try await api.login(
             email: email,
@@ -402,30 +412,82 @@ final class AppModel {
             deviceLabel: ClientPlatform.deviceLabel
         )
 
-        let sessionLogin: LoginResponse
         if let step = passwordLogin.secondStep {
             if step.methods.contains("passkey") {
                 do {
-                    sessionLogin = try await completePasskeySecondStep(token: step.token)
+                    let sessionLogin = try await completePasskeySecondStep(token: step.token)
+                    try await finishOnlineSession(sessionLogin, kek: kek)
+                    Primitives.wipe(&kek)
                 } catch PasskeySignIn.Error.cancelled {
-                    phase = .locked
-                    errorMessage = "Passkey sign-in was cancelled."
-                    return
+                    pendingSecondStep = PendingSecondStep(token: step.token, kek: Array(kek))
+                    Primitives.wipe(&kek)
+                    phase = .needsSecondStep
+                    errorMessage = "Confirm with your sign-in passkey, or use your recovery phrase."
                 } catch {
-                    // Recovery phrase still counts as both factors (decision 30).
-                    phase = .needsRecovery
-                    errorMessage = "Use your passkey, or sign in with your recovery phrase."
-                    return
+                    pendingSecondStep = PendingSecondStep(token: step.token, kek: Array(kek))
+                    Primitives.wipe(&kek)
+                    phase = .needsSecondStep
+                    errorMessage = "Passkey didn’t work. Try again, or use your recovery phrase."
                 }
-            } else {
-                phase = .needsRecovery
-                errorMessage = "This account needs a second step. Sign in with your recovery phrase."
                 return
             }
-        } else {
-            sessionLogin = passwordLogin
+            Primitives.wipe(&kek)
+            phase = .needsRecovery
+            errorMessage = "This account needs a second step. Sign in with your recovery phrase."
+            return
         }
 
+        try await finishOnlineSession(passwordLogin, kek: kek)
+        Primitives.wipe(&kek)
+    }
+
+    /// Retry the platform assertion after cancel/fail (PLAN §9.3).
+    func continuePasskeySecondStep() async {
+        guard let pending = pendingSecondStep else {
+            phase = .locked
+            return
+        }
+        errorMessage = nil
+        phase = .unlocking
+        do {
+            let sessionLogin = try await completePasskeySecondStep(token: pending.token)
+            try await finishOnlineSession(sessionLogin, kek: pending.kek)
+            clearPendingSecondStep()
+            await refreshVault()
+            phase = .unlocked
+            bumpIdle()
+        } catch PasskeySignIn.Error.cancelled {
+            phase = .needsSecondStep
+            errorMessage = "Confirm with your sign-in passkey, or use your recovery phrase."
+        } catch {
+            phase = .needsSecondStep
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelSecondStep() {
+        clearPendingSecondStep()
+        phase = .locked
+        errorMessage = nil
+    }
+
+    /// Open recovery from the second-step screen (wipes held KEK).
+    func beginRecoveryFromSecondStep() {
+        clearPendingSecondStep()
+        phase = .needsRecovery
+        errorMessage = nil
+    }
+
+    private func clearPendingSecondStep() {
+        if var pending = pendingSecondStep {
+            Primitives.wipe(&pending.kek)
+            pendingSecondStep = nil
+        }
+    }
+
+    private func finishOnlineSession(_ sessionLogin: LoginResponse, kek: [UInt8]) async throws {
+        var kek = kek
+        defer { Primitives.wipe(&kek) }
         guard let userId = sessionLogin.userId?.lowercased(),
               let token = sessionLogin.token,
               let wrapped = sessionLogin.wrappedPassword,
@@ -492,6 +554,7 @@ final class AppModel {
     }
 
     func unlockWithRecovery(phrase: String) async {
+        clearPendingSecondStep()
         errorMessage = nil
         // Stay on the recovery screen while working.
         do {
@@ -695,6 +758,7 @@ final class AppModel {
     }
 
     func lock() {
+        clearPendingSecondStep()
         idleTask?.cancel()
         idleTask = nil
         syncTask?.cancel()
@@ -714,6 +778,61 @@ final class AppModel {
             await crypto.lock()
         }
         try? sessions.deleteToken()
+    }
+
+    /// Delete the account on the server and wipe this device (PLAN §9.5).
+    func deleteAccount(password: String) async -> Bool {
+        errorMessage = nil
+        guard phase == .unlocked else { return false }
+        guard password.count >= 10 else {
+            errorMessage = "Use at least 10 characters."
+            return false
+        }
+        guard let cached = try? sessions.loadAccount() else {
+            errorMessage = "No account on this device."
+            return false
+        }
+        do {
+            Primitives.ready()
+            let kdf = cached.kdf.params
+            try kdf.meetFloor()
+            let salt = try Base64Std.decode(cached.saltB64)
+            let (authKey, kek) = try await crypto.beginLogin(
+                password: password,
+                salt: salt,
+                kdf: kdf
+            )
+            var wipeKek = kek
+            Primitives.wipe(&wipeKek)
+            try await api.deleteAccount(authKeyB64: Base64Std.encode(authKey))
+            let userId = cached.userId
+            try? await crypto.disableBiometricWrap(userId: userId)
+            await ReminderScheduler.clearAll()
+            idleTask?.cancel()
+            idleTask = nil
+            syncTask?.cancel()
+            syncTask = nil
+            showSettings = false
+            vault = nil
+            cipherStore = nil
+            syncEngine = nil
+            syncStatus = .idle
+            store.hydrate(.empty())
+            entitiesEpoch += 1
+            phase = .locked
+            await api.setToken(nil)
+            await crypto.lock()
+            try? sessions.clear()
+            try? AppDatabase.remove(userId: userId)
+            accountEmail = nil
+            biometricUnlockAvailable = false
+            passkeyUnlockAvailable = false
+            clearPendingSecondStep()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
     }
 
     func bumpIdle() {

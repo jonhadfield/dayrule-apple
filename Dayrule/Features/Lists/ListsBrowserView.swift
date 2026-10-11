@@ -28,9 +28,9 @@ private enum PhoneTab: Hashable, CaseIterable {
     var systemImage: String {
         switch self {
         case .inbox: "tray"
-        case .today: "sun.max"
+        case .today: "circle.circle"
         case .scheduled: "calendar"
-        case .browse: "square.grid.2x2"
+        case .browse: "folder"
         }
     }
 
@@ -153,12 +153,22 @@ struct ListsBrowserView: View {
                             sidebarToolbar(colors: colors)
                         } else {
                             ToolbarItem(placement: .cancellationAction) {
-                                Button("Lock") { model.lock() }
-                                    .foregroundStyle(colors.accent)
+                                Button {
+                                    model.lock()
+                                } label: {
+                                    Image(systemName: "lock")
+                                }
+                                .foregroundStyle(colors.accent)
+                                .accessibilityLabel("Lock")
                             }
-                            ToolbarItem(placement: .automatic) {
-                                Button("Settings") { model.showSettings = true }
-                                    .foregroundStyle(colors.accent)
+                            ToolbarItem(placement: .primaryAction) {
+                                Button {
+                                    model.showSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                }
+                                .foregroundStyle(colors.accent)
+                                .accessibilityLabel("Settings")
                             }
                         }
                     }
@@ -184,6 +194,7 @@ struct ListsBrowserView: View {
         case .browse:
             sidebarList(colors: colors, phoneLinks: true)
                 .navigationTitle("Browse")
+                .dayruleListNavChrome(colors: colors)
         case .inbox:
             listDetail(list: .inbox, colors: colors)
         case .today:
@@ -256,23 +267,41 @@ struct ListsBrowserView: View {
     @ToolbarContentBuilder
     private func sidebarToolbar(colors: DayruleColors) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
-            Button("Lock") { model.lock() }
-                .foregroundStyle(colors.accent)
-        }
-        ToolbarItem(placement: .automatic) {
-            Button("Find") { showFind = true }
-                .foregroundStyle(colors.accent)
-                .accessibilityIdentifier("sidebar.find")
-        }
-        ToolbarItem(placement: .automatic) {
-            Button("Settings") { model.showSettings = true }
-                .foregroundStyle(colors.accent)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Button("Refresh") {
-                Task { await model.refreshVault() }
+            Button {
+                model.lock()
+            } label: {
+                Image(systemName: "lock")
             }
             .foregroundStyle(colors.accent)
+            .accessibilityLabel("Lock")
+        }
+        ToolbarItem(placement: .automatic) {
+            Button {
+                showFind = true
+            } label: {
+                Image(systemName: "magnifyingglass")
+            }
+            .foregroundStyle(colors.accent)
+            .accessibilityIdentifier("sidebar.find")
+            .accessibilityLabel("Find")
+        }
+        ToolbarItem(placement: .automatic) {
+            Button {
+                model.showSettings = true
+            } label: {
+                Image(systemName: "gearshape")
+            }
+            .foregroundStyle(colors.accent)
+            .accessibilityLabel("Settings")
+        }
+        ToolbarItem(placement: .primaryAction) {
+            Button {
+                Task { await model.refreshVault() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+            }
+            .foregroundStyle(colors.accent)
+            .accessibilityLabel("Refresh")
         }
     }
 
@@ -280,31 +309,96 @@ struct ListsBrowserView: View {
     private func sidebarList(colors: DayruleColors, phoneLinks: Bool) -> some View {
         if phoneLinks {
             List {
-                sidebarRows(colors: colors, phoneLinks: true)
+                phoneBrowseRows(colors: colors)
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .background(colors.bg)
         } else {
             List(selection: $selection) {
-                sidebarRows(colors: colors, phoneLinks: false)
+                sidebarRows(colors: colors)
+            }
+        }
+    }
+
+    /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS (PLAN §6.5).
+    @ViewBuilder
+    private func phoneBrowseRows(colors: DayruleColors) -> some View {
+        if model.syncStatus == .needsUpdate {
+            Text(model.syncStatus.label)
+                .font(.footnote)
+                .foregroundStyle(Tokens.Light.deadline)
+                .listRowBackground(colors.bg)
+        }
+        ForEach(PhoneTab.browseLists, id: \.self) { name in
+            NavigationLink(value: PhoneRoute.list(name)) {
+                HStack(spacing: 12) {
+                    Image(systemName: browseIcon(for: name))
+                        .font(.body)
+                        .foregroundStyle(colors.text)
+                        .frame(width: 22)
+                    Text(name.title.uppercased())
+                        .font(.body.weight(.medium))
+                        .foregroundStyle(colors.text)
+                    Spacer(minLength: 0)
+                    if let count = browseCount(for: name) {
+                        Text("\(count)")
+                            .font(.subheadline)
+                            .foregroundStyle(colors.textSecondary)
+                            .frame(minWidth: 28, minHeight: 28)
+                            .overlay {
+                                Circle()
+                                    .stroke(colors.hairline, lineWidth: 1)
+                            }
+                            .accessibilityLabel(sidebarBadgeLabel(name: name, count: count))
+                    }
+                }
+            }
+            .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
+            .listRowBackground(colors.bg)
+            .listRowSeparatorTint(colors.hairline)
+        }
+        let projects = browseProjects
+        if !projects.isEmpty {
+            Section {
+                ForEach(projects, id: \.id) { project in
+                    NavigationLink(value: PhoneRoute.project(project.id)) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "bookmark")
+                                .font(.body)
+                                .foregroundStyle(colors.text)
+                                .frame(width: 22)
+                            Text(project.title.isEmpty ? "Untitled" : project.title)
+                                .foregroundStyle(colors.text)
+                            Spacer(minLength: 0)
+                        }
+                    }
+                    .accessibilityIdentifier("list.sidebar.project.\(project.id)")
+                    .listRowBackground(colors.bg)
+                    .listRowSeparatorTint(colors.hairline)
+                }
+            } header: {
+                Text("PROJECTS")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colors.textSecondary)
+                    .textCase(nil)
             }
         }
     }
 
     @ViewBuilder
-    private func sidebarRows(colors: DayruleColors, phoneLinks: Bool) -> some View {
+    private func sidebarRows(colors: DayruleColors) -> some View {
         if model.syncStatus == .needsUpdate {
             Text(model.syncStatus.label)
                 .font(.footnote)
                 .foregroundStyle(Tokens.Light.deadline)
                 .listRowBackground(colors.sidebar)
         }
-        // Phone Browse: park/archive lists only (Inbox/Today/Scheduled are tabs).
-        let names: [ListName] = phoneLinks
-            ? PhoneTab.browseLists
-            : ListName.allCases.filter { $0 != .notNow }
+        let names = ListName.allCases.filter { $0 != .notNow }
         ForEach(names, id: \.self) { name in
-            let label = HStack(spacing: 0) {
+            HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(!phoneLinks && selection == name ? colors.accent : .clear)
+                    .fill(selection == name ? colors.accent : .clear)
                     .frame(width: 3)
                     .padding(.trailing, 8)
                 Text(name.title)
@@ -320,15 +414,43 @@ struct ListsBrowserView: View {
                 }
             }
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
+            .tag(Optional(name))
+            .listRowBackground(colors.sidebar)
+        }
+    }
 
-            if phoneLinks {
-                NavigationLink(value: PhoneRoute.list(name)) { label }
-                    .listRowBackground(colors.sidebar)
-            } else {
-                label
-                    .tag(Optional(name))
-                    .listRowBackground(colors.sidebar)
+    private func browseIcon(for name: ListName) -> String {
+        switch name {
+        case .backlog: "sparkle"
+        case .done: "checkmark.circle"
+        case .trash: "trash"
+        default: "list.bullet"
+        }
+    }
+
+    private var browseProjects: [Project] {
+        model.entities.projects.values
+            .filter { !Lists.isTrashed(model.entities, .project($0)) && $0.status == .open }
+            .sorted {
+                let c = Order.compareKeys($0.order, $1.order)
+                if c != 0 { return c < 0 }
+                return Order.compareKeys($0.id, $1.id) < 0
             }
+    }
+
+    private func browseCount(for name: ListName) -> Int? {
+        switch name {
+        case .backlog:
+            let main = Lists.backlog(model.entities, ctx).reduce(0) { $0 + $1.todos.count }
+            let parked = Lists.notNow(model.entities, ctx)
+            return main + parked.todos.count + parked.projects.count
+        case .done:
+            return Lists.doneList(model.entities, ctx).reduce(0) { $0 + $1.items.count }
+        case .trash:
+            let t = Lists.trash(model.entities)
+            return t.areas.count + t.items.count
+        default:
+            return nil
         }
     }
 
@@ -337,6 +459,8 @@ struct ListsBrowserView: View {
         List {
             if list == .backlog {
                 backlogSections(colors: colors)
+            } else if list == .scheduled {
+                scheduledSections(colors: colors)
             } else if rows(for: list).isEmpty {
                 // Never replace existing rows with a sync banner — that races Add in e2e
                 // and hides todos for the whole push/pull.
@@ -358,49 +482,128 @@ struct ListsBrowserView: View {
                 }
             }
             if list == .inbox || list == .today || list == .backlog || list == .scheduled {
-                RuledRow {
-                    HStack {
-                        TextField("Add", text: $draftTitle)
-                            .accessibilityIdentifier("list.addField")
-                            .onSubmit { addTodo(to: list) }
-                        Button("Add") { addTodo(to: list) }
-                            .accessibilityIdentifier("list.addButton")
-                            .foregroundStyle(colors.accent)
-                            .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .buttonStyle(.borderless)
-                    }
+                PaperAddRow(title: $draftTitle, colors: colors) {
+                    addTodo(to: list)
                 }
             }
         }
         .listStyle(.plain)
         .navigationTitle(list.title)
+        .dayruleListNavChrome(colors: colors)
         .scrollContentBackground(.hidden)
         .background(colors.bg)
         .toolbar {
-            ToolbarItemGroup(placement: .automatic) {
-                Button("Find") { showFind = true }
-                    .accessibilityIdentifier("list.find")
-                Button("Undo") {
-                    _ = model.store.undo()
-                    model.noteEntitiesChanged()
+            ToolbarItem(placement: .primaryAction) {
+                Menu {
+                    Button("Find") { showFind = true }
+                    Button("Undo") {
+                        _ = model.store.undo()
+                        model.noteEntitiesChanged()
+                    }
+                    .disabled(!model.store.canUndo)
+                    Button("Redo") {
+                        _ = model.store.redo()
+                        model.noteEntitiesChanged()
+                    }
+                    .disabled(!model.store.canRedo)
+                    if list == .trash {
+                        Button("Empty Trash", role: .destructive) { emptyTrash() }
+                            .accessibilityIdentifier("list.emptyTrash")
+                            .disabled(rows(for: .trash).isEmpty)
+                    }
+                    if list == .done, model.entities.settings.moveToDone == .manually {
+                        Button("Log Completed") { logCompleted() }
+                            .accessibilityIdentifier("list.logCompleted")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundStyle(colors.accent)
                 }
-                .disabled(!model.store.canUndo)
-                Button("Redo") {
-                    _ = model.store.redo()
-                    model.noteEntitiesChanged()
+                .accessibilityIdentifier("list.find")
+                .accessibilityLabel("List actions")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func scheduledSections(colors: DayruleColors) -> some View {
+        let scheduled = Lists.scheduled(model.entities, ctx)
+        let dayGroups = scheduled.days.filter { !$0.items.isEmpty }
+        let monthGroups = scheduled.months.filter { !$0.items.isEmpty }
+        if dayGroups.isEmpty, monthGroups.isEmpty, scheduled.waiting.isEmpty {
+            if model.syncStatus == .syncing || model.vaultLoading {
+                Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
+                    .foregroundStyle(colors.textSecondary)
+            } else if let errorMessage = model.errorMessage, model.vault == nil {
+                Text(errorMessage)
+                    .foregroundStyle(Tokens.Light.deadline)
+            } else {
+                RuledRow {
+                    Text(emptyCopy(for: .scheduled))
+                        .foregroundStyle(colors.textSecondary)
                 }
-                .disabled(!model.store.canRedo)
-                if list == .trash {
-                    Button("Empty Trash", role: .destructive) { emptyTrash() }
-                        .accessibilityIdentifier("list.emptyTrash")
-                        .disabled(rows(for: .trash).isEmpty)
+            }
+        } else {
+            ForEach(dayGroups, id: \.date) { day in
+                Section {
+                    ForEach(day.items, id: \.id) { item in
+                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                    }
+                } header: {
+                    Text(scheduledDayHeader(day.date))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(colors.accent)
+                        .textCase(nil)
                 }
-                if list == .done, model.entities.settings.moveToDone == .manually {
-                    Button("Log Completed") { logCompleted() }
-                        .accessibilityIdentifier("list.logCompleted")
+            }
+            ForEach(monthGroups, id: \.month) { month in
+                Section {
+                    ForEach(month.items, id: \.id) { item in
+                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                    }
+                } header: {
+                    Text(month.month.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(colors.accent)
+                        .textCase(nil)
+                }
+            }
+            if !scheduled.waiting.isEmpty {
+                Section {
+                    ForEach(scheduled.waiting, id: \.id) { item in
+                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                    }
+                } header: {
+                    Text("WAITING")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(colors.accent)
+                        .textCase(nil)
                 }
             }
         }
+    }
+
+    private func scheduledRow(_ item: ListItem) -> Row {
+        if item.isTodo, let t = model.entities.todos[item.id] {
+            return todoRow(t, subtitle: nil, trailing: nil, overdue: false)
+        }
+        return Row(
+            id: item.id,
+            title: item.title,
+            subtitle: nil,
+            isTodo: false,
+            status: item.status
+        )
+    }
+
+    private func scheduledDayHeader(_ date: LocalDate) -> String {
+        let tomorrow = When.addLocalDays(ctx.today, 1)
+        if date == tomorrow { return "TOMORROW" }
+        guard let d = When.fromLocalDate(date) else { return date.uppercased() }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "EEEE"
+        return formatter.string(from: d).uppercased()
     }
 
     @ViewBuilder
@@ -479,7 +682,8 @@ struct ListsBrowserView: View {
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel(rowTitleAccessibility(row))
                     .accessibilityIdentifier("list.todo.\(row.id)")
-                    if let subtitle = row.subtitle {
+                    // Non-Today lists keep subtitle under the title; Today uses trailing chips.
+                    if list != .today, let subtitle = row.subtitle {
                         HStack(spacing: 4) {
                             if row.deadlineOverdue {
                                 Image(systemName: "exclamationmark.circle.fill")
@@ -498,6 +702,18 @@ struct ListsBrowserView: View {
                     }
                 }
                 Spacer(minLength: 0)
+                if let trailing = row.trailing {
+                    HStack(spacing: 4) {
+                        Image(systemName: trailing.systemImage)
+                            .font(.caption)
+                        Text(trailing.label)
+                            .font(.caption)
+                    }
+                    .foregroundStyle(
+                        trailing.isOverdue ? Tokens.Light.deadline : colors.accent
+                    )
+                    .accessibilityLabel(trailing.label)
+                }
             }
         }
         .contentShape(Rectangle())
@@ -577,40 +793,41 @@ struct ListsBrowserView: View {
                 todoRow(
                     $0,
                     subtitle: deadlineSubtitle($0.deadline),
+                    trailing: nil,
                     overdue: Lists.isOverdue(.todo($0), ctx)
                 )
             }
         case .today:
             return Lists.today(model.entities, ctx).map {
+                let trailing = todayTrailing(for: $0)
                 let kind = $0.isTodo ? nil : "Project"
-                let deadline = deadlineSubtitle($0.deadline)
-                let subtitle = [kind, deadline].compactMap { $0 }.joined(separator: " · ")
                 if $0.isTodo, let t = model.entities.todos[$0.id] {
-                    return todoRow(t, subtitle: subtitle.isEmpty ? nil : subtitle, overdue: Lists.isOverdue($0, ctx))
+                    return todoRow(
+                        t,
+                        subtitle: kind,
+                        trailing: trailing,
+                        overdue: Lists.isOverdue($0, ctx)
+                    )
                 }
                 return Row(
                     id: $0.id,
                     title: $0.title,
-                    subtitle: subtitle.isEmpty ? nil : subtitle,
+                    subtitle: kind,
                     isTodo: false,
                     status: $0.status,
-                    deadlineOverdue: Lists.isOverdue($0, ctx)
+                    deadlineOverdue: Lists.isOverdue($0, ctx),
+                    trailing: trailing
                 )
             }
         case .scheduled:
-            let s = Lists.scheduled(model.entities, ctx)
-            return s.days.flatMap { day in
-                day.items.map {
-                    if $0.isTodo, let t = model.entities.todos[$0.id] {
-                        return todoRow(t, subtitle: day.date, overdue: false)
-                    }
-                    return Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: false, status: $0.status)
-                }
+            // Prefer `scheduledSections`; this path is unused for phone listDetail.
+            return Lists.scheduled(model.entities, ctx).days.flatMap { day in
+                day.items.map { scheduledRow($0) }
             }
         case .backlog:
             return Lists.backlog(model.entities, ctx).flatMap { g in
                 g.todos.map {
-                    todoRow($0, subtitle: containerLabel(g.container), overdue: false)
+                    todoRow($0, subtitle: containerLabel(g.container), trailing: nil, overdue: false)
                 }
             }
         case .notNow:
@@ -618,13 +835,13 @@ struct ListsBrowserView: View {
             return n.projects.map {
                 Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, status: $0.status)
             } + n.todos.map {
-                todoRow($0, subtitle: nil, overdue: false)
+                todoRow($0, subtitle: nil, trailing: nil, overdue: false)
             }
         case .done:
             return Lists.doneList(model.entities, ctx).flatMap { day in
                 day.items.map {
                     if $0.isTodo, let t = model.entities.todos[$0.id] {
-                        return todoRow(t, subtitle: day.date, overdue: false)
+                        return todoRow(t, subtitle: day.date, trailing: nil, overdue: false)
                     }
                     return Row(id: $0.id, title: $0.title, subtitle: day.date, isTodo: false, status: $0.status)
                 }
@@ -635,14 +852,39 @@ struct ListsBrowserView: View {
                 Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, status: .open)
             } + t.items.map {
                 if $0.isTodo, let todo = model.entities.todos[$0.id] {
-                    return todoRow(todo, subtitle: nil, overdue: false)
+                    return todoRow(todo, subtitle: nil, trailing: nil, overdue: false)
                 }
                 return Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, status: $0.status)
             }
         }
     }
 
-    private func todoRow(_ todo: Todo, subtitle: String?, overdue: Bool) -> Row {
+    private func todayTrailing(for item: ListItem) -> TrailingChip? {
+        if Lists.isOverdue(item, ctx) {
+            return TrailingChip(systemImage: "clock", label: overdueLabel(deadline: item.deadline), isOverdue: true)
+        }
+        if let start = item.startDate, start < ctx.today {
+            return TrailingChip(systemImage: "clock", label: overdueLabel(startDate: start), isOverdue: true)
+        }
+        if item.startDate == ctx.today || item.deadline == ctx.today {
+            return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
+        }
+        if item.deadline != nil {
+            return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
+        }
+        return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
+    }
+
+    private func overdueLabel(deadline: LocalDate? = nil, startDate: LocalDate? = nil) -> String {
+        let anchor = deadline ?? startDate
+        guard let anchor, let past = When.fromLocalDate(anchor) else { return "Overdue" }
+        let hours = max(1, Int(Date().timeIntervalSince(past) / 3600))
+        if hours < 48 { return "\(hours)h overdue" }
+        let days = max(1, hours / 24)
+        return "\(days)d overdue"
+    }
+
+    private func todoRow(_ todo: Todo, subtitle: String?, trailing: TrailingChip?, overdue: Bool) -> Row {
         let checklist = model.entities.checklistItems.values.filter { $0.todoId == todo.id }
         let done = checklist.filter(\.done).count
         return Row(
@@ -655,7 +897,8 @@ struct ListsBrowserView: View {
             hasReminder: todo.reminderAt != nil,
             isRepeating: todo.repeat != nil || todo.repeatTemplateId != nil,
             hasNotes: !todo.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            checklistLabel: checklist.isEmpty ? nil : "\(done) of \(checklist.count)"
+            checklistLabel: checklist.isEmpty ? nil : "\(done) of \(checklist.count)",
+            trailing: trailing
         )
     }
 
@@ -836,6 +1079,12 @@ struct ListsBrowserView: View {
         return "Due \(deadline)"
     }
 
+    private struct TrailingChip: Equatable {
+        var systemImage: String
+        var label: String
+        var isOverdue: Bool
+    }
+
     private struct Row: Identifiable {
         var id: String
         var title: String
@@ -847,6 +1096,7 @@ struct ListsBrowserView: View {
         var isRepeating: Bool = false
         var hasNotes: Bool = false
         var checklistLabel: String?
+        var trailing: TrailingChip?
     }
 }
 

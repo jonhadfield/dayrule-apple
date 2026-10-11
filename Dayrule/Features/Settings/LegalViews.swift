@@ -90,7 +90,7 @@ struct LegalDocumentView: View {
         para("This app keeps a session token and device unlock material in the Keychain, and your encrypted vault in local storage so Dayrule works offline. Local reminder notifications, if you turn them on, are scheduled by the OS on this device. Showing to-do titles in those notifications is optional — when on, the OS stores that text. There are no analytics, advertising or third-party trackers.")
 
         heading("Your rights")
-        para("You can export and delete your data yourself in the app (Settings → Your data; account deletion follows on the web and later natively). Because we can’t decrypt your to-dos, the export in the app is the only way to get them in readable form. You can also ask us about anything we hold, ask us to correct or delete it, or object to how we use it, by writing to the address above. If you’re unhappy with our answer, you can complain to the UK Information Commissioner’s Office at ico.org.uk.")
+        para("You can export your data in the app (Settings → Your data) and delete your account there (Settings → Delete account), which removes it on our servers and on this device. Because we can’t decrypt your to-dos, the export in the app is the only way to get them in readable form. You can also ask us about anything we hold, ask us to correct or delete it, or object to how we use it, by writing to the address above. If you’re unhappy with our answer, you can complain to the UK Information Commissioner’s Office at ico.org.uk.")
         Button("ico.org.uk") {
             if let u = URL(string: "https://ico.org.uk") { openURL(u) }
         }

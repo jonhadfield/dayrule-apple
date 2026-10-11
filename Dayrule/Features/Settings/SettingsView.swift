@@ -19,6 +19,10 @@ struct SettingsView: View {
     #endif
     @State private var remindersOn = DeviceReminderPrefs.enabled
     @State private var showReminderTitles = DeviceReminderPrefs.showTitles
+    @State private var deletePassword = ""
+    @State private var deleteConfirm = ""
+    @State private var deleteBusy = false
+    @State private var deleteError: String?
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -70,7 +74,7 @@ struct SettingsView: View {
                     Toggle("Unlock with passkey", isOn: passkeyBinding)
                         .accessibilityIdentifier("settings.passkey")
                         .disabled(model.phase != .unlocked)
-                    Text("Creates a passkey on this device that derives a wrap key (PRF). This is not the same as a sign-in passkey on the web account — that comes later. Password stays the fallback.")
+                    Text("Creates a passkey on this device that derives a wrap key (PRF). Separate from a sign-in passkey on the account (second step after password). Password stays the fallback.")
                         .font(.footnote)
                         .foregroundStyle(colors.textSecondary)
                     Text("Stay unlocked keeps a device wrap key without biometrics — anyone who can unlock the phone can open Dayrule.")
@@ -131,6 +135,36 @@ struct SettingsView: View {
                         Text(email)
                             .foregroundStyle(colors.textSecondary)
                     }
+                    Section {
+                        Text("Deletes your account and all your to-dos on our servers and on this device. This can’t be undone.")
+                            .font(.footnote)
+                            .foregroundStyle(colors.textSecondary)
+                        SecureField("Password", text: $deletePassword)
+                            .textContentType(.password)
+                            .accessibilityIdentifier("settings.delete.password")
+                        TextField("Type DELETE to confirm", text: $deleteConfirm)
+                            .autocorrectionDisabled()
+                            #if os(iOS)
+                            .textInputAutocapitalization(.never)
+                            #endif
+                            .accessibilityIdentifier("settings.delete.confirm")
+                        if let deleteError {
+                            Text(deleteError)
+                                .font(.footnote)
+                                .foregroundStyle(Tokens.Light.deadline)
+                        }
+                        Button(deleteBusy ? "Deleting…" : "Delete account", role: .destructive) {
+                            Task { await runDeleteAccount() }
+                        }
+                        .disabled(
+                            deleteBusy
+                                || deletePassword.isEmpty
+                                || deleteConfirm != "DELETE"
+                        )
+                        .accessibilityIdentifier("settings.delete")
+                    } header: {
+                        Text("Delete account")
+                    }
                 }
                 Section {
                     Button("Help") { showHelp = true }
@@ -167,6 +201,24 @@ struct SettingsView: View {
             ) { result in
                 importFile(result)
             }
+        }
+    }
+
+    private func runDeleteAccount() async {
+        deleteError = nil
+        guard deleteConfirm == "DELETE" else {
+            deleteError = "Type DELETE to confirm."
+            return
+        }
+        deleteBusy = true
+        let ok = await model.deleteAccount(password: deletePassword)
+        deleteBusy = false
+        if ok {
+            deletePassword = ""
+            deleteConfirm = ""
+            dismiss()
+        } else {
+            deleteError = model.errorMessage ?? "Couldn’t delete the account."
         }
     }
 

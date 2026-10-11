@@ -21,7 +21,8 @@ struct HelpView: View {
                     labeled("Find", "Quick Find searches unlocked data on this device.")
                     labeled("Export", "Settings → Your data. Exports are plaintext — keep them safe.")
                     labeled("Reminders", "Settings → Reminders. Local notifications; the server never sees what they’re for.")
-                    labeled("Unlock", "Password, biometrics, or a device passkey (PRF). Stay unlocked is less locked.")
+                    labeled("Unlock", "Password, biometrics, or a device passkey (PRF). A sign-in passkey on the account is a second step after password — different from device unlock. Stay unlocked is less locked.")
+                    labeled("Delete account", "Settings → Delete account. Removes the account on the server and wipes this device.")
                 }
                 Section("Legal") {
                     Button("Privacy") { legal = .privacy }

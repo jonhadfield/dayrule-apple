@@ -13,16 +13,25 @@ struct WhenSheetView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let selected = currentSelection
         NavigationStack {
             List {
                 Section {
-                    button("Today", colors: colors) { apply(.today) }
+                    whenRow("Today", selected: selected == .today, colors: colors) { apply(.today) }
                     Button {
                         showDatePicker.toggle()
                     } label: {
-                        Text("Pick a date")
-                            .foregroundStyle(colors.text)
+                        HStack {
+                            Text("Pick a date")
+                                .foregroundStyle(colors.text)
+                            Spacer()
+                            if selected == .pickDate {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(colors.accent)
+                            }
+                        }
                     }
+                    .listRowBackground(colors.bg)
                     if showDatePicker {
                         DatePicker(
                             "Date",
@@ -37,25 +46,30 @@ struct WhenSheetView: View {
                             apply(.date(When.toLocalDate(pickDate)))
                         }
                         .foregroundStyle(colors.accent)
+                        .listRowBackground(colors.bg)
                     }
-                    button("Backlog", colors: colors) { apply(.ready) }
-                    button("Not now", colors: colors) { apply(.later) }
-                    button("Inbox", colors: colors) { apply(.inbox) }
-                    button("Clear", colors: colors) { apply(.clear) }
+                    whenRow("Backlog", selected: selected == .backlog, colors: colors) { apply(.ready) }
+                    whenRow("Not now", selected: selected == .notNow, colors: colors) { apply(.later) }
+                    whenRow("Inbox", selected: selected == .inbox, colors: colors) { apply(.inbox) }
+                    whenRow("Clear", selected: false, colors: colors) { apply(.clear) }
                 }
                 Section("Type a date") {
                     TextField("tomorrow, next monday, 15 oct…", text: $freeText)
                         .onSubmit(parseAndApply)
+                        .listRowBackground(colors.bg)
                     Button("Apply") { parseAndApply() }
                         .foregroundStyle(colors.accent)
                         .disabled(freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .listRowBackground(colors.bg)
                     if let parseError {
                         Text(parseError)
                             .font(.footnote)
                             .foregroundStyle(Tokens.Light.deadline)
+                            .listRowBackground(colors.bg)
                     }
                 }
             }
+            .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .navigationTitle("When")
@@ -71,9 +85,54 @@ struct WhenSheetView: View {
         }
     }
 
-    private func button(_ title: String, colors: DayruleColors, action: @escaping () -> Void) -> some View {
-        Button(title, action: action)
-            .foregroundStyle(colors.text)
+    private enum Selection: Equatable {
+        case today, pickDate, backlog, notNow, inbox
+    }
+
+    /// Match vocabulary for the first id (single-item When from row menus).
+    private var currentSelection: Selection? {
+        guard let id = ids.first else { return nil }
+        let today = When.toLocalDate(Date())
+        if let t = model.entities.todos[id] {
+            return selection(start: t.start, startDate: t.startDate, today: today)
+        }
+        if let p = model.entities.projects[id] {
+            return selection(start: p.start, startDate: p.startDate, today: today)
+        }
+        return nil
+    }
+
+    private func selection(start: StartBucket, startDate: LocalDate?, today: LocalDate) -> Selection? {
+        if start == .later { return .notNow }
+        if start == .inbox { return .inbox }
+        if let startDate {
+            if startDate == today { return .today }
+            if startDate > today { return .pickDate }
+            return .today
+        }
+        if start == .ready { return .backlog }
+        return nil
+    }
+
+    private func whenRow(
+        _ title: String,
+        selected: Bool,
+        colors: DayruleColors,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .foregroundStyle(colors.text)
+                Spacer()
+                if selected {
+                    Image(systemName: "checkmark")
+                        .foregroundStyle(colors.accent)
+                }
+            }
+        }
+        .listRowBackground(colors.bg)
+        .listRowSeparatorTint(colors.hairline)
     }
 
     private func apply(_ when: Commands.When) {

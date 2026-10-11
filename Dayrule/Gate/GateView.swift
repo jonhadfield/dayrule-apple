@@ -16,6 +16,8 @@ struct GateView: View {
                 lockedForm(colors: colors, busy: false)
             case .unlocking:
                 lockedForm(colors: colors, busy: true)
+            case .needsSecondStep:
+                secondStepForm(colors: colors)
             case .needsRecovery:
                 recoveryForm(colors: colors)
             case .signup:
@@ -273,6 +275,52 @@ struct GateView: View {
                         .font(.footnote)
                         .foregroundStyle(Tokens.Light.deadline)
                         .accessibilityIdentifier("signup.error")
+                }
+            }
+            .padding(24)
+        }
+    }
+
+    @ViewBuilder
+    private func secondStepForm(colors: DayruleColors) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Confirm it’s you")
+                    .font(DayruleFont.listTitle())
+                    .foregroundStyle(colors.text)
+                    .accessibilityIdentifier("gate.secondStep")
+                Text("This account has a sign-in passkey. Confirm with it, or use your recovery phrase (that counts as both factors). This is separate from Unlock with passkey on a device.")
+                    .foregroundStyle(colors.textSecondary)
+
+                Button {
+                    Task { await model.continuePasskeySecondStep() }
+                } label: {
+                    Text("Continue with passkey")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .foregroundStyle(colors.bg)
+                        .background(colors.accent)
+                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                }
+                .accessibilityIdentifier("gate.secondStep.passkey")
+
+                Button("Use recovery phrase") {
+                    model.beginRecoveryFromSecondStep()
+                }
+                .foregroundStyle(colors.accent)
+                .accessibilityIdentifier("gate.secondStep.recovery")
+
+                Button("Cancel") {
+                    model.cancelSecondStep()
+                }
+                .foregroundStyle(colors.accent)
+
+                if let errorMessage = model.errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(Tokens.Light.deadline)
+                        .accessibilityIdentifier("gate.secondStep.error")
                 }
             }
             .padding(24)

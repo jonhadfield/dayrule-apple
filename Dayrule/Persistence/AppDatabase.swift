@@ -4,16 +4,34 @@ import GRDB
 enum AppDatabase {
     /// Open (or create) the per-account ciphertext DB under Application Support.
     static func open(userId: String) throws -> DatabaseQueue {
-        let root = try FileManager.default.url(
+        try FileManager.default.createDirectory(at: directoryURL(), withIntermediateDirectories: true)
+        return try open(at: databaseURL(userId: userId))
+    }
+
+    /// Remove the per-account ciphertext DB (and sidecars) after account deletion.
+    static func remove(userId: String) throws {
+        let url = try databaseURL(userId: userId)
+        let fm = FileManager.default
+        for suffix in ["", "-wal", "-shm"] {
+            let path = url.path + suffix
+            if fm.fileExists(atPath: path) {
+                try fm.removeItem(atPath: path)
+            }
+        }
+    }
+
+    private static func directoryURL() throws -> URL {
+        try FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
         ).appendingPathComponent("Dayrule", isDirectory: true)
-        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    }
+
+    private static func databaseURL(userId: String) throws -> URL {
         let safe = userId.replacingOccurrences(of: "/", with: "_")
-        let url = root.appendingPathComponent("data-\(safe).sqlite")
-        return try open(at: url)
+        return try directoryURL().appendingPathComponent("data-\(safe).sqlite")
     }
 
     /// Open (or create) a ciphertext DB at an explicit path (tests / custom roots).

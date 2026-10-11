@@ -300,6 +300,15 @@ actor APIClient {
         try await decode("GET", path: "api/v1/account")
     }
 
+    /// `DELETE /api/v1/account` — server wipes the account after password check.
+    func deleteAccount(authKeyB64: String) async throws {
+        _ = try await raw(
+            "DELETE",
+            path: "api/v1/account",
+            jsonBody: ["authKey": authKeyB64]
+        )
+    }
+
     func recoverStart(email: String, recoveryProofB64: String) async throws -> RecoverStartResponse {
         try await decode(
             "POST",
