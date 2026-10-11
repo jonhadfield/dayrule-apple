@@ -3,7 +3,7 @@ import Security
 
 /// Session token + cached unlock material in the Keychain (M2).
 struct SessionStore: Sendable {
-    private let service = "app.dayrule.session"
+    private let service = "uk.co.lessknown.dayrule.session"
 
     struct CachedAccount: Codable, Sendable {
         var userId: String
@@ -12,6 +12,16 @@ struct SessionStore: Sendable {
         var kdf: KdfDTO
         var wrappedPassword: WrappedB64
         var deviceWrappedAK: WrappedB64?
+        /// AK wrapped under the biometric Keychain key (PLAN §8.3).
+        var biometricWrappedAK: WrappedB64?
+        /// Device-local passkey PRF unlock material (PLAN §8.4).
+        var passkey: PasskeyUnlock?
+    }
+
+    struct PasskeyUnlock: Codable, Equatable, Sendable {
+        var credentialId: String
+        var salt: String
+        var wrapped: WrappedB64
     }
 
     func saveToken(_ token: String) throws {

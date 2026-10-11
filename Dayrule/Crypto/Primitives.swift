@@ -4,8 +4,10 @@ import Foundation
 
 /// Cryptographic building blocks matching `dayrule/web/src/crypto/primitives.ts`.
 enum Primitives {
+    /// Must run before `sodium_malloc` / libsodium APIs (idempotent).
     static func ready() {
-        _ = sodium_init()
+        // 0 = first init, 1 = already initialised; -1 = failure.
+        precondition(sodium_init() >= 0, "sodium_init failed")
     }
 
     static func randomBytes(_ n: Int) -> [UInt8] {
@@ -41,6 +43,16 @@ enum Primitives {
         }
         guard status == 0 else { throw CryptoError.sealFailed }
         return out
+    }
+
+    /// Best-effort wipe of a mutable byte buffer (libsodium `sodium_memzero`).
+    static func wipe(_ bytes: inout [UInt8]) {
+        bytes.withUnsafeMutableBytes { buf in
+            if let base = buf.baseAddress {
+                sodium_memzero(base, buf.count)
+            }
+        }
+        bytes = []
     }
 
     /// HKDF-SHA256 with empty salt and a text label as `info`.

@@ -46,6 +46,7 @@ struct GateView: View {
                     .foregroundStyle(colors.textSecondary)
                     .multilineTextAlignment(.center)
 
+                #if DEBUG
                 field(colors: colors, label: "API", text: $model.apiBaseURLString)
                     .accessibilityIdentifier("gate.api")
                     .autocorrectionDisabled()
@@ -53,6 +54,7 @@ struct GateView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
+                #endif
 
                 field(colors: colors, label: "Email", text: $model.email)
                     .accessibilityIdentifier("gate.email")
@@ -77,6 +79,45 @@ struct GateView: View {
 
                 Toggle("Stay unlocked on this device", isOn: $model.stayUnlocked)
                     .foregroundStyle(colors.textSecondary)
+                    .onChange(of: model.stayUnlocked) { _, on in
+                        DeviceUnlockPrefs.stayUnlocked = on
+                        #if os(iOS)
+                        ReminderBackgroundRefresh.scheduleIfNeeded()
+                        #endif
+                    }
+                    .accessibilityIdentifier("gate.stayUnlocked")
+
+                if model.biometricUnlockAvailable {
+                    Button {
+                        Task { await model.unlockWithBiometrics() }
+                    } label: {
+                        Text(busy ? "Unlocking…" : "Unlock with \(model.biometryLabel)")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(colors.accent)
+                            .background(colors.sidebar)
+                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    }
+                    .accessibilityIdentifier("gate.biometric")
+                    .disabled(busy)
+                }
+
+                if model.passkeyUnlockAvailable {
+                    Button {
+                        Task { await model.unlockWithPasskey() }
+                    } label: {
+                        Text(busy ? "Unlocking…" : "Unlock with passkey")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .foregroundStyle(colors.accent)
+                            .background(colors.sidebar)
+                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    }
+                    .accessibilityIdentifier("gate.passkey")
+                    .disabled(busy)
+                }
 
                 Button {
                     Task {
@@ -133,6 +174,7 @@ struct GateView: View {
                 Text("Invite-only for now. We’ll email a code, then show your recovery phrase.")
                     .foregroundStyle(colors.textSecondary)
 
+                #if DEBUG
                 field(colors: colors, label: "API", text: $model.apiBaseURLString)
                     .accessibilityIdentifier("signup.api")
                     .autocorrectionDisabled()
@@ -140,6 +182,7 @@ struct GateView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.URL)
                     #endif
+                #endif
 
                 field(colors: colors, label: "Invite code", text: $model.inviteCode)
                     .accessibilityIdentifier("signup.invite")

@@ -1,6 +1,6 @@
 name: Dayrule
 options:
-  bundleIdPrefix: app.dayrule
+  bundleIdPrefix: uk.co.lessknown
   deploymentTarget:
     iOS: "18.0"
     macOS: "15.0"
@@ -10,9 +10,9 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    CURRENT_PROJECT_VERSION: 1
+    CURRENT_PROJECT_VERSION: 2
     MARKETING_VERSION: "0.1.0"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: VBZY8FBYR5
     CODE_SIGN_STYLE: Automatic
 packages:
   Sodium:
@@ -40,6 +40,8 @@ targets:
       - path: Dayrule/Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
         destinationFilters: [iOS]
+      - path: Dayrule/Resources/Assets.xcassets
+        buildPhase: resources
     dependencies:
       - package: Sodium
         product: Clibsodium
@@ -47,13 +49,17 @@ targets:
         product: GRDB
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.Dayrule
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule
+        DEVELOPMENT_TEAM: VBZY8FBYR5
         GENERATE_INFOPLIST_FILE: NO
         INFOPLIST_FILE: Dayrule/Resources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ENABLE_PREVIEWS: YES
         SWIFT_STRICT_CONCURRENCY: complete
         TARGETED_DEVICE_FAMILY: "1,2"
         # macOS-only (sdk-conditioned); App Sandbox + network client.
+        CODE_SIGN_ENTITLEMENTS[sdk=iphoneos*]: Dayrule/Resources/Dayrule-iOS.entitlements
+        CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Dayrule/Resources/Dayrule-iOS.entitlements
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Dayrule/Resources/Dayrule.entitlements
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
     scheme:
@@ -69,7 +75,7 @@ targets:
       - target: Dayrule
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleTests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.tests
         GENERATE_INFOPLIST_FILE: YES
         # Multiplatform host path: iOS puts the binary at .app root; macOS under Contents/MacOS.
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Dayrule.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayrule"
@@ -83,7 +89,7 @@ targets:
       - target: Dayrule
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: app.dayrule.DayruleUITests
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.uitests
         GENERATE_INFOPLIST_FILE: YES
         # XCUIApplication is MainActor-isolated on Xcode 16.4; keep tests annotated @MainActor.
         SWIFT_STRICT_CONCURRENCY: complete

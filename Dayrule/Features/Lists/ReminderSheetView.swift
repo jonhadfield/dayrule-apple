@@ -51,7 +51,7 @@ struct ReminderSheetView: View {
                     }
                 }
                 Section {
-                    Text("Reminders go off on the quarter hour. Local notifications come in a later update.")
+                    Text("Reminders go off on the quarter hour. Turn them on in Settings → Reminders. The server never sees what a reminder is for.")
                         .font(.footnote)
                         .foregroundStyle(colors.textSecondary)
                 }

@@ -26,6 +26,7 @@ enum AppDatabase {
         }
         let dbQueue = try DatabaseQueue(path: url.path, configuration: config)
         try migrator.migrate(dbQueue)
+        FileProtection.protectCiphertextFile(at: url)
         return dbQueue
     }
 

@@ -16,14 +16,19 @@ final class AppModel {
 
     var phase: Phase = .locked
     var errorMessage: String?
-    var stayUnlocked = false
+    var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
     var email = ""
-    var apiBaseURLString = "http://127.0.0.1:8080"
+    var apiBaseURLString = APIConfig.defaultBaseURLString
     var vault: VaultSnapshot?
     var vaultLoading = false
     var accountEmail: String?
     var syncStatus: SyncStatus = .idle
     var showSettings = false
+    /// True when a biometric wrap is cached for this device.
+    var biometricUnlockAvailable = false
+    var biometryLabel = "Biometrics"
+    /// True when a passkey PRF unlock blob is cached (PLAN §8.4).
+    var passkeyUnlockAvailable = false
 
     /// Create-account fields (Gate signup).
     var inviteCode = ""
@@ -60,13 +65,59 @@ final class AppModel {
 
     func noteEntitiesChanged() {
         entitiesEpoch += 1
+        scheduleRemindersIfUnlocked()
     }
 
+    /// Reschedule local notifications while unlocked (PLAN §11).
+    func scheduleRemindersIfUnlocked() {
+        guard phase == .unlocked else { return }
+        let snapshot = store.entities
+        Task { await ReminderScheduler.reschedule(entities: snapshot) }
+        #if os(iOS)
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+        #endif
+    }
+
+    #if os(iOS)
+    /// BGAppRefresh: refresh the nearest 64 while stay-unlocked (PLAN §11).
+    func handleBackgroundReminderRefresh() async {
+        guard DeviceReminderPrefs.enabled, DeviceUnlockPrefs.stayUnlocked else { return }
+        if phase == .unlocked {
+            await ReminderScheduler.reschedule(entities: store.entities)
+            ReminderBackgroundRefresh.scheduleIfNeeded()
+            return
+        }
+        guard let cached = try? sessions.loadAccount(),
+              let wrapped = cached.deviceWrappedAK
+        else { return }
+        do {
+            try await crypto.unlockFromDeviceWrap(
+                userId: cached.userId,
+                wrapped: try wrapped.sealed()
+            )
+            try openPersistence(userId: cached.userId)
+            if let cipherStore {
+                let entities = try await cipherStore.load()
+                await ReminderScheduler.reschedule(entities: entities)
+            }
+            cipherStore = nil
+            syncEngine = nil
+            await crypto.lock()
+        } catch {
+            cipherStore = nil
+            syncEngine = nil
+            await crypto.lock()
+        }
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+    }
+    #endif
+
     init() {
-        let env = ProcessInfo.processInfo.environment
-        let defaultAPI = env["DAYRULE_API"] ?? "http://127.0.0.1:8080"
+        let defaultAPI = APIConfig.defaultBaseURLString
         apiBaseURLString = defaultAPI
-        api = APIClient(baseURL: URL(string: defaultAPI) ?? URL(string: "http://127.0.0.1:8080")!)
+        api = APIClient(
+            baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
+        )
         if let cached = try? sessions.loadAccount() {
             email = cached.email
             accountEmail = cached.email
@@ -74,8 +125,19 @@ final class AppModel {
         if let token = try? sessions.loadToken() {
             Task { await api.setToken(token) }
         }
+        if let cached = try? sessions.loadAccount() {
+            biometricUnlockAvailable = cached.biometricWrappedAK != nil
+            passkeyUnlockAvailable = cached.passkey != nil
+        }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
+        }
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name.NSSystemTimeZoneDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.scheduleRemindersIfUnlocked() }
         }
     }
 
@@ -130,12 +192,11 @@ final class AppModel {
     /// Derive keys and show the recovery phrase; `finishSignup` registers after confirm.
     func signupPrepareAccount(password: String, confirm: String) async {
         errorMessage = nil
-        guard password.count >= 10 else {
-            errorMessage = "Use at least 10 characters."
-            return
-        }
-        guard password == confirm else {
-            errorMessage = "Passwords don’t match."
+        if let problem = await PasswordValidation.newPasswordProblem(
+            password: password,
+            confirm: confirm
+        ) {
+            errorMessage = problem
             return
         }
         guard let token = signupToken else {
@@ -195,15 +256,20 @@ final class AppModel {
             }
             await api.setToken(token)
             try sessions.saveToken(token)
+            DeviceUnlockPrefs.stayUnlocked = stayUnlocked
             let cached = SessionStore.CachedAccount(
                 userId: pending.userId,
                 email: pending.email,
                 saltB64: Base64Std.encode(pending.salt),
                 kdf: KdfDTO(v: pending.created.kdf.v, ops: pending.created.kdf.ops, mem: pending.created.kdf.mem),
                 wrappedPassword: WrappedB64(pending.created.wrappedPassword),
-                deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil
+                deviceWrappedAK: stayUnlocked ? WrappedB64(pending.created.wrappedDevice) : nil,
+                biometricWrappedAK: nil,
+                passkey: nil
             )
             try sessions.saveAccount(cached)
+            biometricUnlockAvailable = false
+            passkeyUnlockAvailable = false
             accountEmail = pending.email
             email = pending.email
             try openPersistence(userId: pending.userId)
@@ -269,6 +335,10 @@ final class AppModel {
         } catch let err as SyncBlockedError {
             syncStatus = .blocked(err.localizedDescription)
             errorMessage = err.localizedDescription
+        } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
+            // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
+            syncStatus = .needsUpdate
+            errorMessage = message.isEmpty ? SyncStatus.needsUpdate.label : message
         } catch APIError.offline {
             syncStatus = .offline("Offline — changes stay on this device.")
         } catch {
@@ -319,6 +389,7 @@ final class AppModel {
     }
 
     private func onlineLogin(password: String) async throws {
+        Primitives.ready()
         let pre = try await api.prelogin(email: email)
         let kdf = pre.kdf.params
         try kdf.meetFloor()
@@ -356,21 +427,27 @@ final class AppModel {
             stayUnlocked: stayUnlocked
         )
 
+        DeviceUnlockPrefs.stayUnlocked = stayUnlocked
         var cached = SessionStore.CachedAccount(
             userId: userId,
             email: email.lowercased(),
             saltB64: saltB64,
             kdf: kdfDTO,
             wrappedPassword: wrapped,
-            deviceWrappedAK: deviceWrap.map(WrappedB64.init)
+            deviceWrappedAK: deviceWrap.map(WrappedB64.init),
+            biometricWrappedAK: (try? sessions.loadAccount())?.biometricWrappedAK,
+            passkey: (try? sessions.loadAccount())?.passkey
         )
         if !stayUnlocked { cached.deviceWrappedAK = nil }
         try sessions.saveAccount(cached)
+        biometricUnlockAvailable = cached.biometricWrappedAK != nil
+        passkeyUnlockAvailable = cached.passkey != nil
         accountEmail = cached.email
         try openPersistence(userId: userId)
     }
 
     private func offlineUnlock(password: String, cached: SessionStore.CachedAccount) async throws {
+        Primitives.ready()
         let kdf = cached.kdf.params
         try kdf.meetFloor()
         let salt = try Base64Std.decode(cached.saltB64)
@@ -412,8 +489,81 @@ final class AppModel {
         }
     }
 
+    func refreshBiometryLabel() async {
+        biometryLabel = await crypto.biometryName()
+        let cached = try? sessions.loadAccount()
+        biometricUnlockAvailable = cached?.biometricWrappedAK != nil
+        passkeyUnlockAvailable = cached?.passkey != nil
+    }
+
+    /// Enable Face ID / Touch ID unlock while the vault is open (PLAN §8.3).
+    func setBiometricUnlock(enabled: Bool) async {
+        guard phase == .unlocked else { return }
+        do {
+            guard var cached = try sessions.loadAccount() else { return }
+            if enabled {
+                let sealed = try await crypto.enableBiometricWrap()
+                cached.biometricWrappedAK = WrappedB64(sealed)
+                try sessions.saveAccount(cached)
+                biometricUnlockAvailable = true
+            } else {
+                try await crypto.disableBiometricWrap(userId: cached.userId)
+                cached.biometricWrappedAK = nil
+                try sessions.saveAccount(cached)
+                biometricUnlockAvailable = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            biometricUnlockAvailable = (try? sessions.loadAccount())?.biometricWrappedAK != nil
+        }
+    }
+
+    /// Enable device-local passkey PRF unlock while unlocked (PLAN §8.4).
+    func setPasskeyUnlock(enabled: Bool) async {
+        guard phase == .unlocked else { return }
+        do {
+            guard var cached = try sessions.loadAccount() else { return }
+            if enabled {
+                let enrollment = try await PasskeyPRF.enroll(
+                    userId: cached.userId,
+                    email: cached.email
+                )
+                var prf = enrollment.prf
+                let sealed = try await crypto.wrapForPrf(prf: &prf)
+                cached.passkey = SessionStore.PasskeyUnlock(
+                    credentialId: Base64Std.encode(enrollment.credentialId),
+                    salt: Base64Std.encode(enrollment.salt),
+                    wrapped: WrappedB64(sealed)
+                )
+                try sessions.saveAccount(cached)
+                passkeyUnlockAvailable = true
+            } else {
+                cached.passkey = nil
+                try sessions.saveAccount(cached)
+                passkeyUnlockAvailable = false
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            passkeyUnlockAvailable = (try? sessions.loadAccount())?.passkey != nil
+        }
+    }
+
     func tryDeviceUnlock() async {
-        guard stayUnlocked,
+        await refreshBiometryLabel()
+        // Prefer biometric, then passkey, then stay-unlocked device wrap.
+        if let cached = try? sessions.loadAccount(), let wrapped = cached.biometricWrappedAK {
+            do {
+                try await crypto.unlockFromBiometricWrap(
+                    userId: cached.userId,
+                    wrapped: try wrapped.sealed()
+                )
+                try await finishConvenienceUnlock(cached: cached)
+                return
+            } catch {
+                // User cancelled or biometry failed — stay on the password gate.
+            }
+        }
+        guard DeviceUnlockPrefs.stayUnlocked,
               let cached = try? sessions.loadAccount(),
               let wrapped = cached.deviceWrappedAK
         else { return }
@@ -422,19 +572,63 @@ final class AppModel {
                 userId: cached.userId,
                 wrapped: try wrapped.sealed()
             )
-            if let token = try sessions.loadToken() {
-                await api.setToken(token)
-            }
-            accountEmail = cached.email
-            email = cached.email
-            try openPersistence(userId: cached.userId)
-            await refreshVault()
-            phase = .unlocked
-            bumpIdle()
+            try await finishConvenienceUnlock(cached: cached)
         } catch {
             errorMessage = error.localizedDescription
             phase = .locked
         }
+    }
+
+    func unlockWithBiometrics() async {
+        errorMessage = nil
+        guard let cached = try? sessions.loadAccount(),
+              let wrapped = cached.biometricWrappedAK
+        else { return }
+        phase = .unlocking
+        do {
+            try await crypto.unlockFromBiometricWrap(
+                userId: cached.userId,
+                wrapped: try wrapped.sealed()
+            )
+            try await finishConvenienceUnlock(cached: cached)
+        } catch {
+            phase = .locked
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func unlockWithPasskey() async {
+        errorMessage = nil
+        guard let cached = try? sessions.loadAccount(),
+              let passkey = cached.passkey
+        else { return }
+        phase = .unlocking
+        do {
+            let credentialId = try Base64Std.decode(passkey.credentialId)
+            let salt = try Base64Std.decode(passkey.salt)
+            var prf = try await PasskeyPRF.assert(credentialId: credentialId, salt: salt)
+            try await crypto.unlockWithPrf(
+                userId: cached.userId,
+                prf: &prf,
+                wrapped: try passkey.wrapped.sealed()
+            )
+            try await finishConvenienceUnlock(cached: cached)
+        } catch {
+            phase = .locked
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func finishConvenienceUnlock(cached: SessionStore.CachedAccount) async throws {
+        if let token = try sessions.loadToken() {
+            await api.setToken(token)
+        }
+        accountEmail = cached.email
+        email = cached.email
+        try openPersistence(userId: cached.userId)
+        await refreshVault()
+        phase = .unlocked
+        bumpIdle()
     }
 
     func refreshVault() async {
@@ -481,15 +675,16 @@ final class AppModel {
         syncEngine = nil
         syncStatus = .idle
         showSettings = false
+        // Lock first so noteEntitiesChanged does not clear pending notifications.
+        phase = .locked
         store.hydrate(.empty())
-        noteEntitiesChanged()
+        entitiesEpoch += 1
         Task {
             try? await api.logout()
             await api.setToken(nil)
             await crypto.lock()
         }
         try? sessions.deleteToken()
-        phase = .locked
     }
 
     func bumpIdle() {
@@ -503,6 +698,9 @@ final class AppModel {
     }
 
     func scenePhaseChanged(_ scene: ScenePhase) {
-        if scene == .active { bumpIdle() }
+        if scene == .active {
+            bumpIdle()
+            scheduleRemindersIfUnlocked()
+        }
     }
 }

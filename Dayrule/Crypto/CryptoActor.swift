@@ -7,8 +7,12 @@ actor CryptoActor {
     private var syncIdKey: SecureBuffer?
     private var userId: String?
     private let deviceStore = DeviceKeyStore()
+    private let biometricStore = BiometricKeyStore()
 
     var isUnlocked: Bool { accountKey != nil }
+
+    func biometryAvailable() -> Bool { biometricStore.biometryAvailable() }
+    func biometryName() -> String { biometricStore.biometryName() }
 
     func currentUserId() -> String? { userId }
 
@@ -31,6 +35,7 @@ actor CryptoActor {
 
     /// Derive AuthKey for login (KEK kept only for the subsequent unwrap).
     func beginLogin(password: String, salt: [UInt8], kdf: KdfParams) throws -> (authKey: [UInt8], kek: [UInt8]) {
+        Primitives.ready()
         try kdf.meetFloor()
         let mk = try Primitives.deriveMasterKey(password: password, salt: salt, kdf: kdf)
         let authKey = Primitives.hkdf(ikm: mk, label: Labels.auth)
@@ -68,6 +73,63 @@ actor CryptoActor {
             kek: deviceKey,
             wrapped: wrapped,
             label: Labels.wrapDevice,
+            userId: userId
+        )
+        hold(ak: ak, userId: userId)
+    }
+
+    /// Wrap the in-memory AK under a biometric Keychain key (PLAN §8.3).
+    func enableBiometricWrap() throws -> Primitives.Sealed {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        let bioKey = try biometricStore.loadOrCreate(userId: userId)
+        return try Primitives.wrapKey(
+            kek: bioKey,
+            key: ak,
+            label: Labels.wrapDevice,
+            userId: userId
+        )
+    }
+
+    func unlockFromBiometricWrap(userId: String, wrapped: Primitives.Sealed) throws {
+        guard let bioKey = try biometricStore.load(userId: userId) else {
+            throw CryptoError.notUnlocked
+        }
+        let ak = try Primitives.unwrapKey(
+            kek: bioKey,
+            wrapped: wrapped,
+            label: Labels.wrapDevice,
+            userId: userId
+        )
+        hold(ak: ak, userId: userId)
+    }
+
+    func disableBiometricWrap(userId: String) throws {
+        try biometricStore.delete(userId: userId)
+    }
+
+    /// Wrap AK under HKDF(PRF, `dayrule/prf-kek/v1`) (PLAN §8.4). Wipes `prf`.
+    func wrapForPrf(prf: inout [UInt8]) throws -> Primitives.Sealed {
+        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        defer { Primitives.wipe(&prf) }
+        var kek = Primitives.hkdf(ikm: prf, label: Labels.prfKek)
+        defer { Primitives.wipe(&kek) }
+        return try Primitives.wrapKey(
+            kek: kek,
+            key: ak,
+            label: Labels.wrapUnderPrf,
+            userId: userId
+        )
+    }
+
+    /// Unlock with PRF output; wipes `prf` (PLAN §8.4).
+    func unlockWithPrf(userId: String, prf: inout [UInt8], wrapped: Primitives.Sealed) throws {
+        defer { Primitives.wipe(&prf) }
+        var kek = Primitives.hkdf(ikm: prf, label: Labels.prfKek)
+        defer { Primitives.wipe(&kek) }
+        let ak = try Primitives.unwrapKey(
+            kek: kek,
+            wrapped: wrapped,
+            label: Labels.wrapUnderPrf,
             userId: userId
         )
         hold(ak: ak, userId: userId)

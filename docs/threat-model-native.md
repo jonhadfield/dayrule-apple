@@ -16,11 +16,22 @@ users to check.
 
 | Asset | Where |
 |---|---|
-| Record ciphertext | App-group SQLite (GRDB) — ciphertext only (from M4) |
+| Record ciphertext | Application Support SQLite (GRDB) — ciphertext only (from M4); iOS file protection `completeUntilFirstUserAuthentication` |
 | Account key | `sodium_malloc` inside `CryptoActor` while unlocked; wiped on lock |
-| Device wrap key | Keychain, `WhenUnlockedThisDeviceOnly`, random 256-bit |
-| Session token | Keychain (from M2) — never logged |
+| Device wrap key | Keychain, `WhenUnlockedThisDeviceOnly`, random 256-bit — **never** iCloud Keychain |
+| Biometric wrap key | Keychain, `WhenPasscodeSetThisDeviceOnly` + `.biometryCurrentSet` |
+| Session token | Keychain (from M2), `WhenUnlockedThisDeviceOnly` — never logged |
 | Recovery phrase / password | Never persisted; SecureField copies are best-effort only |
+
+## Backups (iCloud / Finder / iTunes)
+
+Device backups may include the SQLite file (ciphertext only). They do **not**
+include the device or biometric wrap keys (`ThisDeviceOnly` Keychain). Restoring
+a backup onto another device therefore yields ciphertext the new device cannot
+unwrap until the user signs in with password (or recovery) and re-derives keys.
+Explicit Export (Settings → Your data) is plaintext by design — warn in UI.
+Stay-unlocked / biometric / passkey wraps are per-device and not part of the
+synced vault.
 
 ## Shared residual risks (iOS + macOS)
 
