@@ -82,6 +82,7 @@
 		A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */; };
 		AA554C553310463AD0D2FD75 /* Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19069DB52AC6606DCAFA09FC /* Commands.swift */; };
 		AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */ = {isa = PBXBuildFile; fileRef = A04DD9593EDD04B386E31B09 /* BIP39.swift */; };
+		ACF2654EC3B929966026460E /* PasskeySignIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FCEB0603F98391154252BCD /* PasskeySignIn.swift */; };
 		AEDF21E5F48B258B5EAD7398 /* Change.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F60414FCD654000D6F6DF80 /* Change.swift */; };
 		AFB1F4F6DFC086E0676BDC37 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = 6444C067943071E16537A325 /* GRDB */; };
 		B206B81AA34A975D008567EA /* VaultPullTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */; };
@@ -123,6 +124,7 @@
 		F346AD2992D016BBDC804EBC /* TagSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */; };
 		F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */; };
 		F913F1DE7E957405EA69B8AD /* Exchange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D7023605829FF55C543A3A /* Exchange.swift */; };
+		FD5DAC4BCC18FBD39E4375BB /* PasskeyAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */; };
 		FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1160CD5B09CB87451563810B /* StoreTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -183,6 +185,7 @@
 		43FC547FBEFB77D78A87433D /* GateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateView.swift; sourceTree = "<group>"; };
 		4608F0B7201CE4C352E4294D /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		460E9E84AF5DF4F41A3DAD8E /* BreachCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreachCheckTests.swift; sourceTree = "<group>"; };
+		469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyAuthorization.swift; sourceTree = "<group>"; };
 		4E6C23642DCB6C41B26D8671 /* Merge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Merge.swift; sourceTree = "<group>"; };
 		50B739D187E09BA80EF8304B /* DayruleApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleApp.swift; sourceTree = "<group>"; };
 		54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCover.swift; sourceTree = "<group>"; };
@@ -195,6 +198,7 @@
 		67A6060A2F05BA56D06D4BFE /* DayruleTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DayruleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6CE93B71E4258F313852B837 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
 		6F60414FCD654000D6F6DF80 /* Change.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Change.swift; sourceTree = "<group>"; };
+		6FCEB0603F98391154252BCD /* PasskeySignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeySignIn.swift; sourceTree = "<group>"; };
 		70CD9C2BDF762793FE8A263D /* ReminderBackgroundRefresh.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderBackgroundRefresh.swift; sourceTree = "<group>"; };
 		719D685FDE95FE6C63E90CB5 /* Repeats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeats.swift; sourceTree = "<group>"; };
 		7445A8887D2541F518050BD1 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
@@ -477,7 +481,9 @@
 				009C4F0B2898FCD16E2FFC1A /* Hex.swift */,
 				27CAF46F7EBC5CEC5D22EBC3 /* Labels.swift */,
 				D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */,
+				469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */,
 				EAC88A10168259EFE3885170 /* PasskeyPRF.swift */,
+				6FCEB0603F98391154252BCD /* PasskeySignIn.swift */,
 				374E24148DE7D295BFAC4296 /* Primitives.swift */,
 				B6A9CCB3D751BB5F83672A3E /* Recovery.swift */,
 				CDA8099CD51FDF8947583529 /* SecureBuffer.swift */,
@@ -741,7 +747,9 @@
 				C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */,
 				02CEB9BD1F3938CA38CBE210 /* Merge.swift in Sources */,
 				2BF4C47D521435E78A947EF1 /* Order.swift in Sources */,
+				FD5DAC4BCC18FBD39E4375BB /* PasskeyAuthorization.swift in Sources */,
 				E8C0E0A1FF6492E22ABCF59A /* PasskeyPRF.swift in Sources */,
+				ACF2654EC3B929966026460E /* PasskeySignIn.swift in Sources */,
 				372B27D99B0DDB1039654C5F /* PasswordValidation.swift in Sources */,
 				E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */,
 				65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */,
@@ -876,7 +884,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1008,7 +1016,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

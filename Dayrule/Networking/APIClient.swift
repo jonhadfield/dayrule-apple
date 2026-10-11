@@ -272,6 +272,26 @@ actor APIClient {
         )
     }
 
+    /// Raw JSON for `POST /api/v1/auth/login/passkey/options` (parse off-actor).
+    func loginPasskeyOptionsData(token: String) async throws -> Data {
+        try await raw(
+            "POST",
+            path: "api/v1/auth/login/passkey/options",
+            jsonBody: ["token": token]
+        )
+    }
+
+    /// Finish sign-in with a server-verified passkey assertion (`credential` as JSON object Data).
+    func loginPasskey(token: String, credentialJSON: Data) async throws -> LoginResponse {
+        guard let credential = try JSONSerialization.jsonObject(with: credentialJSON) as? [String: Any]
+        else { throw APIError.decoding }
+        return try await decode(
+            "POST",
+            path: "api/v1/auth/login/passkey",
+            jsonBody: ["token": token, "credential": credential]
+        )
+    }
+
     func logout() async throws {
         _ = try await raw("POST", path: "api/v1/auth/logout")
     }
