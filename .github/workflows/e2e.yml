@@ -2,6 +2,10 @@ name: Local sync e2e
 
 # PLAN §14.2: checkout dayrule @ SHARED.lock, Postgres, serve-api, SyncE2E + SyncUITests.
 # Local: E2E_DATABASE_URL=… ./scripts/local-sync-e2e.sh
+#
+# Requires repo secret DAYRULE_WEB_TOKEN: a fine-grained PAT (or classic) with
+# Contents: Read on the private jonhadfield/dayrule repo. The default
+# GITHUB_TOKEN cannot clone that repo.
 on:
   workflow_dispatch:
   push:
@@ -14,19 +18,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read SHARED.lock web commit
+        id: lock
+        run: echo "sha=$(sed -n 's/^web_commit=//p' docs/shared/SHARED.lock)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout dayrule at SHARED.lock
-        env:
-          DAYRULE_WEB_TOKEN: ${{ secrets.DAYRULE_WEB_TOKEN }}
-        run: |
-          set -euo pipefail
-          SHA=$(sed -n 's/^web_commit=//p' docs/shared/SHARED.lock)
-          if [ -n "${DAYRULE_WEB_TOKEN:-}" ]; then
-            git clone --depth 1 "https://x-access-token:${DAYRULE_WEB_TOKEN}@github.com/jonhadfield/dayrule.git" "$RUNNER_TEMP/dayrule"
-          else
-            git clone --depth 1 https://github.com/jonhadfield/dayrule.git "$RUNNER_TEMP/dayrule"
-          fi
-          git -C "$RUNNER_TEMP/dayrule" fetch --depth 1 origin "$SHA"
-          git -C "$RUNNER_TEMP/dayrule" checkout "$SHA"
+        uses: actions/checkout@v4
+        with:
+          repository: jonhadfield/dayrule
+          ref: ${{ steps.lock.outputs.sha }}
+          token: ${{ secrets.DAYRULE_WEB_TOKEN }}
+          path: dayrule
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
@@ -39,7 +41,7 @@ jobs:
 
       - name: Run local sync e2e
         env:
-          DAYRULE_WEB: ${{ runner.temp }}/dayrule
+          DAYRULE_WEB: ${{ github.workspace }}/dayrule
           E2E_DATABASE_URL: postgres://localhost/dayrule_e2e?sslmode=disable
           DAYRULE_API: http://127.0.0.1:8080
         run: ./scripts/local-sync-e2e.sh
