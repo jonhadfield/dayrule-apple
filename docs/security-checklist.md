@@ -42,7 +42,7 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [ ] Internal TestFlight build uploaded (signing + entitlements; build ≥ 2 with sodium_init + phone nav fixes)
+- [x] Internal TestFlight build uploaded (signing + entitlements; build 4 with Browse/When + sodium_init + phone nav fixes)
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [ ] App Review demo account + nutrition label (before external testers)
 - [ ] Confirm French encryption declaration rules before public store
