@@ -396,23 +396,41 @@ final class AppModel {
         let salt = try Base64Std.decode(pre.salt)
         let (authKey, kek) = try await crypto.beginLogin(password: password, salt: salt, kdf: kdf)
 
-        let login = try await api.login(
+        let passwordLogin = try await api.login(
             email: email,
             authKeyB64: Base64Std.encode(authKey),
             deviceLabel: ClientPlatform.deviceLabel
         )
 
-        if login.secondStep != nil {
-            phase = .needsRecovery
-            errorMessage = "This account needs a second step. Sign in with your recovery phrase."
-            return
+        let sessionLogin: LoginResponse
+        if let step = passwordLogin.secondStep {
+            if step.methods.contains("passkey") {
+                do {
+                    sessionLogin = try await completePasskeySecondStep(token: step.token)
+                } catch PasskeySignIn.Error.cancelled {
+                    phase = .locked
+                    errorMessage = "Passkey sign-in was cancelled."
+                    return
+                } catch {
+                    // Recovery phrase still counts as both factors (decision 30).
+                    phase = .needsRecovery
+                    errorMessage = "Use your passkey, or sign in with your recovery phrase."
+                    return
+                }
+            } else {
+                phase = .needsRecovery
+                errorMessage = "This account needs a second step. Sign in with your recovery phrase."
+                return
+            }
+        } else {
+            sessionLogin = passwordLogin
         }
 
-        guard let userId = login.userId?.lowercased(),
-              let token = login.token,
-              let wrapped = login.wrappedPassword,
-              let saltB64 = login.salt,
-              let kdfDTO = login.kdf
+        guard let userId = sessionLogin.userId?.lowercased(),
+              let token = sessionLogin.token,
+              let wrapped = sessionLogin.wrappedPassword,
+              let saltB64 = sessionLogin.salt,
+              let kdfDTO = sessionLogin.kdf
         else {
             throw APIError.decoding
         }
@@ -444,6 +462,17 @@ final class AppModel {
         passkeyUnlockAvailable = cached.passkey != nil
         accountEmail = cached.email
         try openPersistence(userId: userId)
+    }
+
+    /// `POST …/login/passkey/options` + platform assertion + `POST …/login/passkey`.
+    private func completePasskeySecondStep(token: String) async throws -> LoginResponse {
+        let optionsData = try await api.loginPasskeyOptionsData(token: token)
+        guard let root = try JSONSerialization.jsonObject(with: optionsData) as? [String: Any],
+              let options = root["options"] as? [String: Any]
+        else { throw APIError.decoding }
+        let credential = try await PasskeySignIn.assert(options: options)
+        let credentialJSON = try JSONSerialization.data(withJSONObject: credential)
+        return try await api.loginPasskey(token: token, credentialJSON: credentialJSON)
     }
 
     private func offlineUnlock(password: String, cached: SessionStore.CachedAccount) async throws {

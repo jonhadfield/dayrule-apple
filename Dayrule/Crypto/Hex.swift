@@ -31,3 +31,26 @@ enum Base64Std {
         return [UInt8](data)
     }
 }
+
+/// WebAuthn / go-webauthn wire encoding (no padding, URL alphabet).
+enum Base64URL {
+    static func encode(_ bytes: [UInt8]) -> String {
+        Data(bytes).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-")
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: "=", with: "")
+    }
+
+    static func encode(_ data: Data) -> String {
+        encode([UInt8](data))
+    }
+
+    static func decode(_ s: String) throws -> [UInt8] {
+        var b64 = s.replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        let pad = (4 - b64.count % 4) % 4
+        if pad > 0 { b64 += String(repeating: "=", count: pad) }
+        guard let data = Data(base64Encoded: b64) else { throw CryptoError.openFailed }
+        return [UInt8](data)
+    }
+}
