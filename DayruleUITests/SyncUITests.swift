@@ -1,5 +1,8 @@
 import Foundation
 import XCTest
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// Local API signup + Add through the Gate/lists UI (PLAN §14.2).
 /// Enabled by `/tmp/dayrule-e2e-config.json` from `scripts/local-sync-e2e.sh`
@@ -7,6 +10,7 @@ import XCTest
 final class SyncUITests: XCTestCase {
     @MainActor
     func testSignupAddTodoAppearsInInbox() throws {
+        continueAfterFailure = false
         let cfgURL = URL(fileURLWithPath: "/tmp/dayrule-e2e-config.json")
         guard FileManager.default.fileExists(atPath: cfgURL.path),
               let data = try? Data(contentsOf: cfgURL),
@@ -21,7 +25,8 @@ final class SyncUITests: XCTestCase {
         let api = cfg["api"] ?? "http://127.0.0.1:8080"
         let stamp = Int(Date().timeIntervalSince1970 * 1000)
         let email = "ui-e2e-\(stamp)@example.com"
-        let password = "orange kettle drift"
+        // No spaces: SecureField + software keyboard often drops them under XCTest.
+        let password = "orangekettle99"
         let title = "UI marigold \(stamp)"
         let logPath = (outDir as NSString).appendingPathComponent("api.log")
 
@@ -60,12 +65,10 @@ final class SyncUITests: XCTestCase {
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
             if err.exists { XCTFail("verify failed: \(err.label)") }
         }
-        passwordField.tap()
-        passwordField.typeText(password)
+        pasteSecure(passwordField, password, in: app)
         let confirmField = app.secureTextFields["signup.confirmPassword"]
-        confirmField.tap()
-        confirmField.typeText(password)
-        continueBtn.tap()
+        pasteSecure(confirmField, password, in: app)
+        tapWhenHittable(continueBtn, in: app)
 
         // Surface derive/register errors instead of waiting out Argon2 timeout.
         if err.waitForExistence(timeout: 2) {
@@ -130,6 +133,42 @@ final class SyncUITests: XCTestCase {
             element.typeText(deletes)
         }
         element.typeText(text)
+    }
+
+    /// Paste into a SecureField — more reliable than typeText with the soft keyboard.
+    @MainActor
+    private func pasteSecure(_ field: XCUIElement, _ text: String, in app: XCUIApplication) {
+        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        #if canImport(UIKit)
+        UIPasteboard.general.string = text
+        field.tap()
+        field.press(forDuration: 1.0)
+        let paste = app.menuItems["Paste"]
+        if paste.waitForExistence(timeout: 3) {
+            paste.tap()
+            return
+        }
+        #endif
+        field.tap()
+        field.typeText(text)
+    }
+
+    @MainActor
+    private func tapWhenHittable(_ element: XCUIElement, in app: XCUIApplication) {
+        // Soft keyboard often covers Continue on compact iPhone simulators.
+        if app.keyboards.element.exists {
+            app.swipeUp()
+        }
+        let deadline = Date().addingTimeInterval(5)
+        while Date() < deadline, !element.isHittable {
+            app.swipeUp()
+            RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+        }
+        if element.isHittable {
+            element.tap()
+        } else {
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        }
     }
 
     private func waitForEmailCode(email: String, logPath: String) throws -> String {
