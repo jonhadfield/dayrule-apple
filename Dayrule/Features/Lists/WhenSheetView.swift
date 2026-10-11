@@ -18,6 +18,10 @@ struct WhenSheetView: View {
             List {
                 Section {
                     whenRow("Today", selected: selected == .today, colors: colors) { apply(.today) }
+                    whenRow("Tomorrow", selected: selected == .tomorrow, colors: colors) {
+                        let tomorrow = When.addLocalDays(When.toLocalDate(Date()), 1)
+                        apply(.date(tomorrow))
+                    }
                     Button {
                         showDatePicker.toggle()
                     } label: {
@@ -86,7 +90,7 @@ struct WhenSheetView: View {
     }
 
     private enum Selection: Equatable {
-        case today, pickDate, backlog, notNow, inbox
+        case today, tomorrow, pickDate, backlog, notNow, inbox
     }
 
     /// Match vocabulary for the first id (single-item When from row menus).
@@ -107,6 +111,7 @@ struct WhenSheetView: View {
         if start == .inbox { return .inbox }
         if let startDate {
             if startDate == today { return .today }
+            if startDate == When.addLocalDays(today, 1) { return .tomorrow }
             if startDate > today { return .pickDate }
             return .today
         }

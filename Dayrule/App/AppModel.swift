@@ -49,6 +49,9 @@ final class AppModel {
     private var cipherStore: CipherStore?
     private var syncEngine: SyncEngine?
     private var syncTask: Task<Void, Never>?
+    private var syncPollTask: Task<Void, Never>?
+    private var syncInFlight = false
+    private var sceneIsActive = true
 
     private struct PendingSignup {
         var email: String
@@ -323,18 +326,41 @@ final class AppModel {
         }
     }
 
+    /// Foreground poll while unlocked (PLAN §10.3: ~15s head/sync loop).
+    private func startSyncPoll() {
+        syncPollTask?.cancel()
+        guard phase == .unlocked, sceneIsActive else { return }
+        syncPollTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled else { return }
+                guard let self else { return }
+                guard self.phase == .unlocked, self.sceneIsActive else { continue }
+                await self.runSync()
+            }
+        }
+    }
+
+    private func stopSyncPoll() {
+        syncPollTask?.cancel()
+        syncPollTask = nil
+    }
+
     private func hasBearerSession() -> Bool {
         (try? sessions.loadToken()) != nil
     }
 
     private func runSync() async {
         guard let syncEngine else { return }
+        guard !syncInFlight else { return }
         // No Bearer → stay local; do not hit the API (401 would bounce to the gate).
         guard hasBearerSession() else {
             syncStatus = .offline("Sign in to sync.")
             return
         }
+        syncInFlight = true
         syncStatus = .syncing
+        defer { syncInFlight = false }
         do {
             try await syncEngine.sync()
             noteEntitiesChanged()
@@ -375,6 +401,7 @@ final class AppModel {
         if ok {
             phase = .unlocked
             bumpIdle()
+            startSyncPoll()
             return
         }
         cipherStore = nil
@@ -812,6 +839,7 @@ final class AppModel {
         idleTask = nil
         syncTask?.cancel()
         syncTask = nil
+        stopSyncPoll()
         vault = nil
         cipherStore = nil
         syncEngine = nil
@@ -903,9 +931,24 @@ final class AppModel {
     }
 
     func scenePhaseChanged(_ scene: ScenePhase) {
+        sceneIsActive = scene == .active
         if scene == .active {
             bumpIdle()
             scheduleRemindersIfUnlocked()
+            if phase == .unlocked {
+                // Pull peer writes when returning to the foreground (PLAN §10.3).
+                scheduleSync()
+                startSyncPoll()
+            }
+        } else {
+            stopSyncPoll()
+            if phase == .unlocked, hasBearerSession() {
+                // Best-effort outbox flush before suspend (PLAN §10.3).
+                syncTask?.cancel()
+                syncTask = Task { [weak self] in
+                    await self?.runSync()
+                }
+            }
         }
     }
 }

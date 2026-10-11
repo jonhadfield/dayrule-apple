@@ -150,7 +150,7 @@ struct ListsBrowserView: View {
             NavigationStack(path: $phonePath) {
                 phoneTabRoot(colors: colors)
                     .toolbar {
-                        phoneChromeToolbar(colors: colors)
+                        chromeToolbar(colors: colors)
                     }
                     .navigationDestination(for: PhoneRoute.self) { route in
                         switch route {
@@ -233,20 +233,23 @@ struct ListsBrowserView: View {
             sidebarList(colors: colors, phoneLinks: false)
                 .navigationTitle("Dayrule")
                 .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
-                .toolbar { phoneChromeToolbar(colors: colors) }
+                // Lock / Find / Settings live on the detail column so they stay
+                // reachable when the Mac sidebar is collapsed.
         } detail: {
             NavigationStack(path: $projectPath) {
                 listDetail(list: activeList, colors: colors)
+                    .toolbar { chromeToolbar(colors: colors) }
                     .navigationDestination(for: ID.self) { projectId in
                         ProjectDetailView(model: model, projectId: projectId)
+                            .toolbar { chromeToolbar(colors: colors) }
                     }
             }
         }
     }
 
-    /// Lock · Find · Settings on every phone tab (Refresh lives under Settings → Sync now).
+    /// Lock · Find · Settings (Refresh lives under Settings → Sync now).
     @ToolbarContentBuilder
-    private func phoneChromeToolbar(colors: DayruleColors) -> some ToolbarContent {
+    private func chromeToolbar(colors: DayruleColors) -> some ToolbarContent {
         ToolbarItem(placement: .cancellationAction) {
             Button {
                 model.lock()
@@ -473,7 +476,7 @@ struct ListsBrowserView: View {
         .toolbar {
             // Pushed Browse destinations replace the tab-root toolbar — repeat chrome.
             if isCompact, !phonePath.isEmpty {
-                phoneChromeToolbar(colors: colors)
+                chromeToolbar(colors: colors)
             }
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -699,16 +702,22 @@ struct ListsBrowserView: View {
                 }
                 Spacer(minLength: 0)
                 if let trailing = row.trailing {
-                    HStack(spacing: 4) {
-                        Image(systemName: trailing.systemImage)
-                            .font(.caption)
-                        Text(trailing.label)
-                            .font(.caption)
+                    Button {
+                        whenTarget = WhenTarget(ids: [row.id])
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: trailing.systemImage)
+                                .font(.caption)
+                            Text(trailing.label)
+                                .font(.caption)
+                        }
+                        .foregroundStyle(
+                            trailing.isOverdue ? Tokens.Light.deadline : colors.accent
+                        )
                     }
-                    .foregroundStyle(
-                        trailing.isOverdue ? Tokens.Light.deadline : colors.accent
-                    )
+                    .buttonStyle(.plain)
                     .accessibilityLabel(trailing.label)
+                    .accessibilityHint("Change When")
                 }
             }
         }
@@ -925,7 +934,7 @@ struct ListsBrowserView: View {
         guard !title.isEmpty else { return }
         // Use the list on screen, not `selection` — on phone those can diverge.
         do {
-            _ = try model.store.run("Add") { d, env in
+            let todo = try model.store.run("Add") { d, env in
                 switch list {
                 case .today:
                     return try Commands.createTodo(d, env, .init(title: title, placement: .today))
@@ -942,6 +951,10 @@ struct ListsBrowserView: View {
             }
             draftTitles[list] = ""
             model.noteEntitiesChanged()
+            // Scheduled defaults to tomorrow; open When so the date is choosable.
+            if list == .scheduled {
+                whenTarget = WhenTarget(ids: [todo.id])
+            }
         } catch {
             model.errorMessage = error.localizedDescription
         }
