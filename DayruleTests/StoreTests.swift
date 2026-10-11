@@ -56,6 +56,29 @@ struct StoreTests {
         #expect(store.entities.todos[todo.id]?.trashedAt != nil)
     }
 
+    @Test func setWhenInboxAndBacklogVocabulary() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Park", placement: .today))
+        }
+        try store.run("When") { d, env in
+            try Commands.setWhen(d, env, ids: [todo.id], when: .ready)
+        }
+        #expect(store.entities.todos[todo.id]?.start == .ready)
+        #expect(store.entities.todos[todo.id]?.startDate == nil)
+
+        try store.run("When") { d, env in
+            try Commands.setWhen(d, env, ids: [todo.id], when: .later)
+        }
+        #expect(store.entities.todos[todo.id]?.start == .later)
+
+        try store.run("When") { d, env in
+            try Commands.setWhen(d, env, ids: [todo.id], when: .inbox)
+        }
+        #expect(store.entities.todos[todo.id]?.start == .inbox)
+        #expect(store.entities.todos[todo.id]?.startDate == nil)
+    }
+
     @Test func hydrateClearsUndoStacks() throws {
         let store = EntityStore(clock: fixedClock())
         _ = try store.run("Add") { d, env in

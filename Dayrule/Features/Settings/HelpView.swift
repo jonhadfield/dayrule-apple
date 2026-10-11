@@ -16,7 +16,8 @@ struct HelpView: View {
                         .foregroundStyle(colors.textSecondary)
                 }
                 Section("On this device") {
-                    labeled("Lists", "Inbox, Today, Scheduled, Backlog, Not now, Done, Trash.")
+                    labeled("Lists", "Inbox (unsorted), Today, Scheduled, Backlog (anytime) with Not now, Done, Trash. On phone: Inbox · Today · Scheduled · Browse.")
+                    labeled("When", "Today, a date, Backlog, Not now, Inbox, or Clear.")
                     labeled("Find", "Quick Find searches unlocked data on this device.")
                     labeled("Export", "Settings → Your data. Exports are plaintext — keep them safe.")
                     labeled("Reminders", "Settings → Reminders. Local notifications; the server never sees what they’re for.")

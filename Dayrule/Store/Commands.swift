@@ -18,6 +18,7 @@ enum Commands {
         case date(LocalDate)
         case later
         case ready
+        case inbox
         case clear
 
         init(_ result: WhenResult) {
@@ -632,6 +633,10 @@ enum Commands {
             tonight = false
         case .ready:
             start = .ready
+            startDate = nil
+            tonight = false
+        case .inbox:
+            start = .inbox
             startDate = nil
             tonight = false
         case .clear:

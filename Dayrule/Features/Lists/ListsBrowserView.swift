@@ -11,14 +11,61 @@ private enum PhoneRoute: Hashable {
     case project(ID)
 }
 
+/// Compact bottom bar: daily path + Browse (Backlog / Done / Trash / projects).
+private enum PhoneTab: Hashable, CaseIterable {
+    case inbox, today, scheduled, browse
+
+    var title: String {
+        switch self {
+        case .inbox: "Inbox"
+        case .today: "Today"
+        case .scheduled: "Scheduled"
+        case .browse: "Browse"
+        }
+    }
+
+    /// Stable SF Symbols — same on every screen; only colour marks selection.
+    var systemImage: String {
+        switch self {
+        case .inbox: "tray"
+        case .today: "sun.max"
+        case .scheduled: "calendar"
+        case .browse: "square.grid.2x2"
+        }
+    }
+
+    var listName: ListName? {
+        switch self {
+        case .inbox: .inbox
+        case .today: .today
+        case .scheduled: .scheduled
+        case .browse: nil
+        }
+    }
+
+    static func tab(for list: ListName) -> PhoneTab? {
+        switch list {
+        case .inbox: .inbox
+        case .today: .today
+        case .scheduled: .scheduled
+        default: nil
+        }
+    }
+
+    /// Lists shown under Browse (primary three live on the tab bar).
+    static let browseLists: [ListName] = [.backlog, .done, .trash]
+}
+
 /// List shell (M3): Inbox → Trash over Entities from the vault / store.
 struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selection: ListName? = .inbox
-    /// Compact (phone) path; start in Inbox so Add is reachable, back returns home.
-    @State private var phonePath: [PhoneRoute] = [.list(.inbox)]
+    /// Compact: Browse root; push for Backlog / Done / Trash / projects.
+    @State private var phonePath: [PhoneRoute] = []
+    @State private var phoneTab: PhoneTab = .inbox
+    @State private var didApplyDefaultList = false
     @State private var draftTitle = ""
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
@@ -45,6 +92,10 @@ struct ListsBrowserView: View {
                 splitBrowser(colors: colors)
             }
         }
+        .onAppear { applyDefaultDestinationIfNeeded() }
+        .onChange(of: model.vaultLoading) { _, loading in
+            if !loading { applyDefaultDestinationIfNeeded() }
+        }
         .onChange(of: selection) { _, _ in
             if !isCompact { projectPath = [] }
         }
@@ -53,6 +104,12 @@ struct ListsBrowserView: View {
                 if case .list(let n) = route { return n }
                 return nil
             }).first {
+                selection = name
+            }
+        }
+        .onChange(of: phoneTab) { _, tab in
+            phonePath = []
+            if let name = tab.listName {
                 selection = name
             }
         }
@@ -88,19 +145,95 @@ struct ListsBrowserView: View {
 
     @ViewBuilder
     private func phoneBrowser(colors: DayruleColors) -> some View {
-        NavigationStack(path: $phonePath) {
-            sidebarList(colors: colors, phoneLinks: true)
-                .navigationTitle("Dayrule")
-                .toolbar { sidebarToolbar(colors: colors) }
-                .navigationDestination(for: PhoneRoute.self) { route in
-                    switch route {
-                    case .list(let name):
-                        listDetail(list: name, colors: colors)
-                    case .project(let projectId):
-                        ProjectDetailView(model: model, projectId: projectId)
+        VStack(spacing: 0) {
+            NavigationStack(path: $phonePath) {
+                phoneTabRoot(colors: colors)
+                    .toolbar {
+                        if phoneTab == .browse {
+                            sidebarToolbar(colors: colors)
+                        } else {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Lock") { model.lock() }
+                                    .foregroundStyle(colors.accent)
+                            }
+                            ToolbarItem(placement: .automatic) {
+                                Button("Settings") { model.showSettings = true }
+                                    .foregroundStyle(colors.accent)
+                            }
+                        }
                     }
-                }
+                    .navigationDestination(for: PhoneRoute.self) { route in
+                        switch route {
+                        case .list(let name):
+                            listDetail(list: name, colors: colors)
+                        case .project(let projectId):
+                            ProjectDetailView(model: model, projectId: projectId)
+                        }
+                    }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            phoneTabBar(colors: colors)
         }
+        .background(colors.bg)
+    }
+
+    @ViewBuilder
+    private func phoneTabRoot(colors: DayruleColors) -> some View {
+        switch phoneTab {
+        case .browse:
+            sidebarList(colors: colors, phoneLinks: true)
+                .navigationTitle("Browse")
+        case .inbox:
+            listDetail(list: .inbox, colors: colors)
+        case .today:
+            listDetail(list: .today, colors: colors)
+        case .scheduled:
+            listDetail(list: .scheduled, colors: colors)
+        }
+    }
+
+    private func phoneTabBar(colors: DayruleColors) -> some View {
+        HStack(spacing: 0) {
+            ForEach(PhoneTab.allCases, id: \.self) { tab in
+                Button {
+                    phoneTab = tab
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 18, weight: phoneTab == tab ? .semibold : .regular))
+                        Text(tab.title)
+                            .font(.caption2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .foregroundStyle(phoneTab == tab ? colors.accent : colors.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("phone.tab.\(String(describing: tab))")
+                .accessibilityAddTraits(phoneTab == tab ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.bottom, 2)
+        .background(colors.sidebar)
+        .overlay(alignment: .top) {
+            colors.hairline.frame(height: 1)
+        }
+    }
+
+    /// After unlock: Today if it has work, otherwise Inbox.
+    private func applyDefaultDestinationIfNeeded() {
+        guard !didApplyDefaultList else { return }
+        guard !model.vaultLoading else { return }
+        let preferToday = !Lists.today(model.entities, ctx).isEmpty
+        let name: ListName = preferToday ? .today : .inbox
+        selection = name
+        if isCompact {
+            phoneTab = preferToday ? .today : .inbox
+            phonePath = []
+        }
+        didApplyDefaultList = true
     }
 
     @ViewBuilder
@@ -164,7 +297,11 @@ struct ListsBrowserView: View {
                 .foregroundStyle(Tokens.Light.deadline)
                 .listRowBackground(colors.sidebar)
         }
-        ForEach(ListName.allCases, id: \.self) { name in
+        // Phone Browse: park/archive lists only (Inbox/Today/Scheduled are tabs).
+        let names: [ListName] = phoneLinks
+            ? PhoneTab.browseLists
+            : ListName.allCases.filter { $0 != .notNow }
+        ForEach(names, id: \.self) { name in
             let label = HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: 1.5)
                     .fill(!phoneLinks && selection == name ? colors.accent : .clear)
@@ -198,9 +335,11 @@ struct ListsBrowserView: View {
     @ViewBuilder
     private func listDetail(list: ListName, colors: DayruleColors) -> some View {
         List {
-            // Never replace existing rows with a sync banner — that races Add in e2e
-            // and hides todos for the whole push/pull.
-            if rows(for: list).isEmpty {
+            if list == .backlog {
+                backlogSections(colors: colors)
+            } else if rows(for: list).isEmpty {
+                // Never replace existing rows with a sync banner — that races Add in e2e
+                // and hides todos for the whole push/pull.
                 if model.syncStatus == .syncing || model.vaultLoading {
                     Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
                         .foregroundStyle(colors.textSecondary)
@@ -215,123 +354,16 @@ struct ListsBrowserView: View {
                 }
             } else {
                 ForEach(rows(for: list), id: \.id) { row in
-                    RuledRow {
-                        HStack(alignment: .center, spacing: 10) {
-                            if row.isTodo {
-                                DayruleCheckbox(
-                                    status: row.status,
-                                    label: checkboxLabel(for: row)
-                                ) {
-                                    toggleComplete(row.id, title: row.title)
-                                }
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 6) {
-                                    Text(row.title)
-                                        .foregroundStyle(colors.text)
-                                        .strikethrough(row.status != .open)
-                                    if row.hasReminder, row.status == .open {
-                                        Image(systemName: "bell")
-                                            .font(.caption)
-                                            .foregroundStyle(colors.textSecondary)
-                                            .accessibilityLabel("Has a reminder")
-                                    }
-                                    if row.isRepeating {
-                                        Image(systemName: "repeat")
-                                            .font(.caption)
-                                            .foregroundStyle(colors.textSecondary)
-                                            .accessibilityLabel("Repeating")
-                                    }
-                                    if row.hasNotes {
-                                        Image(systemName: "doc.text")
-                                            .font(.caption)
-                                            .foregroundStyle(colors.textSecondary)
-                                            .accessibilityLabel("Has notes")
-                                    }
-                                    if let checklist = row.checklistLabel {
-                                        Text(checklist)
-                                            .font(.caption)
-                                            .foregroundStyle(colors.textSecondary)
-                                            .accessibilityLabel(checklist + " done")
-                                    }
-                                }
-                                .accessibilityElement(children: .combine)
-                                .accessibilityLabel(rowTitleAccessibility(row))
-                                .accessibilityIdentifier("list.todo.\(row.id)")
-                                if let subtitle = row.subtitle {
-                                    HStack(spacing: 4) {
-                                        if row.deadlineOverdue {
-                                            Image(systemName: "exclamationmark.circle.fill")
-                                                .font(.caption2)
-                                                .foregroundStyle(Tokens.Light.deadline)
-                                                .accessibilityLabel("Overdue")
-                                        }
-                                        Text(subtitle)
-                                            .font(.caption)
-                                            .foregroundStyle(
-                                                row.deadlineOverdue
-                                                    ? Tokens.Light.deadline
-                                                    : colors.textSecondary
-                                            )
-                                    }
-                                }
-                            }
-                            Spacer(minLength: 0)
-                        }
-                    }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        guard list != .trash else { return }
-                        if !row.isTodo, model.entities.projects[row.id] != nil {
-                            openProject(row.id)
-                        } else {
-                            editTarget = EditTarget(id: row.id)
-                        }
-                    }
-                    .accessibilityAction(named: Text("When…")) {
-                        whenTarget = WhenTarget(ids: [row.id])
-                    }
-                    .accessibilityAction(named: Text("Move up")) {
-                        guard row.isTodo else { return }
-                        moveTodo(row.id, dir: -1)
-                    }
-                    .accessibilityAction(named: Text("Move down")) {
-                        guard row.isTodo else { return }
-                        moveTodo(row.id, dir: 1)
-                    }
-                    .contextMenu {
-                        if list == .trash {
-                            Button("Restore") { restore(row.id) }
-                        } else {
-                            if !row.isTodo, model.entities.projects[row.id] != nil {
-                                Button("Open") { openProject(row.id) }
-                            }
-                            if row.isTodo, let pid = model.entities.todos[row.id]?.projectId {
-                                Button("Open Project") { openProject(pid) }
-                            }
-                            Button("Edit") { editTarget = EditTarget(id: row.id) }
-                            Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
-                            Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
-                            Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
-                            if row.isTodo {
-                                Button("Repeat…") { repeatTarget = EditTarget(id: row.id) }
-                                Button("Reminder…") { reminderTarget = EditTarget(id: row.id) }
-                            }
-                            if row.isTodo, row.status == .open {
-                                Button("Complete") { toggleComplete(row.id, title: row.title) }
-                            }
-                            Button("Trash", role: .destructive) { trash(row.id) }
-                        }
-                    }
+                    listRow(row, list: list, colors: colors)
                 }
             }
-            if list == .inbox || list == .today {
+            if list == .inbox || list == .today || list == .backlog || list == .scheduled {
                 RuledRow {
                     HStack {
                         TextField("Add", text: $draftTitle)
                             .accessibilityIdentifier("list.addField")
-                            .onSubmit(addTodo)
-                        Button("Add", action: addTodo)
+                            .onSubmit { addTodo(to: list) }
+                        Button("Add") { addTodo(to: list) }
                             .accessibilityIdentifier("list.addButton")
                             .foregroundStyle(colors.accent)
                             .disabled(draftTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -367,6 +399,149 @@ struct ListsBrowserView: View {
                     Button("Log Completed") { logCompleted() }
                         .accessibilityIdentifier("list.logCompleted")
                 }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func backlogSections(colors: DayruleColors) -> some View {
+        let main = rows(for: .backlog)
+        let parked = rows(for: .notNow)
+        if main.isEmpty, parked.isEmpty {
+            if model.syncStatus == .syncing || model.vaultLoading {
+                Text(model.syncStatus == .syncing ? "Syncing…" : "Pulling vault…")
+                    .foregroundStyle(colors.textSecondary)
+            } else {
+                RuledRow {
+                    Text(emptyCopy(for: .backlog))
+                        .foregroundStyle(colors.textSecondary)
+                }
+            }
+        } else {
+            ForEach(main, id: \.id) { row in
+                listRow(row, list: .backlog, colors: colors)
+            }
+            if !parked.isEmpty {
+                Section {
+                    ForEach(parked, id: \.id) { row in
+                        listRow(row, list: .notNow, colors: colors)
+                    }
+                } header: {
+                    Text("Not now")
+                        .foregroundStyle(colors.textSecondary)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func listRow(_ row: Row, list: ListName, colors: DayruleColors) -> some View {
+        RuledRow {
+            HStack(alignment: .center, spacing: 10) {
+                if row.isTodo {
+                    DayruleCheckbox(
+                        status: row.status,
+                        label: checkboxLabel(for: row)
+                    ) {
+                        toggleComplete(row.id, title: row.title)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(row.title)
+                            .foregroundStyle(colors.text)
+                            .strikethrough(row.status != .open)
+                        if row.hasReminder, row.status == .open {
+                            Image(systemName: "bell")
+                                .font(.caption)
+                                .foregroundStyle(colors.textSecondary)
+                                .accessibilityLabel("Has a reminder")
+                        }
+                        if row.isRepeating {
+                            Image(systemName: "repeat")
+                                .font(.caption)
+                                .foregroundStyle(colors.textSecondary)
+                                .accessibilityLabel("Repeating")
+                        }
+                        if row.hasNotes {
+                            Image(systemName: "doc.text")
+                                .font(.caption)
+                                .foregroundStyle(colors.textSecondary)
+                                .accessibilityLabel("Has notes")
+                        }
+                        if let checklist = row.checklistLabel {
+                            Text(checklist)
+                                .font(.caption)
+                                .foregroundStyle(colors.textSecondary)
+                                .accessibilityLabel(checklist + " done")
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(rowTitleAccessibility(row))
+                    .accessibilityIdentifier("list.todo.\(row.id)")
+                    if let subtitle = row.subtitle {
+                        HStack(spacing: 4) {
+                            if row.deadlineOverdue {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(Tokens.Light.deadline)
+                                    .accessibilityLabel("Overdue")
+                            }
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundStyle(
+                                    row.deadlineOverdue
+                                        ? Tokens.Light.deadline
+                                        : colors.textSecondary
+                                )
+                        }
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard list != .trash else { return }
+            if !row.isTodo, model.entities.projects[row.id] != nil {
+                openProject(row.id)
+            } else {
+                editTarget = EditTarget(id: row.id)
+            }
+        }
+        .accessibilityAction(named: Text("When…")) {
+            whenTarget = WhenTarget(ids: [row.id])
+        }
+        .accessibilityAction(named: Text("Move up")) {
+            guard row.isTodo else { return }
+            moveTodo(row.id, dir: -1)
+        }
+        .accessibilityAction(named: Text("Move down")) {
+            guard row.isTodo else { return }
+            moveTodo(row.id, dir: 1)
+        }
+        .contextMenu {
+            if list == .trash {
+                Button("Restore") { restore(row.id) }
+            } else {
+                if !row.isTodo, model.entities.projects[row.id] != nil {
+                    Button("Open") { openProject(row.id) }
+                }
+                if row.isTodo, let pid = model.entities.todos[row.id]?.projectId {
+                    Button("Open Project") { openProject(pid) }
+                }
+                Button("Edit") { editTarget = EditTarget(id: row.id) }
+                Button("When…") { whenTarget = WhenTarget(ids: [row.id]) }
+                Button("Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) }
+                Button("Tags…") { tagTarget = WhenTarget(ids: [row.id]) }
+                if row.isTodo {
+                    Button("Repeat…") { repeatTarget = EditTarget(id: row.id) }
+                    Button("Reminder…") { reminderTarget = EditTarget(id: row.id) }
+                }
+                if row.isTodo, row.status == .open {
+                    Button("Complete") { toggleComplete(row.id, title: row.title) }
+                }
+                Button("Trash", role: .destructive) { trash(row.id) }
             }
         }
     }
@@ -506,13 +681,25 @@ struct ListsBrowserView: View {
         return "\(count)"
     }
 
-    private func addTodo() {
+    private func addTodo(to list: ListName) {
         let title = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
-        let placement: Commands.Placement = activeList == .today ? .today : .inbox
+        // Use the list on screen, not `selection` — on phone those can diverge.
         do {
             _ = try model.store.run("Add") { d, env in
-                try Commands.createTodo(d, env, .init(title: title, placement: placement))
+                switch list {
+                case .today:
+                    return try Commands.createTodo(d, env, .init(title: title, placement: .today))
+                case .backlog:
+                    return try Commands.createTodo(d, env, .init(title: title, placement: .ready))
+                case .scheduled:
+                    let todo = try Commands.createTodo(d, env, .init(title: title, placement: .ready))
+                    let tomorrow = When.addLocalDays(env.today, 1)
+                    try Commands.setWhen(d, env, ids: [todo.id], when: .date(tomorrow))
+                    return todo
+                default:
+                    return try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
+                }
             }
             draftTitle = ""
             model.noteEntitiesChanged()
@@ -596,20 +783,38 @@ struct ListsBrowserView: View {
         case .list(let name):
             selection = name
             projectPath = []
-            if isCompact { phonePath = [.list(name)] }
+            if isCompact { navigatePhone(to: name) }
         case .todo(let id, let home):
             selection = home
             projectPath = []
-            if isCompact { phonePath = [.list(home)] }
+            if isCompact { navigatePhone(to: home) }
             editTarget = EditTarget(id: id)
         case .project(let id):
             selection = .backlog
             projectPath = isCompact ? [] : [id]
-            if isCompact { phonePath = [.list(.backlog), .project(id)] }
+            if isCompact {
+                phoneTab = .browse
+                phonePath = [.list(.backlog), .project(id)]
+            }
         case .area:
             selection = .backlog
             projectPath = []
-            if isCompact { phonePath = [.list(.backlog)] }
+            if isCompact {
+                phoneTab = .browse
+                phonePath = [.list(.backlog)]
+            }
+        }
+    }
+
+    private func navigatePhone(to name: ListName) {
+        if let tab = PhoneTab.tab(for: name) {
+            phoneTab = tab
+            phonePath = []
+        } else {
+            phoneTab = .browse
+            // Not now lives inside Backlog on phone.
+            let dest: ListName = name == .notNow ? .backlog : name
+            phonePath = [.list(dest)]
         }
     }
 

@@ -1,12 +1,14 @@
 import SwiftUI
 
-/// Minimal When picker (Today / Later / Ready / Clear + free-text parse).
+/// When picker — vocabulary matches lists: Today, date, Backlog, Not now, Inbox, Clear.
 struct WhenSheetView: View {
     @Bindable var model: AppModel
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var freeText = ""
+    @State private var pickDate = Date()
+    @State private var showDatePicker = false
     @State private var parseError: String?
 
     var body: some View {
@@ -15,9 +17,31 @@ struct WhenSheetView: View {
             List {
                 Section {
                     button("Today", colors: colors) { apply(.today) }
-                    button("Later", colors: colors) { apply(.later) }
-                    button("Anytime", colors: colors) { apply(.ready) }
-                    button("Clear date", colors: colors) { apply(.clear) }
+                    Button {
+                        showDatePicker.toggle()
+                    } label: {
+                        Text("Pick a date")
+                            .foregroundStyle(colors.text)
+                    }
+                    if showDatePicker {
+                        DatePicker(
+                            "Date",
+                            selection: $pickDate,
+                            in: Date()...,
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .labelsHidden()
+                        .listRowBackground(colors.bg)
+                        Button("Use this date") {
+                            apply(.date(When.toLocalDate(pickDate)))
+                        }
+                        .foregroundStyle(colors.accent)
+                    }
+                    button("Backlog", colors: colors) { apply(.ready) }
+                    button("Not now", colors: colors) { apply(.later) }
+                    button("Inbox", colors: colors) { apply(.inbox) }
+                    button("Clear", colors: colors) { apply(.clear) }
                 }
                 Section("Type a date") {
                     TextField("tomorrow, next monday, 15 oct…", text: $freeText)
