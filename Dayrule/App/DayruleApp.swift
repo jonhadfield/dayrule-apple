@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 @main
 struct DayruleApp: App {
@@ -36,9 +39,20 @@ struct DayruleApp: App {
             .onChange(of: scenePhase) { _, phase in
                 model.scenePhaseChanged(phase)
                 withAnimation(.easeInOut(duration: 0.15)) {
+                    // On Mac, `.inactive` is common while the window is still usable
+                    // (e.g. another app’s menu). Only cover when backgrounded.
+                    #if os(macOS)
+                    showPrivacyCover = phase == .background
+                    #else
                     showPrivacyCover = phase != .active
+                    #endif
                 }
             }
+            #if os(macOS)
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                model.applicationBecameActive()
+            }
+            #endif
         }
     }
 }

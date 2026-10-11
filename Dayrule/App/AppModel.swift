@@ -51,6 +51,8 @@ final class AppModel {
     private var syncTask: Task<Void, Never>?
     private var syncPollTask: Task<Void, Never>?
     private var syncInFlight = false
+    /// Set while a sync is running so a concurrent request re-runs after.
+    private var syncAgain = false
     private var sceneIsActive = true
 
     private struct PendingSignup {
@@ -320,22 +322,27 @@ final class AppModel {
     private func scheduleSync() {
         syncTask?.cancel()
         syncTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            try? await Task.sleep(for: .seconds(1))
             guard !Task.isCancelled else { return }
             await self?.runSync()
         }
     }
 
-    /// Foreground poll while unlocked (PLAN §10.3: ~15s head/sync loop).
+    /// Settings → Sync now: flush local writes, then pull/push (do not re-hydrate).
+    func syncNow() async {
+        await runSync()
+    }
+
+    /// While unlocked and the AK is in memory (PLAN §10.3). Mac `scenePhase` is
+    /// unreliable, so poll regardless of active/inactive — only lock stops it.
     private func startSyncPoll() {
         syncPollTask?.cancel()
-        guard phase == .unlocked, sceneIsActive else { return }
+        guard phase == .unlocked else { return }
         syncPollTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(15))
                 guard !Task.isCancelled else { return }
-                guard let self else { return }
-                guard self.phase == .unlocked, self.sceneIsActive else { continue }
+                guard let self, self.phase == .unlocked else { continue }
                 await self.runSync()
             }
         }
@@ -351,16 +358,30 @@ final class AppModel {
     }
 
     private func runSync() async {
-        guard let syncEngine else { return }
-        guard !syncInFlight else { return }
-        // No Bearer → stay local; do not hit the API (401 would bounce to the gate).
-        guard hasBearerSession() else {
+        guard syncEngine != nil else { return }
+        if syncInFlight {
+            syncAgain = true
+            return
+        }
+        // Prefer Keychain over a stale in-memory token (actor may lag after unlock).
+        guard let token = try? sessions.loadToken() else {
             syncStatus = .offline("Sign in to sync.")
             return
         }
+        await api.setToken(token)
+
         syncInFlight = true
         syncStatus = .syncing
-        defer { syncInFlight = false }
+        defer {
+            syncInFlight = false
+            if syncAgain {
+                syncAgain = false
+                Task { await self.runSync() }
+            }
+        }
+        // Local Add must hit the outbox before we read it.
+        await store.awaitPendingPersist()
+        guard let syncEngine else { return }
         do {
             try await syncEngine.sync()
             noteEntitiesChanged()
@@ -937,18 +958,24 @@ final class AppModel {
             scheduleRemindersIfUnlocked()
             if phase == .unlocked {
                 // Pull peer writes when returning to the foreground (PLAN §10.3).
-                scheduleSync()
                 startSyncPoll()
+                Task { await runSync() }
             }
-        } else {
-            stopSyncPoll()
+        } else if scene == .background {
+            // Keep polling through brief macOS inactive blips; only flush+pause
+            // when the scene is actually backgrounded.
             if phase == .unlocked, hasBearerSession() {
-                // Best-effort outbox flush before suspend (PLAN §10.3).
-                syncTask?.cancel()
-                syncTask = Task { [weak self] in
-                    await self?.runSync()
-                }
+                Task { await runSync() }
             }
         }
+    }
+
+    /// macOS: `scenePhase` often stays `.inactive` while the window is usable.
+    func applicationBecameActive() {
+        sceneIsActive = true
+        bumpIdle()
+        guard phase == .unlocked else { return }
+        startSyncPoll()
+        Task { await runSync() }
     }
 }

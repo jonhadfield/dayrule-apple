@@ -261,9 +261,11 @@ actor CryptoActor {
 
     func decryptSyncPayload(_ rec: WireRecord) throws -> SyncPayload? {
         guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        // Wire ids are lowercase UUID form (PLAN §8.5); normalize before AAD.
+        let wireId = rec.id.lowercased()
         let meta = Primitives.RecordMeta(
             userId: userId,
-            recordId: "sync/\(rec.id)",
+            recordId: "sync/\(wireId)",
             schemaVersion: 1,
             keyId: rec.keyId
         )

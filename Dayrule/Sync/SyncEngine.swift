@@ -156,12 +156,15 @@ final class SyncEngine {
                 )
             }
             let response = try await net.push(wire)
-            let byId = Dictionary(uniqueKeysWithValues: response.results.map { ($0.id, $0) })
+            // Server / client id casing must not leave rows stuck in the outbox.
+            let byId = Dictionary(
+                uniqueKeysWithValues: response.results.map { ($0.id.lowercased(), $0) }
+            )
             var done: [(key: String, rev: Int)] = []
             var accepted: [(key: String, seq: Int64)] = []
             var blocked: SyncBlockedError?
             for (i, row) in batch.enumerated() {
-                guard let r = byId[ids[i]] else { continue }
+                guard let r = byId[ids[i].lowercased()] else { continue }
                 if let err = r.error {
                     blocked = err == "quota" ? .quota : .tooLarge
                 } else if r.conflict == true {

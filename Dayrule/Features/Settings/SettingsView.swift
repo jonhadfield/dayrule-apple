@@ -61,10 +61,11 @@ struct SettingsView: View {
                             .multilineTextAlignment(.trailing)
                     }
                     Button("Sync now") {
-                        Task { await model.refreshVault() }
+                        Task { await model.syncNow() }
                     }
                     .foregroundStyle(colors.accent)
                     .disabled(model.syncStatus == .syncing)
+                    .accessibilityIdentifier("settings.syncNow")
                 }
                 Section("Completed") {
                     Picker("Move to Done", selection: doneModeBinding) {
