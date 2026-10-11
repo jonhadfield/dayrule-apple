@@ -164,4 +164,32 @@ struct ListsTests {
         #expect(c.today == 2)
         #expect(c.overdue == 1)
     }
+
+    @Test("projectView groups to-dos under headings")
+    func projectViewGroups() {
+        let w = World()
+        let p = w.project()
+        let h = w.heading(projectId: p.id)
+        let loose = w.todo(projectId: p.id, start: .ready)
+        let under = w.todo(projectId: p.id, headingId: h.id, start: .ready)
+        let archived = w.heading(projectId: p.id, title: "Archived", archived: true)
+        let archivedUnder = w.todo(projectId: p.id, headingId: archived.id, start: .ready)
+        let v = Lists.projectView(w.e, p.id, ctx)
+        #expect(ids(v?.todos ?? []) == [loose.id, archivedUnder.id])
+        #expect(v?.headings.map { ids($0.todos) } == [[under.id]])
+        #expect(v?.headings.map(\.heading.id) == [h.id])
+    }
+
+    @Test("projectProgress counts non-canceled project to-dos")
+    func projectProgressCounts() {
+        let w = World()
+        let p = w.project()
+        w.todo(projectId: p.id, status: .completed)
+        w.todo(projectId: p.id, status: .open)
+        w.todo(projectId: p.id, status: .canceled)
+        w.todo(projectId: p.id, trashedAt: "2026-10-02T00:00:00Z")
+        let prog = Lists.projectProgress(w.e, p.id)
+        #expect(prog.done == 1)
+        #expect(prog.total == 2)
+    }
 }

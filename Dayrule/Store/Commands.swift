@@ -96,6 +96,80 @@ enum Commands {
         d.putTodo(t)
     }
 
+    static func updateProject(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String?, notes: String?) {
+        guard var p = d.getProject(id) else { return }
+        if let title { p.title = title }
+        if let notes { p.notes = notes }
+        p.updatedAt = ISOStamp.format(env.now)
+        d.putProject(p)
+    }
+
+    @discardableResult
+    static func createProject(_ d: Draft, _ env: EntityStore.Env, title: String, areaId: ID? = nil) throws -> Project {
+        let siblings = d.allProjects().filter { $0.areaId == areaId }
+        let ts = ISOStamp.format(env.now)
+        let project = Project(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            notes: "",
+            areaId: areaId,
+            status: .open,
+            start: .ready,
+            startDate: nil,
+            tonight: false,
+            deadline: nil,
+            tagIds: [],
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            todayOrder: nil,
+            completedAt: nil,
+            trashedAt: nil
+        )
+        d.putProject(project)
+        return project
+    }
+
+    @discardableResult
+    static func createArea(_ d: Draft, _ env: EntityStore.Env, title: String) throws -> Area {
+        let ts = ISOStamp.format(env.now)
+        let area = Area(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            order: try Order.keyAfterLast(d.allAreas().map(\.order)),
+            tagIds: [],
+            trashedAt: nil
+        )
+        d.putArea(area)
+        return area
+    }
+
+    static func renameArea(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String) {
+        guard var a = d.getArea(id) else { return }
+        a.title = title
+        a.updatedAt = ISOStamp.format(env.now)
+        d.putArea(a)
+    }
+
+    static func setDeadline(_ d: Draft, _ env: EntityStore.Env, ids: [ID], deadline: LocalDate?) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            if var t = d.getTodo(id) {
+                t.deadline = deadline
+                t.updatedAt = ts
+                d.putTodo(t)
+            } else if var p = d.getProject(id) {
+                p.deadline = deadline
+                p.updatedAt = ts
+                d.putProject(p)
+            }
+        }
+    }
+
     static func setStatus(_ d: Draft, _ env: EntityStore.Env, ids: [ID], status: Status) {
         let completedAt: Timestamp? = status == .open ? nil : ISOStamp.format(env.now)
         for id in ids {
@@ -175,6 +249,275 @@ enum Commands {
                 area.updatedAt = ts
                 d.putArea(area)
             }
+        }
+    }
+
+    static func setDoneMode(_ d: Draft, mode: DoneMode) {
+        var s = d.settings
+        s.moveToDone = mode
+        d.setSettings(s)
+    }
+
+    /// "Log Completed" for manual logging mode (web `moveToDoneNow`).
+    static func moveToDoneNow(_ d: Draft, _ env: EntityStore.Env) {
+        var s = d.settings
+        s.lastMovedToDoneAt = ISOStamp.format(env.now)
+        d.setSettings(s)
+    }
+
+    @discardableResult
+    static func createHeading(_ d: Draft, _ env: EntityStore.Env, projectId: ID, title: String) throws -> Heading {
+        let siblings = d.allHeadings().filter { $0.projectId == projectId }
+        let ts = ISOStamp.format(env.now)
+        let heading = Heading(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            projectId: projectId,
+            title: title,
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            archived: false
+        )
+        d.putHeading(heading)
+        return heading
+    }
+
+    static func updateHeading(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String?, archived: Bool?) {
+        guard var h = d.getHeading(id) else { return }
+        if let title { h.title = title }
+        if let archived { h.archived = archived }
+        h.updatedAt = ISOStamp.format(env.now)
+        d.putHeading(h)
+    }
+
+    static func deleteHeading(_ d: Draft, _ env: EntityStore.Env, id: ID) {
+        let ts = ISOStamp.format(env.now)
+        for var t in d.allTodos() where t.headingId == id {
+            t.headingId = nil
+            t.updatedAt = ts
+            d.putTodo(t)
+        }
+        d.remove(.headings, id: id)
+    }
+
+    @discardableResult
+    static func createTag(_ d: Draft, _ env: EntityStore.Env, title: String, parentId: ID? = nil) throws -> Tag {
+        let ts = ISOStamp.format(env.now)
+        let tag = Tag(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: title,
+            parentId: parentId,
+            order: try Order.keyAfterLast(d.allTags().map(\.order))
+        )
+        d.putTag(tag)
+        return tag
+    }
+
+    static func setTags(_ d: Draft, _ env: EntityStore.Env, ids: [ID], tagIds: [ID]) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            if var t = d.getTodo(id) {
+                t.tagIds = tagIds
+                t.updatedAt = ts
+                d.putTodo(t)
+            } else if var p = d.getProject(id) {
+                p.tagIds = tagIds
+                p.updatedAt = ts
+                d.putProject(p)
+            }
+        }
+    }
+
+    /// Set or clear a reminder (`YYYY-MM-DDTHH:mm`, or nil). On a repeat
+    /// template, stores `HH:mm` in `repeat.reminderTime` (web `setReminder`).
+    static func setReminder(_ d: Draft, _ env: EntityStore.Env, ids: [ID], at: String?) {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            guard var t = d.getTodo(id) else { continue }
+            if var rule = t.repeat {
+                if let at, at.count >= 16 {
+                    rule.reminderTime = String(at.dropFirst(11).prefix(5))
+                } else {
+                    rule.reminderTime = nil
+                }
+                t.repeat = rule
+            } else {
+                t.reminderAt = at
+            }
+            t.updatedAt = ts
+            d.putTodo(t)
+        }
+    }
+
+    @discardableResult
+    static func addChecklistItem(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        todoId: ID,
+        title: String
+    ) throws -> ChecklistItem {
+        let ts = ISOStamp.format(env.now)
+        let siblings = d.allChecklistItems().filter { $0.todoId == todoId }
+        let item = ChecklistItem(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            todoId: todoId,
+            title: title,
+            done: false,
+            order: try Order.keyAfterLast(siblings.map(\.order))
+        )
+        d.putChecklistItem(item)
+        return item
+    }
+
+    struct ImportCounts: Equatable, Sendable {
+        var areas: Int
+        var projects: Int
+        var headings: Int
+        var todos: Int
+        var checklistItems: Int
+        var tags: Int
+    }
+
+    /// Copy an export's records in with new ids, remapping references
+    /// (web `importData`). Never overwrites existing data.
+    @discardableResult
+    static func importData(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        _ data: Exchange.ExportData
+    ) -> ImportCounts {
+        let now = ISOStamp.format(env.now)
+        var map: [ID: ID] = [:]
+        func fresh(_ old: ID) -> ID {
+            let id = env.newId()
+            map[old] = id
+            return id
+        }
+        for x in data.areas { _ = fresh(x.id) }
+        for x in data.projects { _ = fresh(x.id) }
+        for x in data.headings { _ = fresh(x.id) }
+        for x in data.todos { _ = fresh(x.id) }
+        for x in data.checklistItems { _ = fresh(x.id) }
+        for x in data.tags { _ = fresh(x.id) }
+
+        func ref(_ old: ID?) -> ID? {
+            guard let old else { return nil }
+            return map[old]
+        }
+        func refs(_ olds: [ID]) -> [ID] {
+            olds.compactMap { map[$0] }
+        }
+
+        for t in data.tags {
+            var copy = t
+            copy.id = map[t.id]!
+            copy.parentId = ref(t.parentId)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putTag(copy)
+        }
+        for a in data.areas {
+            var copy = a
+            copy.id = map[a.id]!
+            copy.tagIds = refs(a.tagIds)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putArea(copy)
+        }
+        for p in data.projects {
+            var copy = p
+            copy.id = map[p.id]!
+            copy.areaId = ref(p.areaId)
+            copy.tagIds = refs(p.tagIds)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putProject(copy)
+        }
+        var headingProjects: [ID: ID] = [:]
+        var headingCount = 0
+        for h in data.headings {
+            guard let projectId = ref(h.projectId) else { continue }
+            let newId = map[h.id]!
+            headingProjects[newId] = projectId
+            headingCount += 1
+            var copy = h
+            copy.id = newId
+            copy.projectId = projectId
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putHeading(copy)
+        }
+        for t in data.todos {
+            let projectId = ref(t.projectId)
+            let headingId = ref(t.headingId)
+            var copy = t
+            copy.id = map[t.id]!
+            copy.projectId = projectId
+            if let headingId, let projectId, headingProjects[headingId] == projectId {
+                copy.headingId = headingId
+            } else {
+                copy.headingId = nil
+            }
+            copy.areaId = projectId != nil ? nil : ref(t.areaId)
+            copy.tagIds = refs(t.tagIds)
+            copy.repeatTemplateId = ref(t.repeatTemplateId)
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putTodo(copy)
+        }
+        var checklist = 0
+        for c in data.checklistItems {
+            guard let todoId = ref(c.todoId) else { continue }
+            checklist += 1
+            var copy = c
+            copy.id = map[c.id]!
+            copy.todoId = todoId
+            copy.updatedAt = now
+            copy.clock = nil
+            d.putChecklistItem(copy)
+        }
+        return ImportCounts(
+            areas: data.areas.count,
+            projects: data.projects.count,
+            headings: headingCount,
+            todos: data.todos.count,
+            checklistItems: checklist,
+            tags: data.tags.count
+        )
+    }
+
+    /// Permanently delete trashed items and everything inside them (web `emptyTrash`).
+    static func emptyTrash(_ d: Draft) {
+        let areaIds = Set(d.allAreas().filter { $0.trashedAt != nil }.map(\.id))
+        let projectIds = Set(
+            d.allProjects()
+                .filter { $0.trashedAt != nil || ($0.areaId.map { areaIds.contains($0) } ?? false) }
+                .map(\.id)
+        )
+        let todoIds = Set(
+            d.allTodos()
+                .filter {
+                    $0.trashedAt != nil
+                        || ($0.projectId.map { projectIds.contains($0) } ?? false)
+                        || ($0.areaId.map { areaIds.contains($0) } ?? false)
+                }
+                .map(\.id)
+        )
+        for id in areaIds { d.remove(.areas, id: id) }
+        for id in projectIds { d.remove(.projects, id: id) }
+        for id in todoIds { d.remove(.todos, id: id) }
+        for h in d.allHeadings() where projectIds.contains(h.projectId) {
+            d.remove(.headings, id: h.id)
+        }
+        for c in d.allChecklistItems() where todoIds.contains(c.todoId) {
+            d.remove(.checklistItems, id: c.id)
         }
     }
 

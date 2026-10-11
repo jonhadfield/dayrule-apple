@@ -91,4 +91,178 @@ struct StoreTests {
         #expect(store.entities.todos["t1"]?.clock?["title"] != nil)
         #expect(store.entities.todos["t1"]?.clock?["futureField"] == nil)
     }
+
+    @Test func createProjectUpdateAndEmptyTrash() throws {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Ship", areaId: nil)
+        }
+        #expect(store.entities.projects[project.id]?.title == "Ship")
+        #expect(store.entities.projects[project.id]?.start == .ready)
+
+        store.run("Rename project") { d, env in
+            Commands.updateProject(d, env, id: project.id, title: "Shipped", notes: "done notes")
+        }
+        #expect(store.entities.projects[project.id]?.title == "Shipped")
+        #expect(store.entities.projects[project.id]?.notes == "done notes")
+
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Nested", placement: .project(projectId: project.id, headingId: nil)))
+        }
+        #expect(todo.id != project.id)
+        store.run("Trash project") { d, env in
+            Commands.trashItems(d, env, ids: [project.id])
+        }
+        #expect(store.entities.projects[project.id]?.trashedAt != nil)
+
+        // emptyTrash also removes children of trashed areas/projects even if
+        // the child itself was not soft-trashed (web behaviour).
+        store.run("Empty Trash") { d, _ in
+            Commands.emptyTrash(d)
+        }
+        #expect(store.entities.projects[project.id] == nil)
+        #expect(store.entities.todos[todo.id] == nil)
+    }
+
+    @Test func emptyTrashRemovesSoftTrashedTodo() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Gone", placement: .inbox))
+        }
+        store.run("Trash") { d, env in
+            Commands.trashItems(d, env, ids: [todo.id])
+        }
+        store.run("Empty Trash") { d, _ in
+            Commands.emptyTrash(d)
+        }
+        #expect(store.entities.todos[todo.id] == nil)
+    }
+
+    @Test func setDeadlineAndClear() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Due soon", placement: .inbox))
+        }
+        store.run("Deadline") { d, env in
+            Commands.setDeadline(d, env, ids: [todo.id], deadline: "2026-10-20")
+        }
+        #expect(store.entities.todos[todo.id]?.deadline == "2026-10-20")
+        store.run("Clear deadline") { d, env in
+            Commands.setDeadline(d, env, ids: [todo.id], deadline: nil)
+        }
+        #expect(store.entities.todos[todo.id]?.deadline == nil)
+    }
+
+    @Test func tagsHeadingsAndLogCompleted() throws {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Build")
+        }
+        let heading = try store.run("Heading") { d, env in
+            try Commands.createHeading(d, env, projectId: project.id, title: "Materials")
+        }
+        #expect(store.entities.headings[heading.id]?.title == "Materials")
+        let tag = try store.run("Tag") { d, env in
+            try Commands.createTag(d, env, title: "Errand")
+        }
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env, .init(title: "Buy screws", placement: .project(projectId: project.id, headingId: heading.id))
+            )
+        }
+        store.run("Tags") { d, env in
+            Commands.setTags(d, env, ids: [todo.id], tagIds: [tag.id])
+        }
+        #expect(store.entities.todos[todo.id]?.tagIds == [tag.id])
+
+        store.run("Done mode") { d, _ in
+            Commands.setDoneMode(d, mode: .manually)
+        }
+        #expect(store.entities.settings.moveToDone == .manually)
+        store.run("Complete") { d, env in
+            Commands.setStatus(d, env, ids: [todo.id], status: .completed)
+        }
+        let ctx = Lists.Context(today: "2023-11-14", keepVisible: nil)
+        #expect(!Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
+        store.run("Move to Done") { d, env in
+            Commands.moveToDoneNow(d, env)
+        }
+        #expect(store.entities.settings.lastMovedToDoneAt != nil)
+        #expect(Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
+    }
+
+    @Test func setReminderPlainAndOnTemplate() throws {
+        #expect(When.roundToQuarter("09:07") == "09:00")
+        #expect(When.roundToQuarter("09:08") == "09:15")
+        #expect(When.roundToQuarter("23:53") == "23:45")
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let clock = StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        )
+        let store = EntityStore(clock: clock)
+        let plain = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Call", placement: .inbox))
+        }
+        store.run("Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [plain.id], at: "2026-10-10T09:07")
+        }
+        #expect(store.entities.todos[plain.id]?.reminderAt == "2026-10-10T09:07")
+        store.run("Clear Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [plain.id], at: nil)
+        }
+        #expect(store.entities.todos[plain.id]?.reminderAt == nil)
+
+        let template = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Standup", placement: .today))
+        }
+        store.run("Repeat") { d, env in
+            Repeats.setRepeat(
+                d, env, id: template.id,
+                rule: RepeatRule(
+                    freq: .week, every: 1, weekdays: [0], mode: .fixed,
+                    anchor: env.today, next: nil, reminderTime: nil
+                )
+            )
+        }
+        store.run("Reminder") { d, env in
+            Commands.setReminder(d, env, ids: [template.id], at: "2026-10-10T08:30")
+        }
+        #expect(store.entities.todos[template.id]?.repeat?.reminderTime == "08:30")
+        #expect(store.entities.todos[template.id]?.reminderAt == nil)
+    }
 }
