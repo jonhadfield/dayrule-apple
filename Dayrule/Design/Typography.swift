@@ -80,13 +80,18 @@ enum DayruleType {
     static var sectionSerif: Font { DayruleFont.serif(.headline) }
 
     static let sectionHeader: Font = .footnote.weight(.semibold)
-    /// `.body` on both platforms (13pt system on macOS).
+    /// Phone: Dynamic Type body (17pt default). Mac: 15pt to match web desktop.
+    #if os(macOS)
+    static let rowTitle: Font = .system(size: 15)
+    static let link: Font = .system(size: 15)
+    #else
     static let rowTitle: Font = .body
+    static let link: Font = .body
+    #endif
     static let meta: Font = .footnote
     static let helper: Font = .footnote
     static let error: Font = .footnote
     static let button: Font = .headline
-    static let link: Font = .body
     static let count: Font = .subheadline.monospacedDigit()
     static let tabLabel: Font = .caption2.weight(.medium)
 

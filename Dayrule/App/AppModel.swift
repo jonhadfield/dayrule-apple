@@ -37,6 +37,8 @@ final class AppModel {
     var accountEmail: String?
     var syncStatus: SyncStatus = .idle
     var showSettings = false
+    /// Quick Find overlay (toolbar, Mac menu ⌘F).
+    var showFind = false
     /// True when a biometric wrap is cached for this device.
     var biometricUnlockAvailable = false
     var biometryLabel = "Biometrics"
@@ -975,6 +977,7 @@ final class AppModel {
     /// Lock the vault on this device. Keeps the Bearer session so sync works
     /// after biometric / stay-unlocked reopen (unlike sign-out).
     func lock() {
+        showFind = false
         clearPendingSecondStep()
         idleTask?.cancel()
         idleTask = nil

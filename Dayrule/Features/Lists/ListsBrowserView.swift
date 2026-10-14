@@ -74,11 +74,11 @@ struct ListsBrowserView: View {
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
+    @State private var moveTarget: WhenTarget?
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
     @State private var editTarget: EditTarget?
     @State private var projectPath: [ID] = []
-    @State private var showFind = false
     /// Find result held until the sheet has gone, so navigation isn't fought by the dismissal.
     @State private var pendingFind: Find.Result?
     @State private var confirmEmptyTrash = false
@@ -130,6 +130,9 @@ struct ListsBrowserView: View {
         .sheet(item: $tagTarget) { target in
             TagSheetView(model: model, ids: target.ids)
         }
+        .sheet(item: $moveTarget) { target in
+            MoveSheetView(model: model, ids: target.ids)
+        }
         .sheet(item: $repeatTarget) { target in
             RepeatSheetView(model: model, todoId: target.id)
         }
@@ -145,7 +148,7 @@ struct ListsBrowserView: View {
             ItemEditorSheet(model: model, id: target.id)
         }
         #endif
-        .sheet(isPresented: $showFind, onDismiss: applyPendingFind) {
+        .sheet(isPresented: $model.showFind, onDismiss: applyPendingFind) {
             QuickFindView(model: model) { result in
                 pendingFind = result
             }
@@ -330,7 +333,7 @@ struct ListsBrowserView: View {
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
-                showFind = true
+                model.showFind = true
             } label: {
                 Label("Find", systemImage: "magnifyingglass")
                     .labelStyle(.iconOnly)
@@ -477,16 +480,14 @@ struct ListsBrowserView: View {
         let names = ListName.allCases.filter { $0 != .notNow }
         ForEach(names, id: \.self) { name in
             HStack(spacing: 0) {
-                #if !os(macOS)
-                // iPad: one 3pt accent bar marks the selection. macOS relies on the
-                // window AccentColor highlight so there's a single indicator.
+                // 3pt terracotta bar marks the selection on iPad and Mac (PLAN §6.5 / §6.6).
                 RoundedRectangle(cornerRadius: 1.5)
                     .fill(selection == name ? colors.accent : .clear)
                     .frame(width: 3)
                     .padding(.trailing, 8)
-                #endif
                 Label {
                     Text(name.title)
+                        .font(DayruleType.rowTitle)
                         .foregroundStyle(colors.text)
                 } icon: {
                     Image(systemName: listImage(name))
@@ -503,9 +504,7 @@ struct ListsBrowserView: View {
             }
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .tag(Optional(name))
-            #if !os(macOS)
             .listRowBackground(selection == name ? colors.selectedRow : Color.clear)
-            #endif
         }
         let projects = browseProjects
         if !projects.isEmpty {
@@ -514,22 +513,26 @@ struct ListsBrowserView: View {
                     Button {
                         projectPath = [project.id]
                     } label: {
-                        Label {
-                            Text(project.title.isEmpty ? "Untitled" : project.title)
-                                .font(DayruleType.sectionSerif)
-                                .foregroundStyle(colors.text)
-                        } icon: {
-                            Image(systemName: "bookmark")
-                                .foregroundStyle(colors.textSecondary)
+                        HStack(spacing: 0) {
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(projectPath.last == project.id ? colors.accent : .clear)
+                                .frame(width: 3)
+                                .padding(.trailing, 8)
+                            Label {
+                                Text(project.title.isEmpty ? "Untitled" : project.title)
+                                    .font(DayruleType.sectionSerif)
+                                    .foregroundStyle(colors.text)
+                            } icon: {
+                                Image(systemName: "bookmark")
+                                    .foregroundStyle(colors.textSecondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityIdentifier("list.sidebar.project.\(project.id)")
-                    #if !os(macOS)
                     .listRowBackground(projectPath.last == project.id ? colors.selectedRow : Color.clear)
-                    #endif
                 }
             } header: {
                 DayruleSectionHeader(title: "Projects", tone: .muted, style: .caps, surface: .sidebar)
@@ -878,6 +881,7 @@ struct ListsBrowserView: View {
         ]
         if row.isTodo {
             actions += [
+                RowAction(name: "Move…") { moveTarget = WhenTarget(ids: [row.id]) },
                 RowAction(name: "Repeat…") { repeatTarget = EditTarget(id: row.id) },
                 RowAction(name: "Reminder…") { reminderTarget = EditTarget(id: row.id) },
                 RowAction(name: "Move up") { moveTodo(row.id, dir: -1, in: list) },
@@ -975,6 +979,11 @@ struct ListsBrowserView: View {
                     Label("Tags…", systemImage: "tag")
                 }
                 if row.isTodo {
+                    Button {
+                        moveTarget = WhenTarget(ids: [row.id])
+                    } label: {
+                        Label("Move…", systemImage: "arrow.right.square")
+                    }
                     Button {
                         repeatTarget = EditTarget(id: row.id)
                     } label: {

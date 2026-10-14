@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Title/notes editor for a to-do or project (M5).
+/// Title/notes editor for a to-do or project (M5). Paper card with a terracotta
+/// leading rule, matching web `TodoEditor` (PLAN §6.3).
 struct ItemEditorSheet: View {
     @Bindable var model: AppModel
     let id: ID
@@ -29,53 +30,83 @@ struct ItemEditorSheet: View {
             size: .tall,
             isDirty: title != loadedTitle || notes != loadedNotes
         ) {
-            Form {
-                Section {
-                    TextField(
-                        "Title",
-                        text: $title,
-                        prompt: Text("Title").foregroundStyle(colors.textSecondary),
-                        axis: .vertical
-                    )
-                    .lineLimit(1...4)
-                    .dayruleBareField(colors: colors)
-                    .focused($focus, equals: .title)
-                    .submitLabel(.next)
-                    .onSubmit { focus = .notes }
-                    .accessibilityIdentifier("editor.title")
-                    .onChange(of: title) { _, value in
-                        // A vertical field takes Return as a newline; titles are one line,
-                        // so treat it as "next field".
-                        guard value != loadedTitle, value.contains(where: \.isNewline) else {
-                            return
-                        }
-                        title = value.filter { !$0.isNewline }
-                        focus = .notes
-                    }
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 140)
-                        .scrollContentBackground(.hidden)
-                        .foregroundStyle(colors.text)
-                        .focused($focus, equals: .notes)
-                        .overlay(alignment: .topLeading) {
-                            if notes.isEmpty {
-                                Text("Notes")
-                                    .foregroundStyle(colors.textSecondary)
-                                    .padding(.top, 8)
-                                    .padding(.leading, 5)
-                                    .allowsHitTesting(false)
-                                    .accessibilityHidden(true)
-                            }
-                        }
-                        .accessibilityLabel("Notes")
-                        .accessibilityIdentifier("editor.notes")
-                }
-                .dayruleSheetRow(colors: colors)
+            ScrollView {
+                editorCard(colors: colors)
+                    .padding(Tokens.Space.l)
             }
+            .scrollDismissesKeyboard(.interactively)
             .task {
                 load()
                 focus = .title
             }
+        }
+    }
+
+    private func editorCard(colors: DayruleColors) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.m) {
+            TextField(
+                "Title",
+                text: $title,
+                prompt: Text("Title").foregroundStyle(colors.textSecondary),
+                axis: .vertical
+            )
+            .font(DayruleType.rowTitle)
+            .lineLimit(1...4)
+            .dayruleBareField(colors: colors)
+            .focused($focus, equals: .title)
+            .submitLabel(.next)
+            .onSubmit { focus = .notes }
+            .accessibilityIdentifier("editor.title")
+            .onChange(of: title) { _, value in
+                // A vertical field takes Return as a newline; titles are one line,
+                // so treat it as "next field".
+                guard value != loadedTitle, value.contains(where: \.isNewline) else {
+                    return
+                }
+                title = value.filter { !$0.isNewline }
+                focus = .notes
+            }
+
+            TextEditor(text: $notes)
+                .font(DayruleType.rowTitle)
+                .frame(minHeight: 160)
+                .scrollContentBackground(.hidden)
+                .foregroundStyle(colors.text)
+                .focused($focus, equals: .notes)
+                .overlay(alignment: .topLeading) {
+                    if notes.isEmpty {
+                        Text("Notes")
+                            .font(DayruleType.rowTitle)
+                            .foregroundStyle(colors.textSecondary)
+                            .padding(.top, 8)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .accessibilityLabel("Notes")
+                .accessibilityIdentifier("editor.notes")
+        }
+        .padding(Tokens.Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(colors.sidebar.opacity(0.4))
+        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
+                .strokeBorder(colors.hairline, lineWidth: 1)
+        )
+        // Terracotta leading rule (web `border-l-[3px] border-l-accent`).
+        .overlay(alignment: .leading) {
+            colors.accent
+                .frame(width: 3)
+                .clipShape(
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: Tokens.radiusCard,
+                        bottomLeadingRadius: Tokens.radiusCard,
+                        style: .continuous
+                    )
+                )
+                .accessibilityHidden(true)
         }
     }
 

@@ -30,6 +30,14 @@ enum Commands {
         }
     }
 
+    /// Destination for `moveTodos` (web `MoveTarget`).
+    enum MoveTarget: Sendable, Equatable {
+        case inbox
+        case none
+        case area(areaId: ID)
+        case project(projectId: ID, headingId: ID? = nil)
+    }
+
     @discardableResult
     static func createTodo(_ d: Draft, _ env: EntityStore.Env, _ input: NewTodo) throws -> Todo {
         let p = input.placement
@@ -212,6 +220,50 @@ enum Commands {
                 p.updatedAt = ISOStamp.format(env.now)
                 d.putProject(p)
             }
+        }
+    }
+
+    /// Move to-dos into Inbox, out of any project/area, into an area, or into a project
+    /// (web `moveTodos`). Reorders into the destination sibling list.
+    static func moveTodos(_ d: Draft, _ env: EntityStore.Env, ids: [ID], target: MoveTarget) throws {
+        let ts = ISOStamp.format(env.now)
+        for id in ids {
+            guard var t = d.getTodo(id) else { continue }
+            let siblings = d.allTodos().filter { s in
+                if s.id == id { return false }
+                switch target {
+                case let .project(projectId, headingId):
+                    return s.projectId == projectId && s.headingId == headingId
+                case let .area(areaId):
+                    return s.areaId == areaId && s.projectId == nil
+                case .inbox, .none:
+                    return s.projectId == nil && s.areaId == nil
+                }
+            }
+            switch target {
+            case let .project(projectId, headingId):
+                t.projectId = projectId
+                t.headingId = headingId
+                t.areaId = nil
+            case let .area(areaId):
+                t.projectId = nil
+                t.headingId = nil
+                t.areaId = areaId
+            case .inbox, .none:
+                t.projectId = nil
+                t.headingId = nil
+                t.areaId = nil
+            }
+            t.order = try Order.keyAfterLast(siblings.map(\.order))
+            if case .inbox = target {
+                t.start = .inbox
+                t.startDate = nil
+                t.tonight = false
+            } else if t.start == .inbox {
+                t.start = .ready
+            }
+            t.updatedAt = ts
+            d.putTodo(t)
         }
     }
 

@@ -12,9 +12,12 @@
 		02CEB9BD1F3938CA38CBE210 /* Merge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E6C23642DCB6C41B26D8671 /* Merge.swift */; };
 		07FAAC5A57138A60CF430BE4 /* LingerStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24A6D8DB11402268708E999A /* LingerStore.swift */; };
 		08613D9715503FF6B42375F2 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B779DA6B2031BF08649C89C /* APIClient.swift */; };
+		0D82713DEE3CF1BE17F718D0 /* MoveSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79F6D6E8203CAF71DE807BD5 /* MoveSheetView.swift */; };
 		12C2447A0BBEBFD64F6DDD97 /* Restamp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 125829DF9F4D7E9BBA487D14 /* Restamp.swift */; };
+		13B224BBE84FB47F32ABA8F7 /* DesignCaptureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8952B8F3BECCB4CC3A31C74 /* DesignCaptureTests.swift */; };
 		144161B76441492AFC81F67A /* UuidV7.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20E90060E82A89E4BE7636F7 /* UuidV7.swift */; };
 		159AAFD9B565E01F6DFA6B39 /* DateText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B18EE7B5F2218B8AB2BD0C51 /* DateText.swift */; };
+		15F3F8B98568C7338E90AA80 /* DesignCaptures.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C87174387804A6982E10602 /* DesignCaptures.swift */; };
 		16D9A8632A3B7BEF825EB2EC /* Draft.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA658F607831ED59FCA9C634 /* Draft.swift */; };
 		17FA39351C63860FD3F1C96D /* Find.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C6612B5F8DF84210CAE14D /* Find.swift */; };
 		181A8D17F279AFCBCD6A58E0 /* Hex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 009C4F0B2898FCD16E2FFC1A /* Hex.swift */; };
@@ -189,6 +192,7 @@
 		28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsBrowserView.swift; sourceTree = "<group>"; };
 		2926027C49B5BEDF339EC385 /* EnvelopeB64.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvelopeB64.swift; sourceTree = "<group>"; };
 		29C225964995BA55648E51D5 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
+		2C87174387804A6982E10602 /* DesignCaptures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptures.swift; sourceTree = "<group>"; };
 		3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricUnlockTests.swift; sourceTree = "<group>"; };
 		32A368C1360A61A2C5320783 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 		32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceReminderPrefs.swift; sourceTree = "<group>"; };
@@ -226,6 +230,7 @@
 		719D685FDE95FE6C63E90CB5 /* Repeats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeats.swift; sourceTree = "<group>"; };
 		7445A8887D2541F518050BD1 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		777DAD146F35C4D1E9355E55 /* PrfUnlockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrfUnlockTests.swift; sourceTree = "<group>"; };
+		79F6D6E8203CAF71DE807BD5 /* MoveSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveSheetView.swift; sourceTree = "<group>"; };
 		7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CryptoVectorsTests.swift; sourceTree = "<group>"; };
 		7B779DA6B2031BF08649C89C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleUITests.swift; sourceTree = "<group>"; };
@@ -277,6 +282,7 @@
 		D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychain.swift; sourceTree = "<group>"; };
 		D5FE49922F152AE52CDB2C52 /* FileProtection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileProtection.swift; sourceTree = "<group>"; };
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
+		D8952B8F3BECCB4CC3A31C74 /* DesignCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptureTests.swift; sourceTree = "<group>"; };
 		D917B1933E1E1DCDB240A5FD /* FindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindTests.swift; sourceTree = "<group>"; };
 		DFBE1D22F608EE636247658F /* Repeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeat.swift; sourceTree = "<group>"; };
 		E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineSheetView.swift; sourceTree = "<group>"; };
@@ -320,6 +326,7 @@
 				B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */,
 				9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */,
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
+				79F6D6E8203CAF71DE807BD5 /* MoveSheetView.swift */,
 				CFF7B27C792AA9376304425B /* ProjectDetailView.swift */,
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
 				9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */,
@@ -375,6 +382,7 @@
 				CB239E222FB3FCAF4FFFDDCD /* CountBadge.swift */,
 				B18EE7B5F2218B8AB2BD0C51 /* DateText.swift */,
 				C27C6E4851E216FA86CFF166 /* DayruleCheckbox.swift */,
+				2C87174387804A6982E10602 /* DesignCaptures.swift */,
 				7002250834D980A75C6C5150 /* FieldStyle.swift */,
 				5FA40065C14F9DB05A24F939 /* GateScaffold.swift */,
 				24A6D8DB11402268708E999A /* LingerStore.swift */,
@@ -449,6 +457,7 @@
 				E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */,
 				E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */,
 				7A2AD6B1FAF690DE64AF7DD0 /* CryptoVectorsTests.swift */,
+				D8952B8F3BECCB4CC3A31C74 /* DesignCaptureTests.swift */,
 				32A368C1360A61A2C5320783 /* DesignSystemTests.swift */,
 				C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */,
 				90ED870FC5811C8C825D9E3C /* EntityJSONTests.swift */,
@@ -771,6 +780,7 @@
 				30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */,
 				D830CEFB488936F28111961A /* DayruleCheckbox.swift in Sources */,
 				4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */,
+				15F3F8B98568C7338E90AA80 /* DesignCaptures.swift in Sources */,
 				919A8CB7BA0D8ACD5660A90D /* DeviceAppearancePrefs.swift in Sources */,
 				1E97C6A8F665EA5FB81A95C1 /* DeviceKeyStore.swift in Sources */,
 				BCDF26946850620BA7CAE6B3 /* DeviceReminderPrefs.swift in Sources */,
@@ -803,6 +813,7 @@
 				C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */,
 				02CEB9BD1F3938CA38CBE210 /* Merge.swift in Sources */,
 				76E7BE693BD7BDC45E624C19 /* Motion.swift in Sources */,
+				0D82713DEE3CF1BE17F718D0 /* MoveSheetView.swift in Sources */,
 				433E7ADBF179FCFB7D94DBD6 /* NavigationChrome.swift in Sources */,
 				A2CCC9475AC3454183015582 /* Notice.swift in Sources */,
 				2BF4C47D521435E78A947EF1 /* Order.swift in Sources */,
@@ -870,6 +881,7 @@
 				B92BC3DEDEE1C309337B6152 /* CipherStoreTests.swift in Sources */,
 				62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */,
 				85124F6031198380233EA8D5 /* CryptoVectorsTests.swift in Sources */,
+				13B224BBE84FB47F32ABA8F7 /* DesignCaptureTests.swift in Sources */,
 				B0D7B14703E111B045312DF6 /* DesignSystemTests.swift in Sources */,
 				33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */,
 				00470845145395E42246DC2E /* EntityJSONTests.swift in Sources */,
