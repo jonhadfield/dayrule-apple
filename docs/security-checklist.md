@@ -36,20 +36,20 @@ in code or by a named manual step — not by assumption.
 ## System surfaces (must stay content-free)
 
 - [x] Privacy cover on scene `.inactive`
-- [ ] iOS privacy cover shows only while the vault is unlocked (locked gate has no content to hide), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal
-- [ ] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity`)
+- [x] iOS privacy cover shows only while the vault is unlocked (or recovery words are on screen), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal (`DayruleApp.privacyCoverNeeded` / `setPrivacyCover`)
+- [x] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity` / `bumpIdle`)
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code
 - [x] Notification titles opt-in; default body is time-only
 - [x] No third-party analytics / crash / ad SDKs
 
 ## Manual / release gates
 
-- [x] Internal TestFlight build uploaded (signing + entitlements; build 9 with offline-unlock sync banner)
+- [x] Internal TestFlight build uploaded (signing + entitlements; build 11)
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
 - [ ] App Review demo account + nutrition label (before external testers)
 - [ ] Confirm French encryption declaration rules before public store
-- [ ] Confirm server `MIN_IOS_BUILD` / `426` floor for external testers
+- [ ] Server `MIN_IOS_BUILD` / `426` floor — **not configured yet** (2026-10-14): client maps `426` / `upgrade_required` → needsUpdate (`AppModel`); dayrule `server/internal/httpapi` has no build-floor middleware. Confirm and set before external testers.
 
-**Signed off (code items above):** M7 branch review — remaining unchecked items are release ops, not app code.
+**Signed off (code items above):** M7 branch review — remaining unchecked items are release ops / server config, not app code.

@@ -429,6 +429,24 @@ enum Commands {
         return item
     }
 
+    static func updateChecklistItem(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        id: ID,
+        title: String? = nil,
+        done: Bool? = nil
+    ) {
+        guard var c = d.getChecklistItem(id) else { return }
+        if let title { c.title = title }
+        if let done { c.done = done }
+        c.updatedAt = ISOStamp.format(env.now)
+        d.putChecklistItem(c)
+    }
+
+    static func removeChecklistItem(_ d: Draft, id: ID) {
+        d.remove(.checklistItems, id: id)
+    }
+
     struct ImportCounts: Equatable, Sendable {
         var areas: Int
         var projects: Int

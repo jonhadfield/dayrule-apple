@@ -56,6 +56,33 @@ struct StoreTests {
         #expect(store.entities.todos[todo.id]?.trashedAt != nil)
     }
 
+    @Test func checklistAddUpdateRemove() throws {
+        let store = EntityStore(clock: fixedClock())
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Shop", placement: .inbox))
+        }
+        let item = try store.run("Checklist") { d, env in
+            try Commands.addChecklistItem(d, env, todoId: todo.id, title: "Milk")
+        }
+        #expect(store.entities.checklistItems[item.id]?.title == "Milk")
+        #expect(store.entities.checklistItems[item.id]?.done == false)
+
+        store.run("Checklist") { d, env in
+            Commands.updateChecklistItem(d, env, id: item.id, done: true)
+        }
+        #expect(store.entities.checklistItems[item.id]?.done == true)
+
+        store.run("Checklist") { d, env in
+            Commands.updateChecklistItem(d, env, id: item.id, title: "Oat milk")
+        }
+        #expect(store.entities.checklistItems[item.id]?.title == "Oat milk")
+
+        store.run("Checklist") { d, _ in
+            Commands.removeChecklistItem(d, id: item.id)
+        }
+        #expect(store.entities.checklistItems[item.id] == nil)
+    }
+
     @Test func moveTodosToProjectAndInbox() throws {
         final class Seq: @unchecked Sendable {
             private var n = 0

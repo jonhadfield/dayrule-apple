@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Title/notes editor for a to-do or project (M5). Paper card with a terracotta
-/// leading rule, matching web `TodoEditor` (PLAN §6.3).
+/// leading rule, matching web `TodoEditor` (PLAN §6.3). To-dos also edit checklist
+/// items live (web `addChecklistItem` / `updateChecklistItem` / `removeChecklistItem`).
 struct ItemEditorSheet: View {
     @Bindable var model: AppModel
     let id: ID
@@ -14,8 +15,9 @@ struct ItemEditorSheet: View {
     @State private var isTodo = true
     @FocusState private var focus: Field?
 
-    private enum Field {
+    private enum Field: Hashable {
         case title, notes
+        case checklist(ID)
     }
 
     var body: some View {
@@ -69,7 +71,7 @@ struct ItemEditorSheet: View {
 
             TextEditor(text: $notes)
                 .font(DayruleType.rowTitle)
-                .frame(minHeight: 160)
+                .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .foregroundStyle(colors.text)
                 .focused($focus, equals: .notes)
@@ -86,6 +88,10 @@ struct ItemEditorSheet: View {
                 }
                 .accessibilityLabel("Notes")
                 .accessibilityIdentifier("editor.notes")
+
+            if isTodo {
+                checklistSection(colors: colors)
+            }
         }
         .padding(Tokens.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -108,6 +114,81 @@ struct ItemEditorSheet: View {
                 )
                 .accessibilityHidden(true)
         }
+    }
+
+    @ViewBuilder
+    private func checklistSection(colors: DayruleColors) -> some View {
+        let items = checklistItems
+        VStack(alignment: .leading, spacing: 0) {
+            if !items.isEmpty {
+                colors.hairline.frame(height: 1)
+                    .padding(.top, Tokens.Space.xs)
+                ForEach(items, id: \.id) { item in
+                    checklistRow(item, colors: colors)
+                    colors.hairline.frame(height: 1)
+                }
+            }
+            Button {
+                addChecklistItem()
+            } label: {
+                Label("Checklist", systemImage: "checklist")
+                    .font(DayruleType.meta)
+                    .foregroundStyle(colors.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, Tokens.Space.s)
+            .accessibilityIdentifier("editor.checklist.add")
+        }
+    }
+
+    private func checklistRow(_ item: ChecklistItem, colors: DayruleColors) -> some View {
+        HStack(spacing: Tokens.Space.s) {
+            Button {
+                toggleChecklistDone(item)
+            } label: {
+                Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(item.done ? colors.accent : colors.textSecondary)
+                    .imageScale(.medium)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(item.done ? "Mark not done" : "Mark done")
+            .accessibilityIdentifier("editor.checklist.done.\(item.id)")
+
+            TextField(
+                "Checklist item",
+                text: Binding(
+                    get: { model.entities.checklistItems[item.id]?.title ?? item.title },
+                    set: { setChecklistTitle(item.id, $0) }
+                ),
+                prompt: Text("Item").foregroundStyle(colors.textSecondary)
+            )
+            .font(DayruleType.meta)
+            .strikethrough(item.done)
+            .foregroundStyle(item.done ? colors.textSecondary : colors.text)
+            .dayruleBareField(colors: colors)
+            .focused($focus, equals: .checklist(item.id))
+            .submitLabel(.next)
+            .onSubmit { addChecklistItem() }
+            .accessibilityIdentifier("editor.checklist.title.\(item.id)")
+
+            Button {
+                removeChecklistItem(item.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(colors.textSecondary)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Remove checklist item")
+            .accessibilityIdentifier("editor.checklist.remove.\(item.id)")
+        }
+        .padding(.vertical, Tokens.Space.xs)
+    }
+
+    private var checklistItems: [ChecklistItem] {
+        model.entities.checklistItems.values
+            .filter { $0.todoId == id }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
     }
 
     private var trimmedTitle: String {
@@ -140,5 +221,38 @@ struct ItemEditorSheet: View {
         }
         model.noteEntitiesChanged()
         dismiss()
+    }
+
+    private func addChecklistItem() {
+        do {
+            let item = try model.store.run("Checklist") { d, env in
+                try Commands.addChecklistItem(d, env, todoId: id, title: "")
+            }
+            model.noteEntitiesChanged()
+            focus = .checklist(item.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
+    }
+
+    private func toggleChecklistDone(_ item: ChecklistItem) {
+        model.store.run("Checklist") { d, env in
+            Commands.updateChecklistItem(d, env, id: item.id, done: !item.done)
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func setChecklistTitle(_ itemId: ID, _ title: String) {
+        model.store.run("Checklist") { d, env in
+            Commands.updateChecklistItem(d, env, id: itemId, title: title)
+        }
+        model.noteEntitiesChanged(animation: nil)
+    }
+
+    private func removeChecklistItem(_ itemId: ID) {
+        model.store.run("Checklist") { d, _ in
+            Commands.removeChecklistItem(d, id: itemId)
+        }
+        model.noteEntitiesChanged()
     }
 }
