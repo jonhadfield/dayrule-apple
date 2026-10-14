@@ -35,6 +35,8 @@ struct DayruleApp: App {
             }
             #if os(macOS)
             .frame(minWidth: 720, minHeight: 480)
+            // Dense desktop body (web 15px at ≥900px); explicit role fonts still win.
+            .environment(\.font, Font.system(size: 15))
             .modifier(UserActivityMonitor(model: model))
             #endif
             .preferredColorScheme(preferredScheme)
@@ -60,6 +62,30 @@ struct DayruleApp: App {
         #if os(macOS)
         .defaultSize(width: 1040, height: 700)
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(replacing: .appSettings) {
+                Button("Settings…") {
+                    model.showSettings = true
+                }
+                .keyboardShortcut(",", modifiers: .command)
+                .disabled(model.phase != .unlocked)
+            }
+            CommandGroup(after: .appInfo) {
+                Button("Lock") {
+                    model.lockNow()
+                }
+                .keyboardShortcut("l", modifiers: [.command, .shift])
+                .disabled(model.phase != .unlocked)
+            }
+            CommandGroup(replacing: .newItem) {}
+            CommandGroup(after: .pasteboard) {
+                Button("Find…") {
+                    model.showFind = true
+                }
+                .keyboardShortcut("f", modifiers: .command)
+                .disabled(model.phase != .unlocked)
+            }
+        }
         #endif
     }
 

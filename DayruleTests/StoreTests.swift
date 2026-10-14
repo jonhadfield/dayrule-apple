@@ -56,6 +56,40 @@ struct StoreTests {
         #expect(store.entities.todos[todo.id]?.trashedAt != nil)
     }
 
+    @Test func moveTodosToProjectAndInbox() throws {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        let store = EntityStore(clock: StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        ))
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Renovate")
+        }
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Paint", placement: .inbox))
+        }
+        try store.run("Move") { d, env in
+            try Commands.moveTodos(d, env, ids: [todo.id], target: .project(projectId: project.id))
+        }
+        #expect(store.entities.todos[todo.id]?.projectId == project.id)
+        #expect(store.entities.todos[todo.id]?.start == .ready)
+        #expect(store.entities.todos[todo.id]?.areaId == nil)
+
+        try store.run("Move") { d, env in
+            try Commands.moveTodos(d, env, ids: [todo.id], target: .inbox)
+        }
+        #expect(store.entities.todos[todo.id]?.projectId == nil)
+        #expect(store.entities.todos[todo.id]?.start == .inbox)
+    }
+
     @Test func setWhenInboxAndBacklogVocabulary() throws {
         let store = EntityStore(clock: fixedClock())
         let todo = try store.run("Add") { d, env in

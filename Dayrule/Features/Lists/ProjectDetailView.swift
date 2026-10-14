@@ -16,6 +16,7 @@ struct ProjectDetailView: View {
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
+    @State private var moveTarget: WhenTarget?
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
 
@@ -157,6 +158,9 @@ struct ProjectDetailView: View {
         .sheet(item: $tagTarget) { target in
             TagSheetView(model: model, ids: target.ids)
         }
+        .sheet(item: $moveTarget) { target in
+            MoveSheetView(model: model, ids: target.ids)
+        }
         .sheet(item: $repeatTarget) { target in
             RepeatSheetView(model: model, todoId: target.id)
         }
@@ -207,6 +211,7 @@ struct ProjectDetailView: View {
                 RowAction(name: "When…") { whenTarget = WhenTarget(ids: [todo.id]) },
                 RowAction(name: "Deadline…") { deadlineTarget = WhenTarget(ids: [todo.id]) },
                 RowAction(name: "Tags…") { tagTarget = WhenTarget(ids: [todo.id]) },
+                RowAction(name: "Move…") { moveTarget = WhenTarget(ids: [todo.id]) },
                 RowAction(name: "Repeat…") { repeatTarget = EditTarget(id: todo.id) },
                 RowAction(name: "Reminder…") { reminderTarget = EditTarget(id: todo.id) },
                 RowAction(name: "Trash") { trash(todo.id, title: title) },
@@ -236,6 +241,9 @@ struct ProjectDetailView: View {
                 }
                 Button { tagTarget = WhenTarget(ids: [todo.id]) } label: {
                     Label("Tags…", systemImage: "tag")
+                }
+                Button { moveTarget = WhenTarget(ids: [todo.id]) } label: {
+                    Label("Move…", systemImage: "arrow.right.square")
                 }
                 Button { repeatTarget = EditTarget(id: todo.id) } label: {
                     Label("Repeat…", systemImage: "repeat")
