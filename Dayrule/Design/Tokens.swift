@@ -36,6 +36,33 @@ enum Tokens {
     static let radiusCard: CGFloat = 6
     static let radiusPopover: CGFloat = 8
     static let rowHeightPhone: CGFloat = 46
+
+    // MARK: Native-only layout (not mirrored from tokens.css; see PLAN §6.1)
+
+    enum Space {
+        static let xxs: CGFloat = 2
+        static let xs: CGFloat = 4
+        static let s: CGFloat = 8
+        static let m: CGFloat = 12
+        static let l: CGFloat = 16
+        static let xl: CGFloat = 24
+        static let xxl: CGFloat = 32
+    }
+
+    static let rowInset: CGFloat = 16
+    static let rowGlyphSpacing: CGFloat = 10
+    static let rowLeadingSlot: CGFloat = 28
+    /// Web `--row-height` at 900px and up.
+    static let rowHeightDesktop: CGFloat = 36
+    #if os(macOS)
+    static let rowHeight: CGFloat = rowHeightDesktop
+    #else
+    static let rowHeight: CGFloat = rowHeightPhone
+    #endif
+    static let formMaxWidth: CGFloat = 420
+    static let readingMaxWidth: CGFloat = 720
+    static let minHit: CGFloat = 44
+    static let badgeSize: CGFloat = 28
 }
 
 extension Color {
@@ -57,6 +84,20 @@ struct DayruleColors {
     let textSecondary: Color
     let hairline: Color
     let accent: Color
+    let deadline: Color
+    let today: Color
+    let scheduled: Color
+    let ready: Color
+    let later: Color
+    let done: Color
+
+    var selectedRow: Color { accent.opacity(0.10) }
+    var pressed: Color { sidebar.opacity(0.6) }
+    var deadlineTint: Color { deadline.opacity(0.10) }
+    var ruleStrong: Color { text }
+    var checkboxBorder: Color { text.opacity(0.5) }
+    /// Unfocused text-field boundary: non-text contrast ≥3:1 on bg and sidebar.
+    var fieldBorder: Color { textSecondary }
 
     static func resolve(colorScheme: ColorScheme) -> DayruleColors {
         switch colorScheme {
@@ -67,7 +108,13 @@ struct DayruleColors {
                 text: Tokens.Dark.text,
                 textSecondary: Tokens.Dark.textSecondary,
                 hairline: Tokens.Dark.hairline,
-                accent: Tokens.Dark.accent
+                accent: Tokens.Dark.accent,
+                deadline: Tokens.Dark.deadline,
+                today: Tokens.Dark.today,
+                scheduled: Tokens.Dark.scheduled,
+                ready: Tokens.Dark.ready,
+                later: Tokens.Dark.later,
+                done: Tokens.Dark.done
             )
         case .light:
             fallthrough
@@ -78,7 +125,13 @@ struct DayruleColors {
                 text: Tokens.Light.text,
                 textSecondary: Tokens.Light.textSecondary,
                 hairline: Tokens.Light.hairline,
-                accent: Tokens.Light.accent
+                accent: Tokens.Light.accent,
+                deadline: Tokens.Light.deadline,
+                today: Tokens.Light.today,
+                scheduled: Tokens.Light.scheduled,
+                ready: Tokens.Light.ready,
+                later: Tokens.Light.later,
+                done: Tokens.Light.done
             )
         }
     }

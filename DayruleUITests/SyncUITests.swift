@@ -129,10 +129,14 @@ final class SyncUITests: XCTestCase {
         if let current = element.value as? String, !current.isEmpty,
            current != element.placeholderValue
         {
+            // Wrapping (vertical-axis) fields put the caret where the tap lands;
+            // a tap at the bottom-trailing corner puts it after the last character.
+            element.coordinate(withNormalizedOffset: CGVector(dx: 0.97, dy: 0.9)).tap()
             let deletes = String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count + 4)
             element.typeText(deletes)
         }
         element.typeText(text)
+        XCTAssertEqual(element.value as? String, text)
     }
 
     /// Paste into a SecureField — more reliable than typeText with the soft keyboard.

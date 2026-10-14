@@ -6,59 +6,110 @@ struct GateView: View {
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var recoveryPhrase = ""
+    @State private var codeSent = false
+    /// The button that started the in-flight action; only it shows a busy title.
+    @State private var pending: GateAction?
+    @FocusState private var focus: Field?
+    @AccessibilityFocusState private var titleFocused: Bool
+
+    private enum Field: Hashable {
+        case api, email, password
+        case invite, signupEmail, code, signupPassword, confirmPassword
+        case recoveryEmail, phrase
+    }
+
+    private enum GateAction {
+        case signIn, biometric, passkey
+        case sendCode, verifyCode, signupContinue
+        case secondStepPasskey, recoveryUnlock
+    }
+
+    /// One key per screen: locked and unlocking share the sign-in form, so they don't cut.
+    private enum Screen: Hashable {
+        case restoring, signIn, secondStep, recovery, signup, confirmRecovery, unlocked
+    }
+
+    private var screen: Screen {
+        switch model.phase {
+        case .locked, .unlocking: model.isRestoringSession ? .restoring : .signIn
+        case .needsSecondStep: .secondStep
+        case .needsRecovery: .recovery
+        case .signup: .signup
+        case .confirmRecovery: .confirmRecovery
+        case .unlocked: .unlocked
+        }
+    }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         ZStack {
             colors.bg.ignoresSafeArea()
             switch model.phase {
-            case .locked:
-                lockedForm(colors: colors, busy: false)
-            case .unlocking:
-                lockedForm(colors: colors, busy: true)
+            case .locked, .unlocking:
+                if model.isRestoringSession {
+                    // Cold launch: hold the cover until device unlock has had its go,
+                    // so the password form doesn't flash before the lists.
+                    PrivacyCover(showsProgress: true)
+                        .transition(.dayruleScreen)
+                } else {
+                    lockedForm(colors: colors, busy: model.phase == .unlocking || model.gateBusy)
+                        .transition(.dayruleScreen)
+                }
             case .needsSecondStep:
                 secondStepForm(colors: colors)
+                    .transition(.dayruleScreen)
             case .needsRecovery:
                 recoveryForm(colors: colors)
+                    .transition(.dayruleScreen)
             case .signup:
                 signupForm(colors: colors)
+                    .transition(.dayruleScreen)
             case .confirmRecovery:
                 RecoveryPhraseView(words: model.pendingRecoveryWords, busy: model.signupBusy) {
                     Task { await model.finishSignup() }
                 }
                 .accessibilityIdentifier("gate.recovery")
+                .transition(.dayruleScreen)
             case .unlocked:
                 ListsBrowserView(model: model)
+                    .transition(.dayruleScreen)
             }
         }
+        .dayruleAnimation(Motion.screen, value: screen)
         .task { await model.tryDeviceUnlock() }
+        .onChange(of: screen) { _, next in
+            focus = nil
+            guard next != .restoring, next != .unlocked else { return }
+            // Let the screen transition land before moving VoiceOver to the new title.
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(350))
+                titleFocused = true
+            }
+        }
     }
+
+    // MARK: - Sign in
 
     @ViewBuilder
     private func lockedForm(colors: DayruleColors, busy: Bool) -> some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Spacer(minLength: 40)
-                Text("Dayrule")
-                    .font(DayruleFont.brand())
-                    .foregroundStyle(colors.text)
-                    .accessibilityIdentifier("gate.brand")
-                Text("Sign in to pull your encrypted vault.")
-                    .font(.body)
-                    .foregroundStyle(colors.textSecondary)
-                    .multilineTextAlignment(.center)
+        let canSignIn = !password.isEmpty && !model.email.isEmpty && !busy
+        GateScaffold(alignment: .center) { proxy in
+            form(alignment: .center, proxy: proxy) {
+                header(
+                    "Dayrule",
+                    intro: "Sign in to open your lists.",
+                    font: DayruleType.brand,
+                    alignment: .center,
+                    identifier: "gate.brand",
+                    colors: colors
+                )
 
                 #if DEBUG
-                field(colors: colors, label: "API", text: $model.apiBaseURLString)
-                    .accessibilityIdentifier("gate.api")
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
+                apiField(identifier: "gate.api", next: .email, busy: busy, colors: colors)
                 #endif
 
-                field(colors: colors, label: "Email", text: $model.email)
+                TextField("Email", text: $model.email, prompt: prompt("Email", colors))
+                    .focused($focus, equals: .email)
                     .accessibilityIdentifier("gate.email")
                     .textContentType(.username)
                     .autocorrectionDisabled()
@@ -66,328 +117,473 @@ struct GateView: View {
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     #endif
+                    .submitLabel(.next)
+                    .onSubmit { focus = .password }
+                    .dayruleField(isFocused: focus == .email, colors: colors)
+                    .disabled(busy)
 
-                SecureField("Password", text: $password)
+                SecureField("Password", text: $password, prompt: prompt("Password", colors))
+                    .focused($focus, equals: .password)
                     .accessibilityIdentifier("gate.password")
                     .textContentType(.password)
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
-                    .padding(14)
-                    .background(colors.sidebar)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+                    .submitLabel(.go)
+                    .onSubmit {
+                        guard canSignIn else { return }
+                        signIn()
+                    }
+                    .dayruleField(isFocused: focus == .password, colors: colors)
                     .disabled(busy)
 
-                Toggle("Stay unlocked on this device", isOn: $model.stayUnlocked)
-                    .foregroundStyle(colors.textSecondary)
-                    .onChange(of: model.stayUnlocked) { _, on in
-                        DeviceUnlockPrefs.stayUnlocked = on
-                        #if os(iOS)
-                        ReminderBackgroundRefresh.scheduleIfNeeded()
-                        #endif
-                    }
-                    .accessibilityIdentifier("gate.stayUnlocked")
+                Toggle(isOn: $model.stayUnlocked) {
+                    Text("Stay unlocked on this device")
+                        .foregroundStyle(colors.text)
+                }
+                .onChange(of: model.stayUnlocked) { _, on in
+                    DeviceUnlockPrefs.stayUnlocked = on
+                    #if os(iOS)
+                    ReminderBackgroundRefresh.scheduleIfNeeded()
+                    #endif
+                }
+                .accessibilityIdentifier("gate.stayUnlocked")
+                .disabled(busy)
 
                 if model.biometricUnlockAvailable {
                     Button {
-                        Task { await model.unlockWithBiometrics() }
+                        run(.biometric) { await model.unlockWithBiometrics() }
                     } label: {
-                        Text(busy ? "Unlocking…" : "Unlock with \(model.biometryLabel)")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(colors.accent)
-                            .background(colors.sidebar)
-                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                        DayruleBusyLabel(
+                            title: "Unlock with \(model.biometryLabel)",
+                            busyTitle: "Unlocking…",
+                            busy: busy && pending == .biometric
+                        )
                     }
+                    .buttonStyle(.dayruleSecondary)
                     .accessibilityIdentifier("gate.biometric")
                     .disabled(busy)
                 }
 
                 if model.passkeyUnlockAvailable {
                     Button {
-                        Task { await model.unlockWithPasskey() }
+                        run(.passkey) { await model.unlockWithPasskey() }
                     } label: {
-                        Text(busy ? "Unlocking…" : "Unlock with passkey")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .foregroundStyle(colors.accent)
-                            .background(colors.sidebar)
-                            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                        DayruleBusyLabel(
+                            title: "Unlock with passkey",
+                            busyTitle: "Unlocking…",
+                            busy: busy && pending == .passkey
+                        )
                     }
+                    .buttonStyle(.dayruleSecondary)
                     .accessibilityIdentifier("gate.passkey")
                     .disabled(busy)
                 }
 
                 Button {
-                    Task {
-                        await model.unlock(password: password)
-                        password = ""
-                    }
+                    signIn()
                 } label: {
-                    Text(busy ? "Unlocking…" : "Sign in")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(colors.bg)
-                        .background(colors.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    DayruleBusyLabel(title: "Sign in", busyTitle: "Unlocking…", busy: busy && pending == .signIn)
                 }
+                .buttonStyle(.dayrulePrimary)
+                .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("gate.signIn")
-                .disabled(password.isEmpty || model.email.isEmpty || busy)
+                .disabled(!canSignIn)
+
+                message("gate.error", alignment: .center)
 
                 Button("Create an account") {
                     model.beginSignup()
                 }
+                .buttonStyle(.dayruleLink)
                 .accessibilityIdentifier("gate.createAccount")
-                .foregroundStyle(colors.accent)
                 .disabled(busy)
 
                 Button("Use recovery phrase") {
                     model.phase = .needsRecovery
                     model.errorMessage = nil
                 }
-                .foregroundStyle(colors.accent)
-
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(Tokens.Light.deadline)
-                        .multilineTextAlignment(.center)
-                        .accessibilityIdentifier("gate.error")
-                }
-                Spacer(minLength: 40)
+                .buttonStyle(.dayruleLink)
+                .disabled(busy)
             }
-            .padding(.horizontal, 32)
+        }
+        #if os(macOS)
+        // Mac: ready to type. iOS keeps the keyboard down until a field is tapped,
+        // so the sign-in screen isn't half covered at launch.
+        .task {
+            focus = model.email.isEmpty ? .email : .password
+        }
+        #endif
+    }
+
+    private func signIn() {
+        run(.signIn) {
+            await model.unlock(password: password)
+            password = ""
         }
     }
 
+    // MARK: - Sign up
+
     @ViewBuilder
     private func signupForm(colors: DayruleColors) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Create an account")
-                    .font(DayruleFont.listTitle())
-                    .foregroundStyle(colors.text)
-                    .accessibilityIdentifier("signup.title")
-
-                Text("Invite-only for now. We’ll email a code, then show your recovery phrase.")
-                    .foregroundStyle(colors.textSecondary)
+        let busy = model.signupBusy || model.gateBusy
+        let canContinue = model.signupToken != nil && !password.isEmpty && !busy
+        GateScaffold { proxy in
+            form(alignment: .leading, proxy: proxy) {
+                header(
+                    "Create an account",
+                    intro: "Invite-only for now. We’ll email a code, then show your recovery phrase.",
+                    identifier: "signup.title",
+                    colors: colors
+                )
 
                 #if DEBUG
-                field(colors: colors, label: "API", text: $model.apiBaseURLString)
-                    .accessibilityIdentifier("signup.api")
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    #endif
+                apiField(identifier: "signup.api", next: .invite, busy: busy, colors: colors)
                 #endif
 
-                field(colors: colors, label: "Invite code", text: $model.inviteCode)
+                TextField("Invite code", text: $model.inviteCode, prompt: prompt("Invite code", colors))
+                    .focused($focus, equals: .invite)
                     .accessibilityIdentifier("signup.invite")
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     #endif
+                    .submitLabel(.next)
+                    .onSubmit { focus = .signupEmail }
+                    .dayruleField(isFocused: focus == .invite, colors: colors)
+                    .disabled(busy)
 
-                field(colors: colors, label: "Email", text: $model.email)
+                TextField("Email", text: $model.email, prompt: prompt("Email", colors))
+                    .focused($focus, equals: .signupEmail)
                     .accessibilityIdentifier("signup.email")
+                    .textContentType(.username)
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     #endif
+                    .dayruleField(isFocused: focus == .signupEmail, colors: colors)
+                    .disabled(busy)
+                    .onChange(of: model.email) { codeSent = false }
 
                 Button {
-                    Task { await model.signupSendCode() }
+                    run(.sendCode) {
+                        await model.signupSendCode()
+                        if model.errorMessage == nil {
+                            codeSent = true
+                            focus = .code
+                        }
+                    }
                 } label: {
-                    Text(model.signupBusy ? "Sending…" : "Send code")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(colors.bg)
-                        .background(colors.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    DayruleBusyLabel(title: "Send code", busyTitle: "Sending…", busy: busy && pending == .sendCode)
                 }
+                .buttonStyle(.dayruleStep(isCurrent: !codeSent))
                 .accessibilityIdentifier("signup.sendCode")
-                .disabled(model.email.isEmpty || model.inviteCode.isEmpty || model.signupBusy)
+                .disabled(model.email.isEmpty || model.inviteCode.isEmpty || busy)
 
-                field(colors: colors, label: "Code", text: $model.signupCode)
+                if codeSent && model.errorMessage == nil {
+                    GateInlineMessage(text: "Code sent to \(model.email)", kind: .info, identifier: "signup.codeSent")
+                }
+
+                TextField("Code", text: $model.signupCode, prompt: prompt("Code", colors))
+                    .focused($focus, equals: .code)
                     .accessibilityIdentifier("signup.code")
+                    .textContentType(.oneTimeCode)
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.numberPad)
                     #endif
-
-                Button {
-                    Task { await model.signupVerifyCode() }
-                } label: {
-                    Text(model.signupToken == nil ? "Verify code" : "Code verified")
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                }
-                .accessibilityIdentifier("signup.verifyCode")
-                .disabled(model.signupCode.isEmpty || model.signupBusy || model.signupToken != nil)
-                .foregroundStyle(colors.accent)
-
-                SecureField("Password", text: $password)
-                    .accessibilityIdentifier("signup.password")
-                    .padding(14)
-                    .background(colors.sidebar)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
-                    .disabled(model.signupToken == nil)
-
-                SecureField("Confirm password", text: $confirmPassword)
-                    .accessibilityIdentifier("signup.confirmPassword")
-                    .padding(14)
-                    .background(colors.sidebar)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
-                    .disabled(model.signupToken == nil)
-
-                Button {
-                    Task {
-                        await model.signupPrepareAccount(password: password, confirm: confirmPassword)
-                        password = ""
-                        confirmPassword = ""
+                    .onSubmit {
+                        guard !model.signupCode.isEmpty, !busy, model.signupToken == nil else { return }
+                        verifyCode()
                     }
+                    .dayruleField(isFocused: focus == .code, colors: colors)
+                    .disabled(busy)
+
+                Button {
+                    verifyCode()
                 } label: {
-                    Text(model.signupBusy ? "Working…" : "Continue")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(colors.bg)
-                        .background(colors.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    DayruleBusyLabel(
+                        title: model.signupToken == nil ? "Verify code" : "Code verified",
+                        busyTitle: "Verifying…",
+                        busy: busy && pending == .verifyCode
+                    )
                 }
+                .buttonStyle(.dayruleStep(isCurrent: codeSent && model.signupToken == nil))
+                .accessibilityIdentifier("signup.verifyCode")
+                .disabled(model.signupCode.isEmpty || busy || model.signupToken != nil)
+
+                SecureField("Password", text: $password, prompt: prompt("Password", colors))
+                    .focused($focus, equals: .signupPassword)
+                    .accessibilityIdentifier("signup.password")
+                    .textContentType(.newPassword)
+                    .submitLabel(.next)
+                    .onSubmit { focus = .confirmPassword }
+                    .dayruleField(isFocused: focus == .signupPassword, colors: colors)
+                    .disabled(model.signupToken == nil || busy)
+
+                SecureField("Confirm password", text: $confirmPassword, prompt: prompt("Confirm password", colors))
+                    .focused($focus, equals: .confirmPassword)
+                    .accessibilityIdentifier("signup.confirmPassword")
+                    .textContentType(.newPassword)
+                    .submitLabel(.go)
+                    .onSubmit {
+                        guard canContinue else { return }
+                        continueSignup()
+                    }
+                    .dayruleField(isFocused: focus == .confirmPassword, colors: colors)
+                    .disabled(model.signupToken == nil || busy)
+
+                Button {
+                    continueSignup()
+                } label: {
+                    DayruleBusyLabel(
+                        title: "Continue",
+                        busyTitle: "Working…",
+                        busy: busy && pending == .signupContinue
+                    )
+                }
+                .buttonStyle(.dayrulePrimary)
+                .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("signup.continue")
-                .disabled(model.signupToken == nil || password.isEmpty || model.signupBusy)
+                .disabled(!canContinue)
 
-                Button("Back") { model.cancelSignup() }
-                    .foregroundStyle(colors.accent)
-                    .accessibilityIdentifier("signup.back")
+                message("signup.error")
 
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(Tokens.Light.deadline)
-                        .accessibilityIdentifier("signup.error")
+                Button("Back") {
+                    codeSent = false
+                    model.cancelSignup()
                 }
+                .buttonStyle(.dayruleLink)
+                .accessibilityIdentifier("signup.back")
             }
-            .padding(24)
         }
     }
 
+    private func verifyCode() {
+        run(.verifyCode) { await model.signupVerifyCode() }
+    }
+
+    private func continueSignup() {
+        run(.signupContinue) {
+            await model.signupPrepareAccount(password: password, confirm: confirmPassword)
+            password = ""
+            confirmPassword = ""
+        }
+    }
+
+    // MARK: - Second step
+
     @ViewBuilder
     private func secondStepForm(colors: DayruleColors) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Confirm it’s you")
-                    .font(DayruleFont.listTitle())
-                    .foregroundStyle(colors.text)
-                    .accessibilityIdentifier("gate.secondStep")
-                Text("This account has a sign-in passkey. Confirm with it, or use your recovery phrase (that counts as both factors). This is separate from Unlock with passkey on a device.")
-                    .foregroundStyle(colors.textSecondary)
+        let busy = model.gateBusy
+        GateScaffold { proxy in
+            form(alignment: .leading, proxy: proxy) {
+                header(
+                    "Confirm it’s you",
+                    intro: "This account has a sign-in passkey. Confirm with it, or use your recovery phrase (that counts as both factors). This is separate from Unlock with passkey on a device.",
+                    identifier: "gate.secondStep",
+                    colors: colors
+                )
 
                 Button {
-                    Task { await model.continuePasskeySecondStep() }
+                    run(.secondStepPasskey) { await model.continuePasskeySecondStep() }
                 } label: {
-                    Text("Continue with passkey")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(colors.bg)
-                        .background(colors.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    DayruleBusyLabel(
+                        title: "Continue with passkey",
+                        busyTitle: "Confirming…",
+                        busy: busy && pending == .secondStepPasskey
+                    )
                 }
+                .buttonStyle(.dayrulePrimary)
+                .keyboardShortcut(.defaultAction)
                 .accessibilityIdentifier("gate.secondStep.passkey")
+                .disabled(busy)
+
+                message("gate.secondStep.error")
 
                 Button("Use recovery phrase") {
                     model.beginRecoveryFromSecondStep()
                 }
-                .foregroundStyle(colors.accent)
+                .buttonStyle(.dayruleLink)
                 .accessibilityIdentifier("gate.secondStep.recovery")
+                .disabled(busy)
 
                 Button("Cancel") {
                     model.cancelSecondStep()
                 }
-                .foregroundStyle(colors.accent)
-
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(Tokens.Light.deadline)
-                        .accessibilityIdentifier("gate.secondStep.error")
-                }
+                .buttonStyle(.dayruleLink)
+                .disabled(busy)
             }
-            .padding(24)
         }
     }
 
+    // MARK: - Recovery sign-in
+
     @ViewBuilder
     private func recoveryForm(colors: DayruleColors) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Recovery sign-in")
-                    .font(DayruleFont.listTitle())
-                    .foregroundStyle(colors.text)
-                Text("Enter your 24-word recovery phrase. This counts as both factors when a second step is required.")
-                    .foregroundStyle(colors.textSecondary)
+        let busy = model.gateBusy || model.phase == .unlocking
+        GateScaffold { proxy in
+            form(alignment: .leading, proxy: proxy) {
+                header(
+                    "Recovery sign-in",
+                    intro: "Enter your 24-word recovery phrase. This counts as both factors when a second step is required.",
+                    colors: colors
+                )
 
-                field(colors: colors, label: "Email", text: $model.email)
+                TextField("Email", text: $model.email, prompt: prompt("Email", colors))
+                    .focused($focus, equals: .recoveryEmail)
+                    .textContentType(.username)
                     .autocorrectionDisabled()
                     #if os(iOS)
                     .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
                     #endif
+                    .submitLabel(.next)
+                    .onSubmit { focus = .phrase }
+                    .dayruleField(isFocused: focus == .recoveryEmail, colors: colors)
+                    .disabled(busy)
 
-                TextField("twenty four words…", text: $recoveryPhrase, axis: .vertical)
-                    .lineLimit(4...8)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .padding(14)
-                    .background(colors.sidebar)
-                    .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+                TextField(
+                    "Recovery phrase",
+                    text: $recoveryPhrase,
+                    prompt: prompt("twenty four words…", colors),
+                    axis: .vertical
+                )
+                .focused($focus, equals: .phrase)
+                .lineLimit(4...8)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .dayruleField(isFocused: focus == .phrase, colors: colors)
+                .disabled(busy)
 
                 Button {
-                    Task {
+                    run(.recoveryUnlock) {
                         await model.unlockWithRecovery(phrase: recoveryPhrase)
                         recoveryPhrase = ""
                     }
                 } label: {
-                    Text(model.phase == .unlocking ? "Unlocking…" : "Unlock with phrase")
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .foregroundStyle(colors.bg)
-                        .background(colors.accent)
-                        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous))
+                    DayruleBusyLabel(
+                        title: "Unlock with phrase",
+                        busyTitle: "Unlocking…",
+                        busy: busy && pending == .recoveryUnlock
+                    )
                 }
+                .buttonStyle(.dayrulePrimary)
+                .keyboardShortcut(.defaultAction)
+                .disabled(model.email.isEmpty || recoveryPhrase.isEmpty || busy)
+
+                message("gate.recoverySignIn.error")
 
                 Button("Back") {
                     model.phase = .locked
                     model.errorMessage = nil
                 }
-                .foregroundStyle(colors.accent)
-
-                if let errorMessage = model.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(Tokens.Light.deadline)
-                }
+                .buttonStyle(.dayruleLink)
+                .disabled(busy)
             }
-            .padding(24)
         }
     }
 
-    private func field(colors: DayruleColors, label: String, text: Binding<String>) -> some View {
-        TextField(label, text: text)
-            .padding(14)
-            .background(colors.sidebar)
-            .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+    // MARK: - Shared pieces
+
+    /// Runs a gate action and remembers which button started it until it returns.
+    private func run(_ action: GateAction, _ work: @escaping @MainActor () async -> Void) {
+        pending = action
+        Task { @MainActor in
+            await work()
+            if pending == action { pending = nil }
+        }
+    }
+
+    #if DEBUG
+    /// Debug-only server URL. It wraps rather than clips at large text sizes;
+    /// Return moves to the next field instead of adding a line break.
+    private func apiField(identifier: String, next: Field, busy: Bool, colors: DayruleColors) -> some View {
+        TextField("API", text: $model.apiBaseURLString, prompt: prompt("API", colors), axis: .vertical)
+            .lineLimit(1...3)
+            .focused($focus, equals: .api)
+            .accessibilityIdentifier(identifier)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .keyboardType(.URL)
+            #endif
+            .submitLabel(.next)
+            .onSubmit { focus = next }
+            .onChange(of: model.apiBaseURLString) { _, value in
+                let single = value.filter { !$0.isNewline }
+                if single != value { model.apiBaseURLString = single }
+            }
+            .dayruleField(isFocused: focus == .api, colors: colors)
+            .disabled(busy)
+    }
+    #endif
+
+    private func prompt(_ text: String, _ colors: DayruleColors) -> Text {
+        Text(text).foregroundStyle(colors.textSecondary)
+    }
+
+    /// Screen title (a VoiceOver heading that takes focus on arrival) and intro.
+    @ViewBuilder
+    private func header(
+        _ title: String,
+        intro: String,
+        font: Font = DayruleType.pageTitle,
+        alignment: TextAlignment = .leading,
+        identifier: String? = nil,
+        colors: DayruleColors
+    ) -> some View {
+        Text(title)
+            .font(font)
+            .tracking(DayruleType.titleTracking)
+            .foregroundStyle(colors.text)
+            .multilineTextAlignment(alignment)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityFocused($titleFocused)
+            .accessibilityIdentifier(identifier ?? "")
+        Text(intro)
+            .font(.body)
+            .foregroundStyle(colors.textSecondary)
+            .multilineTextAlignment(alignment)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Inline error or info under the primary button.
+    @ViewBuilder
+    private func message(_ identifier: String, alignment: TextAlignment = .leading) -> some View {
+        if let errorMessage = model.errorMessage {
+            GateInlineMessage(
+                text: errorMessage,
+                kind: model.gateMessageIsInfo ? .info : .error,
+                identifier: identifier
+            )
+            .multilineTextAlignment(alignment)
+        }
+    }
+
+    /// Form column: scrolls a new message into view and announces it.
+    private func form<Content: View>(
+        alignment: HorizontalAlignment,
+        proxy: ScrollViewProxy,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: alignment, spacing: Tokens.Space.l) {
+            content()
+        }
+        .dayruleAnimation(Motion.standard, value: model.errorMessage)
+        .dayruleAnimation(Motion.standard, value: codeSent)
+        .onChange(of: model.errorMessage) { _, message in
+            guard let message else { return }
+            withAnimation(Motion.system(Motion.standard)) {
+                proxy.scrollTo("gate.message", anchor: .center)
+            }
+            AccessibilityNotification.Announcement(message).post()
+        }
     }
 }

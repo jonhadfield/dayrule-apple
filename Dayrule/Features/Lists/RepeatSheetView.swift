@@ -17,9 +17,13 @@ struct RepeatSheetView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
+        DayruleSheet(
+            title: "Repeat",
+            confirm: SheetAction(title: "Save", identifier: "repeat.save") { save() },
+            size: .standard
+        ) {
             Form {
-                Section("How often") {
+                Section {
                     Picker("Frequency", selection: $freq) {
                         Text("Daily").tag(RepeatRule.Freq.day)
                         Text("Weekly").tag(RepeatRule.Freq.week)
@@ -28,76 +32,75 @@ struct RepeatSheetView: View {
                     }
                     .pickerStyle(.segmented)
                     .accessibilityIdentifier("repeat.freq")
-                    Stepper("Every \(every) \(unitLabel)", value: $every, in: 1...99)
-                        .accessibilityIdentifier("repeat.every")
+                    Stepper(value: $every, in: 1...99) {
+                        Text("Every \(every) \(unitLabel)")
+                            .foregroundStyle(colors.text)
+                    }
+                    .accessibilityIdentifier("repeat.every")
+                } header: {
+                    DayruleSectionHeader(title: "How often")
                 }
+                .dayruleSheetRow(colors: colors)
                 if freq == .week && mode == .fixed {
-                    Section("On these days") {
+                    Section {
                         HStack(spacing: 6) {
                             ForEach(0..<7, id: \.self) { i in
-                                Button {
-                                    if weekdays.contains(i) { weekdays.remove(i) }
-                                    else { weekdays.insert(i) }
-                                } label: {
-                                    Text(Self.dayLabels[i])
-                                        .font(.caption.weight(.semibold))
-                                        .frame(maxWidth: .infinity)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            weekdays.contains(i) ? colors.text : colors.bg
-                                        )
-                                        .foregroundStyle(
-                                            weekdays.contains(i) ? colors.bg : colors.text
-                                        )
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .stroke(colors.hairline, lineWidth: 1)
-                                        )
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityIdentifier("repeat.weekday.\(i)")
+                                weekdayChip(i, colors: colors)
                             }
                         }
+                    } header: {
+                        DayruleSectionHeader(title: "On these days")
                     }
-                }
-                Section("Repeat") {
-                    Picker("Mode", selection: $mode) {
-                        Text("On a schedule").tag(RepeatRule.Mode.fixed)
-                        Text("After I complete the last one").tag(RepeatRule.Mode.afterCompletion)
-                    }
-                    .accessibilityIdentifier("repeat.mode")
-                    DatePicker(
-                        "Starting",
-                        selection: $anchor,
-                        displayedComponents: .date
-                    )
-                    .accessibilityIdentifier("repeat.anchor")
+                    .dayruleSheetRow(colors: colors)
                 }
                 Section {
-                    Button(currentRule != nil ? "Save" : "Repeat") { save() }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("repeat.save")
-                    if currentRule != nil {
-                        Button("Stop repeating", role: .destructive) { stop() }
-                            .accessibilityIdentifier("repeat.stop")
+                    Picker(selection: $mode) {
+                        Text("On a schedule").tag(RepeatRule.Mode.fixed)
+                        Text("After I complete the last one").tag(RepeatRule.Mode.afterCompletion)
+                    } label: {
+                        Text("Mode").foregroundStyle(colors.text)
                     }
+                    .accessibilityIdentifier("repeat.mode")
+                    DatePicker(selection: $anchor, displayedComponents: .date) {
+                        Text("Starting").foregroundStyle(colors.text)
+                    }
+                    .accessibilityIdentifier("repeat.anchor")
+                } header: {
+                    DayruleSectionHeader(title: "Repeat")
+                }
+                .dayruleSheetRow(colors: colors)
+                SheetClearSection(
+                    title: "Stop repeating",
+                    isVisible: currentRule != nil,
+                    identifier: "repeat.stop"
+                ) {
+                    stop()
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle("Repeat")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(colors.accent)
-                }
-            }
+            .dayruleAnimation(Motion.standard, value: freq)
+            .dayruleAnimation(Motion.standard, value: mode)
             .onAppear(perform: load)
         }
+    }
+
+    private func weekdayChip(_ i: Int, colors: DayruleColors) -> some View {
+        let on = weekdays.contains(i)
+        return Button {
+            if on { weekdays.remove(i) } else { weekdays.insert(i) }
+        } label: {
+            Text(Self.dayLabels[i])
+                .font(.caption.weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: Tokens.minHit)
+                .foregroundStyle(on ? colors.bg : colors.text)
+                .background(on ? colors.text : colors.sidebar, in: Capsule())
+                .overlay(Capsule().strokeBorder(colors.hairline, lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        // dayLabels start on Monday; weekdaySymbols start on Sunday.
+        .accessibilityLabel(Calendar.current.weekdaySymbols[(i + 1) % 7])
+        .accessibilityAddTraits(on ? .isSelected : [])
+        .accessibilityIdentifier("repeat.weekday.\(i)")
     }
 
     private var templateId: ID {

@@ -7,51 +7,86 @@ struct HeadingSheetView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var title = ""
+    @State private var loadedTitle = ""
+    @State private var titleSelection: TextSelection?
+    @State private var confirmingDelete = false
+    @FocusState private var titleFocused: Bool
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
+        DayruleSheet(
+            title: "Heading",
+            confirm: SheetAction(
+                title: "Save",
+                identifier: "heading.save",
+                isEnabled: !trimmedTitle.isEmpty
+            ) { save() },
+            size: .compact,
+            detents: [.medium],
+            isDirty: title != loadedTitle
+        ) {
             Form {
                 Section {
-                    TextField("Title", text: $title)
-                        .accessibilityIdentifier("heading.title")
+                    TextField(
+                        "Title",
+                        text: $title,
+                        selection: $titleSelection,
+                        prompt: Text("Title").foregroundStyle(colors.textSecondary)
+                    )
+                    .dayruleBareField(colors: colors)
+                    .focused($titleFocused)
+                    .submitLabel(.done)
+                    .onSubmit(save)
+                    .accessibilityIdentifier("heading.title")
                 }
-                Section {
-                    Button("Archive") { archive() }
+                .dayruleSheetRow(colors: colors)
+                DayruleFormSection {
+                    Button(action: archive) {
+                        Text("Archive")
+                            .foregroundStyle(colors.text)
+                            .frame(minHeight: Tokens.minHit)
+                    }
+                    .buttonStyle(.dayruleRow)
+                    .accessibilityIdentifier("heading.archive")
+                } footer: {
+                    Text("Hides the heading; its to-dos stay in the project.")
+                        .font(DayruleType.helper)
                         .foregroundStyle(colors.textSecondary)
-                        .accessibilityIdentifier("heading.archive")
-                    Button("Delete", role: .destructive) { deleteHeading() }
-                        .accessibilityIdentifier("heading.delete")
+                }
+                .dayruleSheetRow(colors: colors)
+                SheetClearSection(title: "Delete", isVisible: true, identifier: "heading.delete") {
+                    confirmingDelete = true
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle("Heading")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(colors.accent)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("heading.save")
-                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            .confirmationDialog(
+                "Delete heading?",
+                isPresented: $confirmingDelete,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Heading", role: .destructive, action: deleteHeading)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Its to-dos stay in the project.")
             }
-            .onAppear(perform: load)
+            .task {
+                load()
+                titleSelection = TextSelection(range: title.startIndex..<title.endIndex)
+                titleFocused = true
+            }
         }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func load() {
         title = model.entities.headings[headingId]?.title ?? ""
+        loadedTitle = title
     }
 
     private func save() {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = trimmedTitle
         guard !trimmed.isEmpty else { return }
         model.store.run("Rename Heading") { d, env in
             Commands.updateHeading(d, env, id: headingId, title: trimmed, archived: nil)

@@ -36,6 +36,8 @@ in code or by a named manual step — not by assumption.
 ## System surfaces (must stay content-free)
 
 - [x] Privacy cover on scene `.inactive`
+- [ ] iOS privacy cover shows only while the vault is unlocked (locked gate has no content to hide), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal
+- [ ] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity`)
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code
 - [x] Notification titles opt-in; default body is time-only
 - [x] No third-party analytics / crash / ad SDKs

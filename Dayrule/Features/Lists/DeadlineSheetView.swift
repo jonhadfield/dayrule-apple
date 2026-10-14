@@ -12,29 +12,50 @@ struct DeadlineSheetView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
+        DayruleSheet(
+            title: "Deadline",
+            confirm: SheetAction(title: "Save", identifier: "deadline.useCalendar") {
+                apply(When.toLocalDate(pickedDate))
+            },
+            size: .tall
+        ) {
             List {
                 if let current = currentDeadline {
                     Section {
-                        Text("Current: \(current)")
+                        Text(DayruleDateFormat.due(current, today: When.toLocalDate(Date())))
                             .foregroundStyle(colors.textSecondary)
                             .accessibilityIdentifier("deadline.current")
+                            .dayruleSheetRow(colors: colors)
                     }
                 }
-                Section("Type a date") {
-                    TextField("fri, tomorrow, 15 oct…", text: $freeText)
+                Section {
+                    HStack(spacing: Tokens.Space.s) {
+                        TextField(
+                            "Type a date",
+                            text: $freeText,
+                            prompt: Text("Fri, tomorrow, 15 Oct…")
+                                .foregroundStyle(colors.textSecondary)
+                        )
+                        .dayruleBareField(colors: colors)
+                        .submitLabel(.done)
                         .accessibilityIdentifier("deadline.field")
                         .onSubmit(parseAndApply)
-                    Button("Apply") { parseAndApply() }
-                        .foregroundStyle(colors.accent)
-                        .disabled(freeText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button("Apply", action: parseAndApply)
+                            .buttonStyle(.borderless)
+                            .disabled(trimmedText.isEmpty)
+                    }
+                    .dayruleSheetRow(colors: colors)
                     if let parseError {
                         Text(parseError)
-                            .font(.footnote)
-                            .foregroundStyle(Tokens.Light.deadline)
+                            .font(DayruleType.error)
+                            .foregroundStyle(colors.deadline)
+                            .transition(.dayruleInlineError)
+                            .dayruleSheetRow(colors: colors)
                     }
+                } header: {
+                    DayruleSectionHeader(title: "Type a date")
                 }
-                Section("Calendar") {
+                Section {
                     DatePicker(
                         "Deadline",
                         selection: $pickedDate,
@@ -42,37 +63,31 @@ struct DeadlineSheetView: View {
                     )
                     .datePickerStyle(.graphical)
                     .labelsHidden()
-                    Button("Use selected day") {
-                        apply(When.toLocalDate(pickedDate))
-                    }
-                    .foregroundStyle(colors.accent)
-                    .accessibilityIdentifier("deadline.useCalendar")
+                    .dayruleSheetRow(colors: colors)
+                } header: {
+                    DayruleSectionHeader(title: "Calendar")
                 }
-                Section {
-                    Button("Remove deadline", role: .destructive) {
-                        apply(nil)
-                    }
-                    .accessibilityIdentifier("deadline.clear")
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle("Deadline")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(colors.accent)
+                SheetClearSection(
+                    title: "Remove deadline",
+                    isVisible: currentDeadline != nil,
+                    identifier: "deadline.clear"
+                ) {
+                    apply(nil)
                 }
             }
+            .listStyle(.plain)
+            .dayruleAnimation(Motion.quick, value: parseError)
+            .onChange(of: freeText) { parseError = nil }
             .onAppear {
                 if let current = currentDeadline, let d = When.fromLocalDate(current) {
                     pickedDate = d
                 }
             }
         }
+    }
+
+    private var trimmedText: String {
+        freeText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var currentDeadline: LocalDate? {
@@ -89,7 +104,7 @@ struct DeadlineSheetView: View {
     }
 
     private func parseAndApply() {
-        let text = freeText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = trimmedText
         guard !text.isEmpty else { return }
         guard let result = When.parseWhen(text, today: Date()) else {
             parseError = "Couldn’t understand that date."

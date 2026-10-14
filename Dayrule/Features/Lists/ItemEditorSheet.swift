@@ -8,40 +8,79 @@ struct ItemEditorSheet: View {
     @Environment(\.colorScheme) private var colorScheme
     @State private var title: String = ""
     @State private var notes: String = ""
+    @State private var loadedTitle: String = ""
+    @State private var loadedNotes: String = ""
     @State private var isTodo = true
+    @FocusState private var focus: Field?
+
+    private enum Field {
+        case title, notes
+    }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
+        DayruleSheet(
+            title: isTodo ? "To-do" : "Project",
+            confirm: SheetAction(
+                title: "Save",
+                identifier: "editor.save",
+                isEnabled: !trimmedTitle.isEmpty
+            ) { save() },
+            size: .tall,
+            isDirty: title != loadedTitle || notes != loadedNotes
+        ) {
             Form {
                 Section {
-                    TextField("Title", text: $title)
-                        .accessibilityIdentifier("editor.title")
-                    TextField("Notes", text: $notes, axis: .vertical)
-                        .lineLimit(3...8)
+                    TextField(
+                        "Title",
+                        text: $title,
+                        prompt: Text("Title").foregroundStyle(colors.textSecondary),
+                        axis: .vertical
+                    )
+                    .lineLimit(1...4)
+                    .dayruleBareField(colors: colors)
+                    .focused($focus, equals: .title)
+                    .submitLabel(.next)
+                    .onSubmit { focus = .notes }
+                    .accessibilityIdentifier("editor.title")
+                    .onChange(of: title) { _, value in
+                        // A vertical field takes Return as a newline; titles are one line,
+                        // so treat it as "next field".
+                        guard value != loadedTitle, value.contains(where: \.isNewline) else {
+                            return
+                        }
+                        title = value.filter { !$0.isNewline }
+                        focus = .notes
+                    }
+                    TextEditor(text: $notes)
+                        .frame(minHeight: 140)
+                        .scrollContentBackground(.hidden)
+                        .foregroundStyle(colors.text)
+                        .focused($focus, equals: .notes)
+                        .overlay(alignment: .topLeading) {
+                            if notes.isEmpty {
+                                Text("Notes")
+                                    .foregroundStyle(colors.textSecondary)
+                                    .padding(.top, 8)
+                                    .padding(.leading, 5)
+                                    .allowsHitTesting(false)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                        .accessibilityLabel("Notes")
                         .accessibilityIdentifier("editor.notes")
                 }
+                .dayruleSheetRow(colors: colors)
             }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle(isTodo ? "To-do" : "Project")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(colors.accent)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { save() }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("editor.save")
-                        .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
+            .task {
+                load()
+                focus = .title
             }
-            .onAppear(perform: load)
         }
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func load() {
@@ -54,10 +93,12 @@ struct ItemEditorSheet: View {
             title = p.title
             notes = p.notes
         }
+        loadedTitle = title
+        loadedNotes = notes
     }
 
     private func save() {
-        let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = trimmedTitle
         guard !trimmed.isEmpty else { return }
         model.store.run("Edit") { d, env in
             if isTodo {

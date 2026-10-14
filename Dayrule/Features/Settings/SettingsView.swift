@@ -9,7 +9,6 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
-    @State private var showHelp = false
     @State private var importError: String?
     @State private var importSummary: String?
     @State private var showImporter = false
@@ -19,11 +18,25 @@ struct SettingsView: View {
     #endif
     @State private var remindersOn = DeviceReminderPrefs.enabled
     @State private var showReminderTitles = DeviceReminderPrefs.showTitles
+    @State private var reminderError: String?
+    @State private var unlockBusy: UnlockMethod?
+    @State private var unlockError: UnlockError?
+    @State private var confirmingSignOut = false
+    @State private var signOutHasPending = false
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
     @State private var deletePassword = ""
     @State private var deleteConfirm = ""
     @State private var deleteBusy = false
     @State private var deleteError: String?
+
+    private enum UnlockMethod: Equatable {
+        case biometric, passkey
+    }
+
+    private struct UnlockError: Equatable {
+        var method: UnlockMethod
+        var message: String
+    }
 
     private var appearanceBinding: Binding<AppearancePreference> {
         Binding(
@@ -34,192 +47,41 @@ struct SettingsView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
+        DayruleSheet(
+            title: "Settings",
+            dismissTitle: "Done",
+            dismissPlacement: .confirmationAction,
+            size: .reading
+        ) {
             List {
-                Section("Appearance") {
-                    Picker("Appearance", selection: appearanceBinding) {
-                        ForEach(AppearancePreference.allCases) { pref in
-                            Text(pref.title).tag(pref)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("settings.appearance")
-                    Text("Light keeps the paper palette. System follows the device. This preference stays on this device only.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                }
-                Section("Sync") {
-                    HStack {
-                        Text("Status")
-                        Spacer()
-                        Text(model.syncStatus.label)
-                            .foregroundStyle(
-                                model.syncStatus == .needsUpdate
-                                    || model.syncStatus.isBlocked
-                                    || model.needsServerSignIn
-                                    ? Tokens.Light.deadline
-                                    : colors.textSecondary
-                            )
-                            .multilineTextAlignment(.trailing)
-                    }
-                    if model.needsServerSignIn {
-                        Text("Unlocked offline — edits stay on this device. Face ID does not create a server session.")
-                            .font(.footnote)
-                            .foregroundStyle(Tokens.Light.deadline)
-                        Button("Sign in to sync") {
-                            model.showSignInGate()
-                        }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.signInToSync")
-                    }
-                    Button("Sync now") {
-                        Task { await model.syncNow() }
-                    }
-                    .foregroundStyle(colors.accent)
-                    .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
-                    .accessibilityIdentifier("settings.syncNow")
-                }
-                Section("Completed") {
-                    Picker("Move to Done", selection: doneModeBinding) {
-                        Text("Immediately").tag(DoneMode.immediately)
-                        Text("Daily").tag(DoneMode.daily)
-                        Text("Manually").tag(DoneMode.manually)
-                    }
-                    .accessibilityIdentifier("settings.doneMode")
-                    if model.entities.settings.moveToDone == .manually {
-                        Button("Log Completed") {
-                            model.store.run("Move to Done") { d, env in
-                                Commands.moveToDoneNow(d, env)
-                            }
-                            model.noteEntitiesChanged()
-                        }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.logCompleted")
-                    }
-                }
-                Section("Unlock") {
-                    Toggle("Unlock with \(model.biometryLabel)", isOn: biometricBinding)
-                        .accessibilityIdentifier("settings.biometric")
-                        .disabled(model.phase != .unlocked)
-                    Text("Uses this device’s biometrics to open the Keychain item that unwraps your account key. Password and recovery stay authoritative.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                    Toggle("Unlock with passkey", isOn: passkeyBinding)
-                        .accessibilityIdentifier("settings.passkey")
-                        .disabled(model.phase != .unlocked)
-                    Text("Creates a passkey on this device that derives a wrap key (PRF). Separate from a sign-in passkey on the account (second step after password). Password stays the fallback.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                    Text("Stay unlocked keeps a device wrap key without biometrics — anyone who can unlock the phone can open Dayrule.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                }
-                Section("Reminders") {
-                    Toggle("Local reminders", isOn: $remindersOn)
-                        .accessibilityIdentifier("settings.remindersEnabled")
-                        .onChange(of: remindersOn) { _, on in
-                            Task { await setRemindersEnabled(on) }
-                        }
-                    if remindersOn {
-                        Toggle("Show titles in notifications", isOn: $showReminderTitles)
-                            .accessibilityIdentifier("settings.reminderTitles")
-                            .onChange(of: showReminderTitles) { _, on in
-                                DeviceReminderPrefs.showTitles = on
-                                model.scheduleRemindersIfUnlocked()
-                            }
-                        Text("Titles are stored by the OS on this device. Leave off to keep only the time.")
-                            .font(.footnote)
-                            .foregroundStyle(colors.textSecondary)
-                    }
-                    Text("Reminders stay on this device. The account reminder channel on the web still drives email / browser push only.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                }
-                Section("Your data") {
-                    Text("Exports are made on this device and are not encrypted. Keep the files safe.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                    Text("Device backups may include your encrypted vault. Unlock keys stay on this device only, so a backup alone can’t open Dayrule on another phone or Mac.")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                        .accessibilityIdentifier("settings.backupNote")
-                    Button("Export JSON") { beginExport(json: true) }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.exportJson")
-                    Button("Export Markdown") { beginExport(json: false) }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.exportMarkdown")
-                    Button("Import…") { showImporter = true }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.import")
-                    if let importSummary {
-                        Text(importSummary)
-                            .font(.footnote)
-                            .foregroundStyle(colors.textSecondary)
-                    }
-                    if let importError {
-                        Text(importError)
-                            .font(.footnote)
-                            .foregroundStyle(Tokens.Light.deadline)
-                    }
-                }
+                appearanceSection(colors: colors)
+                syncSection(colors: colors)
+                doneSection(colors: colors)
+                biometricSection(colors: colors)
+                passkeySection(colors: colors)
+                remindersSection(colors: colors)
+                dataSection(colors: colors)
                 if let email = model.accountEmail {
-                    Section("Account") {
-                        Text(email)
-                            .foregroundStyle(colors.textSecondary)
-                    }
-                    Section {
-                        Text("Deletes your account and all your to-dos on our servers and on this device. This can’t be undone.")
-                            .font(.footnote)
-                            .foregroundStyle(colors.textSecondary)
-                        SecureField("Password", text: $deletePassword)
-                            .textContentType(.password)
-                            .accessibilityIdentifier("settings.delete.password")
-                        TextField("Type DELETE to confirm", text: $deleteConfirm)
-                            .autocorrectionDisabled()
-                            #if os(iOS)
-                            .textInputAutocapitalization(.never)
-                            #endif
-                            .accessibilityIdentifier("settings.delete.confirm")
-                        if let deleteError {
-                            Text(deleteError)
-                                .font(.footnote)
-                                .foregroundStyle(Tokens.Light.deadline)
-                        }
-                        Button(deleteBusy ? "Deleting…" : "Delete account", role: .destructive) {
-                            Task { await runDeleteAccount() }
-                        }
-                        .disabled(
-                            deleteBusy
-                                || deletePassword.isEmpty
-                                || deleteConfirm != "DELETE"
-                        )
-                        .accessibilityIdentifier("settings.delete")
-                    } header: {
-                        Text("Delete account")
-                    }
+                    accountSection(email: email, colors: colors)
+                    deleteSection(colors: colors)
                 }
                 Section {
-                    Button("Help") { showHelp = true }
-                        .foregroundStyle(colors.accent)
-                        .accessibilityIdentifier("settings.help")
+                    NavigationLink {
+                        HelpView(embedded: true)
+                    } label: {
+                        Text("Help")
+                    }
+                    .accessibilityIdentifier("settings.help")
                 }
+                .dayruleSheetRow(colors: colors)
             }
-            .scrollContentBackground(.hidden)
-            .background(colors.bg)
-            .navigationTitle("Settings")
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(colors.accent)
-                }
-            }
-            .sheet(isPresented: $showHelp) {
-                HelpView()
-            }
+            .listStyle(.plain)
+            .dayruleAnimation(Motion.standard, value: model.entities.settings.moveToDone)
+            .dayruleAnimation(Motion.standard, value: unlockError)
+            .dayruleAnimation(Motion.standard, value: reminderError)
+            .dayruleAnimation(Motion.standard, value: importSummary)
+            .dayruleAnimation(Motion.standard, value: importError)
+            .dayruleAnimation(Motion.standard, value: deleteError)
             #if os(iOS)
             .sheet(isPresented: $showShare) {
                 if let shareURL {
@@ -234,8 +96,346 @@ struct SettingsView: View {
             ) { result in
                 importFile(result)
             }
+            .confirmationDialog(
+                "Sign out of Dayrule?",
+                isPresented: $confirmingSignOut,
+                titleVisibility: .visible
+            ) {
+                Button("Sign Out", role: .destructive) { model.signOut() }
+                    .accessibilityIdentifier("settings.signOut.confirm")
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(signOutMessage)
+            }
         }
     }
+
+    // MARK: - Sections
+
+    private func appearanceSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            Picker(selection: appearanceBinding) {
+                ForEach(AppearancePreference.allCases) { pref in
+                    Text(pref.title).tag(pref)
+                }
+            } label: {
+                Text("Appearance").foregroundStyle(colors.text)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("settings.appearance")
+        } header: {
+            DayruleSectionHeader(title: "Appearance")
+        } footer: {
+            footerText("Light keeps the paper palette. System follows the device. This preference stays on this device only.", colors: colors)
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func syncSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            LabeledContent {
+                SyncStatusView(status: model.syncStatus, needsServerSignIn: model.needsServerSignIn)
+            } label: {
+                Text("Status").foregroundStyle(colors.text)
+            }
+            if model.needsServerSignIn {
+                Button("Sign in to sync") {
+                    model.showSignInGate()
+                }
+                .buttonStyle(.dayruleLink)
+                .accessibilityIdentifier("settings.signInToSync")
+            }
+            Button {
+                Task { await model.syncNow() }
+            } label: {
+                DayruleBusyLabel(title: "Sync now", busyTitle: "Syncing…", busy: model.syncStatus == .syncing)
+            }
+            .buttonStyle(.dayruleLink)
+            .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
+            .accessibilityIdentifier("settings.syncNow")
+        } header: {
+            DayruleSectionHeader(title: "Sync")
+        } footer: {
+            syncFooter(colors: colors)
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    @ViewBuilder
+    private func syncFooter(colors: DayruleColors) -> some View {
+        let status = model.syncStatus
+        let showLabel = status.label != status.shortLabel
+        if showLabel || model.needsServerSignIn {
+            FooterStack {
+                if showLabel {
+                    Text(status.label)
+                        .font(DayruleType.helper)
+                        .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .contentTransition(.opacity)
+                }
+                if model.needsServerSignIn {
+                    footerText(
+                        "Unlocked offline — edits stay on this device. \(model.biometryLabel) does not create a server session.",
+                        colors: colors
+                    )
+                }
+            }
+        }
+    }
+
+    private func doneSection(colors: DayruleColors) -> some View {
+        Section {
+            Picker(selection: doneModeBinding) {
+                Text("Immediately").tag(DoneMode.immediately)
+                Text("Daily").tag(DoneMode.daily)
+                Text("Manually").tag(DoneMode.manually)
+            } label: {
+                Text("Move to Done").foregroundStyle(colors.text)
+            }
+            .accessibilityIdentifier("settings.doneMode")
+            if model.entities.settings.moveToDone == .manually {
+                Button("Move to Done now") {
+                    model.store.run("Move to Done") { d, env in
+                        Commands.moveToDoneNow(d, env)
+                    }
+                    model.noteEntitiesChanged()
+                }
+                .buttonStyle(.dayruleLink)
+                .accessibilityIdentifier("settings.logCompleted")
+            }
+        } header: {
+            DayruleSectionHeader(title: "Done")
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func biometricSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            unlockToggle(
+                .biometric,
+                title: "Unlock with \(model.biometryLabel)",
+                isOn: biometricBinding,
+                identifier: "settings.biometric",
+                colors: colors
+            )
+        } header: {
+            DayruleSectionHeader(title: "Biometrics")
+        } footer: {
+            footerText("Uses this device’s biometrics to open the Keychain item that unwraps your account key. Password and recovery stay authoritative.", colors: colors)
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func passkeySection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            unlockToggle(
+                .passkey,
+                title: "Unlock with passkey",
+                isOn: passkeyBinding,
+                identifier: "settings.passkey",
+                colors: colors
+            )
+        } header: {
+            DayruleSectionHeader(title: "Passkey")
+        } footer: {
+            FooterStack {
+                footerText("Creates a passkey on this device that derives a wrap key (PRF). Separate from a sign-in passkey on the account (second step after password). Password stays the fallback.", colors: colors)
+                footerText("Stay unlocked is chosen when you sign in. It keeps a device wrap key without biometrics — anyone who can unlock this device can open Dayrule.", colors: colors)
+            }
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    @ViewBuilder
+    private func unlockToggle(
+        _ method: UnlockMethod,
+        title: String,
+        isOn: Binding<Bool>,
+        identifier: String,
+        colors: DayruleColors
+    ) -> some View {
+        HStack(spacing: Tokens.Space.s) {
+            Toggle(isOn: isOn) {
+                Text(title).foregroundStyle(colors.text)
+            }
+            .accessibilityIdentifier(identifier)
+            .disabled(model.phase != .unlocked || unlockBusy != nil)
+            if unlockBusy == method {
+                ProgressView()
+                    .controlSize(.small)
+                    .accessibilityLabel("Working")
+            }
+        }
+        if let unlockError, unlockError.method == method {
+            inlineError(unlockError.message, colors: colors)
+        }
+    }
+
+    private func remindersSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            Toggle(isOn: $remindersOn) {
+                Text("Local reminders").foregroundStyle(colors.text)
+            }
+            .accessibilityIdentifier("settings.remindersEnabled")
+            .onChange(of: remindersOn) { _, on in
+                Task { await setRemindersEnabled(on) }
+            }
+            if let reminderError {
+                inlineError(reminderError, colors: colors)
+            }
+            if remindersOn {
+                Toggle(isOn: $showReminderTitles) {
+                    Text("Show titles in notifications").foregroundStyle(colors.text)
+                }
+                .accessibilityIdentifier("settings.reminderTitles")
+                .onChange(of: showReminderTitles) { _, on in
+                    DeviceReminderPrefs.showTitles = on
+                    model.scheduleRemindersIfUnlocked()
+                }
+            }
+        } header: {
+            DayruleSectionHeader(title: "Reminders")
+        } footer: {
+            FooterStack {
+                if remindersOn {
+                    footerText("Titles are stored by the OS on this device. Leave off to keep only the time.", colors: colors)
+                }
+                footerText("Reminders stay on this device. The account reminder channel on the web still drives email / browser push only.", colors: colors)
+            }
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func dataSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            Button { beginExport(json: true) } label: {
+                Label("Export JSON", systemImage: "curlybraces")
+            }
+            .buttonStyle(.dayruleLink)
+            .accessibilityIdentifier("settings.exportJson")
+            Button { beginExport(json: false) } label: {
+                Label("Export Markdown", systemImage: "doc.plaintext")
+            }
+            .buttonStyle(.dayruleLink)
+            .accessibilityIdentifier("settings.exportMarkdown")
+            Button { showImporter = true } label: {
+                Label("Import…", systemImage: "square.and.arrow.down")
+            }
+            .buttonStyle(.dayruleLink)
+            .accessibilityIdentifier("settings.import")
+            if let importSummary {
+                Text(importSummary)
+                    .font(DayruleType.helper)
+                    .foregroundStyle(colors.textSecondary)
+                    .transition(.opacity)
+            }
+            if let importError {
+                inlineError(importError, colors: colors)
+            }
+        } header: {
+            DayruleSectionHeader(title: "Your data")
+        } footer: {
+            FooterStack {
+                footerText("Exports are made on this device and are not encrypted. Keep the files safe.", colors: colors)
+                footerText("Device backups may include your encrypted vault. Unlock keys stay on this device only, so a backup alone can’t open Dayrule on another phone or Mac.", colors: colors)
+                    .accessibilityIdentifier("settings.backupNote")
+            }
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func accountSection(email: String, colors: DayruleColors) -> some View {
+        Section {
+            Text(email)
+                .foregroundStyle(colors.textSecondary)
+            Button("Sign out", role: .destructive) {
+                Task {
+                    signOutHasPending = await model.hasPendingChanges()
+                    confirmingSignOut = true
+                }
+            }
+            .buttonStyle(.dayruleDestructive)
+            .accessibilityIdentifier("settings.signOut")
+        } header: {
+            DayruleSectionHeader(title: "Account")
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func deleteSection(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            SecureField(
+                "Password",
+                text: $deletePassword,
+                prompt: Text("Password").foregroundStyle(colors.textSecondary)
+            )
+            .dayruleBareField(colors: colors)
+            .textContentType(.password)
+            .accessibilityIdentifier("settings.delete.password")
+            TextField(
+                "Type DELETE to confirm",
+                text: $deleteConfirm,
+                prompt: Text("Type DELETE to confirm").foregroundStyle(colors.textSecondary)
+            )
+            .dayruleBareField(colors: colors)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
+            .accessibilityIdentifier("settings.delete.confirm")
+            if let deleteError {
+                inlineError(deleteError, colors: colors)
+            }
+            Button(role: .destructive) {
+                Task { await runDeleteAccount() }
+            } label: {
+                DayruleBusyLabel(title: "Delete account", busyTitle: "Deleting…", busy: deleteBusy)
+            }
+            .buttonStyle(.dayruleDestructive)
+            .disabled(
+                deleteBusy
+                    || deletePassword.isEmpty
+                    || deleteConfirm != "DELETE"
+            )
+            .accessibilityIdentifier("settings.delete")
+        } header: {
+            DayruleSectionHeader(title: "Delete account")
+        } footer: {
+            footerText("Deletes your account and all your to-dos on our servers and on this device. This can’t be undone.", colors: colors)
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    // MARK: - Pieces
+
+    private func footerText(_ text: String, colors: DayruleColors) -> some View {
+        Text(text)
+            .font(DayruleType.helper)
+            .foregroundStyle(colors.textSecondary)
+            .lineLimit(nil)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func inlineError(_ text: String, colors: DayruleColors) -> some View {
+        Text(text)
+            .font(DayruleType.error)
+            .foregroundStyle(colors.deadline)
+            .fixedSize(horizontal: false, vertical: true)
+            .transition(.dayruleInlineError)
+    }
+
+    /// Warns about unsent changes only when the outbox (read as the dialog opens) has any.
+    private var signOutMessage: String {
+        if signOutHasPending {
+            return "Changes that haven’t synced stay encrypted on this device and sync after your next sign-in."
+        }
+        return "Your lists stay encrypted on this device. Sign in with your password to open them again."
+    }
+
+    // MARK: - Actions
 
     private func runDeleteAccount() async {
         deleteError = nil
@@ -329,7 +529,12 @@ struct SettingsView: View {
         Binding(
             get: { model.biometricUnlockAvailable },
             set: { on in
-                Task { await model.setBiometricUnlock(enabled: on) }
+                Task {
+                    await changeUnlock(.biometric, enabled: on) {
+                        let error = await model.setBiometricUnlock(enabled: on)
+                        return (model.biometricUnlockAvailable, error)
+                    }
+                }
             }
         )
     }
@@ -338,18 +543,44 @@ struct SettingsView: View {
         Binding(
             get: { model.passkeyUnlockAvailable },
             set: { on in
-                Task { await model.setPasskeyUnlock(enabled: on) }
+                Task {
+                    await changeUnlock(.passkey, enabled: on) {
+                        let error = await model.setPasskeyUnlock(enabled: on)
+                        return (model.passkeyUnlockAvailable, error)
+                    }
+                }
             }
         )
     }
 
+    /// Runs one unlock change with an in-flight spinner. `apply` returns the resulting
+    /// state and AppModel's failure message, shown under the toggle.
+    private func changeUnlock(
+        _ method: UnlockMethod,
+        enabled: Bool,
+        apply: () async -> (isOn: Bool, error: String?)
+    ) async {
+        guard unlockBusy == nil else { return }
+        unlockError = nil
+        unlockBusy = method
+        let result = await apply()
+        unlockBusy = nil
+        if result.isOn != enabled {
+            let fallback = enabled ? "Couldn’t turn this on." : "Couldn’t turn this off."
+            unlockError = UnlockError(method: method, message: result.error ?? fallback)
+        }
+    }
+
     private func setRemindersEnabled(_ on: Bool) async {
         if on {
+            // Cleared here only: a refusal flips the toggle back off, which re-enters
+            // with `on == false` and must not wipe the message.
+            reminderError = nil
             let ok = await ReminderScheduler.requestAuthorization()
             DeviceReminderPrefs.enabled = ok
             remindersOn = ok
             if !ok {
-                importError = "Notifications aren’t allowed for Dayrule."
+                reminderError = "Notifications aren’t allowed for Dayrule."
             } else {
                 model.scheduleRemindersIfUnlocked()
             }
@@ -363,9 +594,16 @@ struct SettingsView: View {
     }
 }
 
-private extension SyncStatus {
-    var isBlocked: Bool {
-        if case .blocked = self { return true }
-        return false
+/// Several footer paragraphs. Reports its full height so Mac grouped forms don't
+/// under-measure it and overlap the row above.
+private struct FooterStack<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            content
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

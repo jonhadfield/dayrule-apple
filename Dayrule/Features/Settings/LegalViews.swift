@@ -17,38 +17,51 @@ enum LegalDocument: String, Identifiable {
 
 struct LegalDocumentView: View {
     let document: LegalDocument
-    @Environment(\.dismiss) private var dismiss
+    /// Pushed inside Settings' stack: no own NavigationStack or Done.
+    var embedded = false
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.openURL) private var openURL
 
+    /// Last material change to both documents (matches the web legal pages).
+    private static let lastUpdated: Date = {
+        var parts = DateComponents(year: 2026, month: 10, day: 4, hour: 12)
+        parts.calendar = Calendar(identifier: .gregorian)
+        return parts.date ?? Date(timeIntervalSince1970: 0)
+    }()
+
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Last updated 4 October 2026")
-                        .font(.footnote)
-                        .foregroundStyle(colors.textSecondary)
-                    switch document {
-                    case .privacy: privacyBody(colors: colors)
-                    case .terms: termsBody(colors: colors)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(20)
-            }
-            .background(colors.bg)
-            .navigationTitle(document.title)
-            #if os(iOS)
-            .navigationBarTitleDisplayMode(.inline)
-            #endif
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
-                        .foregroundStyle(colors.accent)
-                }
+        if embedded {
+            content
+                .settingsPushedPage(title: document.title)
+        } else {
+            DayruleSheet(
+                title: document.title,
+                dismissTitle: "Done",
+                dismissPlacement: .confirmationAction,
+                size: .reading
+            ) {
+                content
             }
         }
+    }
+
+    private var content: some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Last updated \(Self.lastUpdated.formatted(.dateTime.day().month(.wide).year()))")
+                    .font(.footnote)
+                    .foregroundStyle(colors.textSecondary)
+                switch document {
+                case .privacy: privacyBody(colors: colors)
+                case .terms: termsBody(colors: colors)
+                }
+            }
+            .frame(maxWidth: 640, alignment: .leading)
+            .frame(maxWidth: .infinity)
+            .padding(20)
+        }
+        .background(colors.bg)
     }
 
     @ViewBuilder
@@ -60,7 +73,7 @@ struct LegalDocumentView: View {
         Button("jon@lessknown.co.uk") {
             if let u = URL(string: "mailto:jon@lessknown.co.uk") { openURL(u) }
         }
-        .foregroundStyle(colors.accent)
+        .buttonStyle(.dayruleLink)
 
         heading("What we can’t see")
         para("Everything you write in Dayrule — titles, notes, checklists, tags, projects, areas, dates, repeats and settings — is end-to-end encrypted. We store it, but only as ciphertext, and we don’t have the key. We also never receive your password or your recovery phrase.")
@@ -94,7 +107,7 @@ struct LegalDocumentView: View {
         Button("ico.org.uk") {
             if let u = URL(string: "https://ico.org.uk") { openURL(u) }
         }
-        .foregroundStyle(colors.accent)
+        .buttonStyle(.dayruleLink)
 
         heading("Children")
         para("Dayrule isn’t meant for children under 13.")
@@ -109,7 +122,7 @@ struct LegalDocumentView: View {
         Button("jon@lessknown.co.uk") {
             if let u = URL(string: "mailto:jon@lessknown.co.uk") { openURL(u) }
         }
-        .foregroundStyle(colors.accent)
+        .buttonStyle(.dayruleLink)
         para("By creating an account you agree to them.")
 
         heading("The service")
@@ -136,7 +149,9 @@ struct LegalDocumentView: View {
 
     private func heading(_ text: String) -> some View {
         Text(text)
-            .font(DayruleFont.serif(.title3))
+            .font(DayruleType.sectionSerif)
+            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme).text)
+            .accessibilityAddTraits(.isHeader)
             .padding(.top, 8)
     }
 

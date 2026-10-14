@@ -16,7 +16,19 @@ final class AppModel {
     }
 
     var phase: Phase = .locked
-    var errorMessage: String?
+    /// Gate and auth outcomes, plus the last sync problem (gate and vault-missing row).
+    /// Other unlocked-phase errors go to `notices`.
+    var errorMessage: String? {
+        didSet { gateMessageIsInfo = false }
+    }
+    /// True when `errorMessage` is guidance rather than a failure (gate shows it muted).
+    private(set) var gateMessageIsInfo = false
+    /// A gate action (unlock, recovery, passkey, signup step) is running.
+    private(set) var gateBusy = false
+    /// True until the launch-time device / biometric unlock attempt has finished.
+    private(set) var isRestoringSession = true
+    /// Set after the first successful sync since unlock (empty lists stop saying "Syncing…").
+    private(set) var hasCompletedInitialSync = false
     var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
     var email = ""
     var apiBaseURLString = APIConfig.defaultBaseURLString
@@ -41,6 +53,8 @@ final class AppModel {
 
     let crypto = CryptoActor()
     let store = EntityStore()
+    let linger = LingerStore()
+    let notices = NoticeCenter()
     /// Bumped when `store.entities` changes so Observation refreshes views.
     private(set) var entitiesEpoch = 0
     private let sessions = SessionStore()
@@ -50,10 +64,13 @@ final class AppModel {
     private var syncEngine: SyncEngine?
     private var syncTask: Task<Void, Never>?
     private var syncPollTask: Task<Void, Never>?
+    /// Sync now / pull-to-refresh callers waiting on the running pass.
+    private var syncWaiters: [CheckedContinuation<Void, Never>] = []
     private var syncInFlight = false
     /// Set while a sync is running so a concurrent request re-runs after.
     private var syncAgain = false
     private var sceneIsActive = true
+    private var lastIdleBump: ContinuousClock.Instant?
 
     private struct PendingSignup {
         var email: String
@@ -77,9 +94,45 @@ final class AppModel {
         return store.entities
     }
 
-    func noteEntitiesChanged() {
-        entitiesEpoch += 1
+    /// A user edit changed `store.entities`: refresh views and count it as activity.
+    /// Any Undo notice on screen now refers to an older entry, so it goes; callers that
+    /// want one post it after this.
+    func noteEntitiesChanged(animation: Animation? = Motion.list) {
+        notices.dismissUndo()
+        entitiesDidChange(animation: animation)
+        noteUserActivity()
+    }
+
+    /// Sync, persist and hydrate paths: refresh views without resetting the idle lock.
+    private func entitiesDidChange(animation: Animation?) {
+        if let animation {
+            withAnimation(Motion.system(animation)) { entitiesEpoch += 1 }
+        } else {
+            entitiesEpoch += 1
+        }
         scheduleRemindersIfUnlocked()
+    }
+
+    /// Real user activity keeps the vault open; throttled so typing doesn't churn tasks.
+    func noteUserActivity() {
+        guard phase == .unlocked else { return }
+        if let lastIdleBump, ContinuousClock.now - lastIdleBump < .seconds(10) { return }
+        bumpIdle()
+    }
+
+    func undoLast() {
+        guard store.undo() != nil else { return }
+        noteEntitiesChanged()
+    }
+
+    /// Show `message` with an Undo action for the last store change. Undo only acts while
+    /// that change is still the newest history entry.
+    func undoNotice(_ message: String) {
+        let depth = store.past.count
+        notices.post(.undo(message) { [weak self] in
+            guard let self, self.store.past.count == depth else { return }
+            self.undoLast()
+        })
     }
 
     /// Reschedule local notifications while unlocked (PLAN §11).
@@ -175,9 +228,14 @@ final class AppModel {
     }
 
     func signupSendCode() async {
+        guard !gateBusy else { return }
         errorMessage = nil
+        gateBusy = true
         signupBusy = true
-        defer { signupBusy = false }
+        defer {
+            signupBusy = false
+            gateBusy = false
+        }
         do {
             guard let base = URL(string: apiBaseURLString) else { throw APIError.offline }
             await api.setBaseURL(base)
@@ -189,9 +247,14 @@ final class AppModel {
     }
 
     func signupVerifyCode() async {
+        guard !gateBusy else { return }
         errorMessage = nil
+        gateBusy = true
         signupBusy = true
-        defer { signupBusy = false }
+        defer {
+            signupBusy = false
+            gateBusy = false
+        }
         do {
             let verified = try await api.signupVerify(
                 email: email,
@@ -305,10 +368,10 @@ final class AppModel {
             case .local: try await cipherStore.applyLocal(changes)
             case .sync: try await cipherStore.applyRemote(changes)
             }
-            noteEntitiesChanged()
+            entitiesDidChange(animation: source == .sync ? Motion.fade : nil)
             if source == .local { scheduleSync() }
         } catch {
-            errorMessage = error.localizedDescription
+            notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 
@@ -328,9 +391,21 @@ final class AppModel {
         }
     }
 
+    /// Local changes still waiting in the outbox (Settings sign-out warning).
+    func hasPendingChanges() async -> Bool {
+        await store.awaitPendingPersist()
+        let pending = (try? await cipherStore?.pendingKeys()) ?? []
+        return !pending.isEmpty
+    }
+
     /// Settings → Sync now: flush local writes, then pull/push (do not re-hydrate).
+    /// If a pass is already running, waits for it so `.refreshable` tracks real work.
     func syncNow() async {
-        await runSync()
+        guard syncInFlight else {
+            await runSync()
+            return
+        }
+        await withCheckedContinuation { syncWaiters.append($0) }
     }
 
     /// While unlocked and the AK is in memory (PLAN §10.3). Mac `scenePhase` is
@@ -379,6 +454,9 @@ final class AppModel {
         syncStatus = .syncing
         defer {
             syncInFlight = false
+            let waiters = syncWaiters
+            syncWaiters = []
+            waiters.forEach { $0.resume() }
             if syncAgain {
                 syncAgain = false
                 Task { await self.runSync() }
@@ -389,13 +467,17 @@ final class AppModel {
         guard let syncEngine else { return }
         do {
             try await syncEngine.sync()
-            noteEntitiesChanged()
+            entitiesDidChange(animation: Motion.fade)
+            hasCompletedInitialSync = true
             let pending = (try? await cipherStore?.pendingKeys()) ?? []
             if syncEngine.sawUnknownAlg {
                 syncStatus = .needsUpdate
             } else if !pending.isEmpty {
                 // Push ran but rows remain — surface it instead of a false "Up to date".
-                syncStatus = .offline("Sync incomplete — \(pending.count) change(s) still waiting.")
+                let waiting = AttributedString(
+                    localized: "Sync incomplete — ^[\(pending.count) change](inflect: true) still waiting."
+                )
+                syncStatus = .offline(String(waiting.characters))
             } else {
                 syncStatus = .synced
             }
@@ -452,6 +534,7 @@ final class AppModel {
     /// Leave the lists and show the password gate (session missing / sync blocked).
     func showSignInGate() {
         errorMessage = "Sign in with your password to sync."
+        gateMessageIsInfo = true
         if hasBearerSession() {
             signOut()
         } else {
@@ -461,6 +544,9 @@ final class AppModel {
     }
 
     func unlock(password: String) async {
+        guard !gateBusy else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         errorMessage = nil
         guard password.count >= 10 else {
             errorMessage = "Use at least 10 characters."
@@ -543,12 +629,15 @@ final class AppModel {
 
     /// Retry the platform assertion after cancel/fail (PLAN §9.3).
     func continuePasskeySecondStep() async {
+        guard !gateBusy else { return }
         guard let pending = pendingSecondStep else {
             phase = .locked
             return
         }
+        gateBusy = true
+        defer { gateBusy = false }
         errorMessage = nil
-        phase = .unlocking
+        // Stay on the second-step screen while working.
         do {
             let sessionLogin = try await completePasskeySecondStep(token: pending.token)
             try await finishOnlineSession(sessionLogin, kek: pending.kek)
@@ -652,6 +741,9 @@ final class AppModel {
     }
 
     func unlockWithRecovery(phrase: String) async {
+        guard !gateBusy else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         clearPendingSecondStep()
         errorMessage = nil
         // Stay on the recovery screen while working.
@@ -685,10 +777,12 @@ final class AppModel {
     }
 
     /// Enable Face ID / Touch ID unlock while the vault is open (PLAN §8.3).
-    func setBiometricUnlock(enabled: Bool) async {
-        guard phase == .unlocked else { return }
+    /// Returns the failure message, if any, for the caller (Settings) to show inline.
+    @discardableResult
+    func setBiometricUnlock(enabled: Bool) async -> String? {
+        guard phase == .unlocked else { return nil }
         do {
-            guard var cached = try sessions.loadAccount() else { return }
+            guard var cached = try sessions.loadAccount() else { return nil }
             if enabled {
                 let sealed = try await crypto.enableBiometricWrap()
                 cached.biometricWrappedAK = WrappedB64(sealed)
@@ -701,16 +795,19 @@ final class AppModel {
                 biometricUnlockAvailable = false
             }
         } catch {
-            errorMessage = error.localizedDescription
             biometricUnlockAvailable = (try? sessions.loadAccount())?.biometricWrappedAK != nil
+            return error.localizedDescription
         }
+        return nil
     }
 
     /// Enable device-local passkey PRF unlock while unlocked (PLAN §8.4).
-    func setPasskeyUnlock(enabled: Bool) async {
-        guard phase == .unlocked else { return }
+    /// Returns the failure message, if any, for the caller (Settings) to show inline.
+    @discardableResult
+    func setPasskeyUnlock(enabled: Bool) async -> String? {
+        guard phase == .unlocked else { return nil }
         do {
-            guard var cached = try sessions.loadAccount() else { return }
+            guard var cached = try sessions.loadAccount() else { return nil }
             if enabled {
                 let enrollment = try await PasskeyPRF.enroll(
                     userId: cached.userId,
@@ -731,12 +828,17 @@ final class AppModel {
                 passkeyUnlockAvailable = false
             }
         } catch {
-            errorMessage = error.localizedDescription
             passkeyUnlockAvailable = (try? sessions.loadAccount())?.passkey != nil
+            return error.localizedDescription
         }
+        return nil
     }
 
     func tryDeviceUnlock() async {
+        defer { isRestoringSession = false }
+        guard !gateBusy else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         await refreshBiometryLabel()
         // Prefer biometric, then passkey, then stay-unlocked device wrap.
         if let cached = try? sessions.loadAccount(), let wrapped = cached.biometricWrappedAK {
@@ -768,10 +870,13 @@ final class AppModel {
     }
 
     func unlockWithBiometrics() async {
+        guard !gateBusy else { return }
         errorMessage = nil
         guard let cached = try? sessions.loadAccount(),
               let wrapped = cached.biometricWrappedAK
         else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         phase = .unlocking
         do {
             try await crypto.unlockFromBiometricWrap(
@@ -786,10 +891,13 @@ final class AppModel {
     }
 
     func unlockWithPasskey() async {
+        guard !gateBusy else { return }
         errorMessage = nil
         guard let cached = try? sessions.loadAccount(),
               let passkey = cached.passkey
         else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         phase = .unlocking
         do {
             let credentialId = try Base64Std.decode(passkey.credentialId)
@@ -822,6 +930,8 @@ final class AppModel {
     func refreshVault() async -> Bool {
         vaultLoading = true
         defer { vaultLoading = false }
+        linger.clear()
+        notices.clear()
         do {
             if cipherStore == nil, let userId = await crypto.currentUserId() {
                 try openPersistence(userId: userId)
@@ -848,7 +958,7 @@ final class AppModel {
             }
             store.generateRepeats()
             await store.awaitPendingPersist()
-            noteEntitiesChanged()
+            entitiesDidChange(animation: nil)
             errorMessage = nil
             await runSync()
             return true
@@ -868,6 +978,7 @@ final class AppModel {
         clearPendingSecondStep()
         idleTask?.cancel()
         idleTask = nil
+        lastIdleBump = nil
         syncTask?.cancel()
         syncTask = nil
         stopSyncPoll()
@@ -875,12 +986,21 @@ final class AppModel {
         cipherStore = nil
         syncEngine = nil
         syncStatus = .idle
+        hasCompletedInitialSync = false
         showSettings = false
+        linger.clear()
+        notices.clear()
         // Lock first so noteEntitiesChanged does not clear pending notifications.
         phase = .locked
         store.hydrate(.empty())
         entitiesEpoch += 1
         Task { await crypto.lock() }
+    }
+
+    /// User chose Lock: drop any stale gate message (lock() keeps it for signOut / 401).
+    func lockNow() {
+        errorMessage = nil
+        lock()
     }
 
     /// Revoke the server session and clear the Keychain token (Settings / 401).
@@ -933,6 +1053,9 @@ final class AppModel {
             cipherStore = nil
             syncEngine = nil
             syncStatus = .idle
+            hasCompletedInitialSync = false
+            linger.clear()
+            notices.clear()
             store.hydrate(.empty())
             entitiesEpoch += 1
             phase = .locked
@@ -953,11 +1076,12 @@ final class AppModel {
 
     func bumpIdle() {
         idleTask?.cancel()
+        lastIdleBump = .now
         guard !stayUnlocked else { return }
         idleTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(15 * 60))
             guard !Task.isCancelled else { return }
-            await MainActor.run { self?.lock() }
+            await MainActor.run { self?.lockNow() }
         }
     }
 
