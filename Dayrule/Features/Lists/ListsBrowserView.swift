@@ -906,6 +906,7 @@ struct ListsBrowserView: View {
             onOpen: { openRow(row, list: list) },
             accessibilityActions: rowActions(row, list: list)
         )
+        .opacity(model.linger.fading.contains(row.id) ? 0 : 1)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if list == .trash {
                 Button {

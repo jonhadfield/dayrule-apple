@@ -9,6 +9,7 @@ import AppKit
 enum Motion {
     static let quick: Animation = .easeOut(duration: 0.15)
     static let fade: Animation = .easeInOut(duration: 0.15)
+    static let fadeDuration: Duration = .milliseconds(150)
     /// Sheets, banners and disclosures.
     static let standard: Animation = .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.22)
     static let list: Animation = .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.26)
@@ -27,16 +28,22 @@ enum Motion {
         reduceMotion ? fade : a
     }
 
+    /// The system Reduce Motion setting, for non-View code with no environment to read.
+    @MainActor
+    static var reduceMotion: Bool {
+        #if canImport(UIKit)
+        UIAccessibility.isReduceMotionEnabled
+        #elseif canImport(AppKit)
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #else
+        false
+        #endif
+    }
+
     /// For non-View code (AppModel, stores) that has no environment to read.
     @MainActor
     static func system(_ a: Animation) -> Animation {
-        #if canImport(UIKit)
-        resolve(a, reduceMotion: UIAccessibility.isReduceMotionEnabled)
-        #elseif canImport(AppKit)
-        resolve(a, reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion)
-        #else
-        a
-        #endif
+        resolve(a, reduceMotion: reduceMotion)
     }
 }
 
