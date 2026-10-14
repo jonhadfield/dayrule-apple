@@ -125,6 +125,7 @@
 		DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336000FBB2DB5AD70D51A33A /* RepeatTests.swift */; };
 		DB8E55D9D16612CA224EB233 /* SyncConvergenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E760B37539EA8DA121BE562E /* SyncConvergenceTests.swift */; };
 		E07D26082132443B3A2CF7A1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E7E230BA135789962B607A3D /* PrivacyInfo.xcprivacy */; platformFilters = (ios, ); };
+		E223009C5C3E712A2664BA6A /* SelectionBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */; };
 		E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */; };
 		E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340184C820B58937291F1AB9 /* SyncTransport.swift */; };
 		E5A683A625CD7BE743935E5C /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = 3C89D1DF494846980AFD6C74 /* Clibsodium */; };
@@ -260,6 +261,7 @@
 		A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenerateRepeatsTests.swift; sourceTree = "<group>"; };
 		AB9A6D321AF398DD22A708FC /* World.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = World.swift; sourceTree = "<group>"; };
 		ABA59A162F972005C49AB993 /* UuidV5Tests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UuidV5Tests.swift; sourceTree = "<group>"; };
+		ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionBarView.swift; sourceTree = "<group>"; };
 		B18EE7B5F2218B8AB2BD0C51 /* DateText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateText.swift; sourceTree = "<group>"; };
 		B27CFCD5837AFEF92ECFFEAD /* RuledRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RuledRow.swift; sourceTree = "<group>"; };
 		B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeadingSheetView.swift; sourceTree = "<group>"; };
@@ -331,6 +333,7 @@
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
 				9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */,
 				907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */,
+				ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */,
 				5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */,
 				A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */,
 			);
@@ -840,6 +843,7 @@
 				7D40FF4BF0CA7584E20463BE /* RuledRow.swift in Sources */,
 				A7642620481BCDB6C5051300 /* SectionHeader.swift in Sources */,
 				A00DE465813F1AE286638F77 /* SecureBuffer.swift in Sources */,
+				E223009C5C3E712A2664BA6A /* SelectionBarView.swift in Sources */,
 				D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */,
 				BEC639BA3492EB472E585D16 /* SettingsView.swift in Sources */,
 				6F181483B46F66F73C2E7776 /* ShareSheet.swift in Sources */,
@@ -960,7 +964,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1093,7 +1097,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 11;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = VBZY8FBYR5;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;

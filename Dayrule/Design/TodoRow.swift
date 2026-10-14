@@ -38,6 +38,8 @@ struct DayruleTodoRow: View {
     var identifier: String
     var onToggle: () -> Void
     var onOpen: () -> Void
+    /// Multi-select highlight (PLAN §6.5 selection mode).
+    var isSelected: Bool = false
     var accessibilityActions: [RowAction] = []
 
     @Environment(\.colorScheme) private var colorScheme
@@ -82,6 +84,8 @@ struct DayruleTodoRow: View {
                 }
             }
         }
+        .listRowBackground(isSelected ? colors.selectedRow : colors.bg)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
         .modifier(OpenAccessibility(hint: model.openHint, onOpen: onOpen))

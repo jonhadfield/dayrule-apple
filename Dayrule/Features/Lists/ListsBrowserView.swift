@@ -84,6 +84,9 @@ struct ListsBrowserView: View {
     @State private var confirmEmptyTrash = false
     @State private var keyboardVisible = false
     @State private var detailWidth: CGFloat = 0
+    /// Multi-select mode (PLAN §6.5): bar replaces Add; taps toggle membership.
+    @State private var selecting = false
+    @State private var selectedIds: Set<ID> = []
     @ScaledMetric(relativeTo: .body) private var tabIconSize: CGFloat = 18
     @ScaledMetric(relativeTo: .body) private var browseIconWidth: CGFloat = 22
 
@@ -109,6 +112,10 @@ struct ListsBrowserView: View {
         }
         .onChange(of: selection) { _, _ in
             if !isCompact { projectPath = [] }
+            exitSelecting()
+        }
+        .onChange(of: phoneTab) { _, _ in
+            exitSelecting()
         }
         .onChange(of: phonePath) { _, path in
             if let name = path.reversed().compactMap({ route -> ListName? in
@@ -591,7 +598,7 @@ struct ListsBrowserView: View {
                     }
                 }
             }
-            if list == .inbox || list == .today || list == .backlog || list == .scheduled {
+            if !selecting, list == .inbox || list == .today || list == .backlog || list == .scheduled {
                 let draft = draftBinding(for: list)
                 PaperAddRow(
                     title: draft,
@@ -618,6 +625,30 @@ struct ListsBrowserView: View {
         .refreshable {
             await model.syncNow()
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if selecting {
+                SelectionBarView(
+                    count: selectedIds.count,
+                    onCancel: exitSelecting,
+                    onWhen: {
+                        whenTarget = WhenTarget(ids: Array(selectedIds))
+                        exitSelecting()
+                    },
+                    onDeadline: {
+                        deadlineTarget = WhenTarget(ids: Array(selectedIds))
+                        exitSelecting()
+                    },
+                    onMove: {
+                        moveTarget = WhenTarget(ids: Array(selectedIds))
+                        exitSelecting()
+                    },
+                    onComplete: completeSelection,
+                    onTrash: trashSelection
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .dayruleAnimation(Motion.standard, value: selecting)
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if model.needsServerSignIn {
@@ -874,7 +905,11 @@ struct ListsBrowserView: View {
         if list == .trash {
             return [RowAction(name: "Restore") { restore(row.id) }]
         }
-        var actions = [
+        var actions: [RowAction] = []
+        if list != .trash, row.isTodo {
+            actions.append(RowAction(name: "Select") { beginSelecting(row.id) })
+        }
+        actions += [
             RowAction(name: "When…") { whenTarget = WhenTarget(ids: [row.id]) },
             RowAction(name: "Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) },
             RowAction(name: "Tags…") { tagTarget = WhenTarget(ids: [row.id]) },
@@ -894,6 +929,11 @@ struct ListsBrowserView: View {
 
     private func openRow(_ row: Row, list: ListName) {
         guard list != .trash else { return }
+        if selecting {
+            guard row.isTodo else { return }
+            toggleSelected(row.id)
+            return
+        }
         if !row.isTodo, model.entities.projects[row.id] != nil {
             openProject(row.id)
         } else {
@@ -906,8 +946,15 @@ struct ListsBrowserView: View {
         DayruleTodoRow(
             model: rowModel(row, list: list),
             identifier: "list.todo.\(row.id)",
-            onToggle: { toggleComplete(row.id, title: row.title) },
+            onToggle: {
+                if selecting, row.isTodo {
+                    toggleSelected(row.id)
+                } else {
+                    toggleComplete(row.id, title: row.title)
+                }
+            },
             onOpen: { openRow(row, list: list) },
+            isSelected: selecting && selectedIds.contains(row.id),
             accessibilityActions: rowActions(row, list: list)
         )
         .opacity(model.linger.fading.contains(row.id) ? 0 : 1)
@@ -926,6 +973,16 @@ struct ListsBrowserView: View {
                     Label("When", systemImage: "calendar")
                 }
                 .tint(colors.accent)
+            }
+        }
+        .swipeActions(edge: .trailing) {
+            if list != .trash, row.isTodo, !selecting {
+                Button {
+                    beginSelecting(row.id)
+                } label: {
+                    Label("Select", systemImage: "checkmark.circle")
+                }
+                .tint(colors.textSecondary)
             }
         }
         .contextMenu {
@@ -961,6 +1018,13 @@ struct ListsBrowserView: View {
                     editTarget = EditTarget(id: row.id)
                 } label: {
                     Label("Edit", systemImage: "pencil")
+                }
+                if row.isTodo {
+                    Button {
+                        beginSelecting(row.id)
+                    } label: {
+                        Label("Select", systemImage: "checkmark.circle")
+                    }
                 }
             }
             Section {
@@ -1238,6 +1302,54 @@ struct ListsBrowserView: View {
         } catch {
             model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
+    }
+
+    private func beginSelecting(_ id: ID) {
+        selecting = true
+        selectedIds = [id]
+        AccessibilityNotification.Announcement("1 selected").post()
+    }
+
+    private func exitSelecting() {
+        guard selecting || !selectedIds.isEmpty else { return }
+        selecting = false
+        selectedIds = []
+    }
+
+    private func toggleSelected(_ id: ID) {
+        if selectedIds.contains(id) {
+            selectedIds.remove(id)
+        } else {
+            selectedIds.insert(id)
+        }
+        if selectedIds.isEmpty {
+            selecting = false
+        }
+        let n = selectedIds.count
+        AccessibilityNotification.Announcement(n == 0 ? "Selection cleared" : "\(n) selected").post()
+    }
+
+    private func completeSelection() {
+        let ids = Array(selectedIds)
+        guard !ids.isEmpty else { return }
+        model.store.run("Complete") { d, env in
+            Commands.setStatus(d, env, ids: ids, status: .completed)
+        }
+        for id in ids { model.linger.hold(id) }
+        model.noteEntitiesChanged()
+        model.undoNotice(ids.count == 1 ? "Completed 1 to-do" : "Completed \(ids.count) to-dos")
+        exitSelecting()
+    }
+
+    private func trashSelection() {
+        let ids = Array(selectedIds)
+        guard !ids.isEmpty else { return }
+        model.store.run("Trash") { d, env in
+            Commands.trashItems(d, env, ids: ids)
+        }
+        model.noteEntitiesChanged()
+        model.undoNotice(ids.count == 1 ? "Moved 1 to-do to Trash" : "Moved \(ids.count) to-dos to Trash")
+        exitSelecting()
     }
 
     private func toggleComplete(_ id: ID, title: String) {

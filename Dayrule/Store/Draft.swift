@@ -60,6 +60,16 @@ final class Draft {
         return base.tags[id]
     }
 
+    func getChecklistItem(_ id: ID) -> ChecklistItem? {
+        if case let .entity(_, _, _, after?, _) = touched["checklistItems/\(id)"] {
+            return EntityJSON.decodeChecklist(JSONDict.toAny(after), id: id)
+        }
+        if case let .entity(_, _, _, nil, _) = touched["checklistItems/\(id)"] {
+            return nil
+        }
+        return base.checklistItems[id]
+    }
+
     func allTodos() -> [Todo] {
         all(collection: .todos, baseMap: base.todos) { EntityJSON.decodeTodo($0, id: $1) }
     }
