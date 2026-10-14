@@ -209,7 +209,7 @@ struct DesignSystemTests {
     @Test("hold keeps a row visible until the linger ends, then folds it away")
     @MainActor
     func lingerHoldFolds() async throws {
-        let store = LingerStore(linger: Self.linger)
+        let store = LingerStore(linger: Self.linger, reduceMotion: { false })
         #expect(store.keepVisible == nil)
         store.hold("a")
         #expect(store.keepVisible == ["a"])
@@ -223,7 +223,7 @@ struct DesignSystemTests {
     @Test("holding again restarts the linger")
     @MainActor
     func lingerHoldRestarts() async throws {
-        let store = LingerStore(linger: Self.linger)
+        let store = LingerStore(linger: Self.linger, reduceMotion: { false })
         store.hold("a")
         try await Task.sleep(for: Self.linger * 0.6)
         store.hold("a")
@@ -236,7 +236,7 @@ struct DesignSystemTests {
     @Test("release drops a row at once and cancels its fold")
     @MainActor
     func lingerRelease() async throws {
-        let store = LingerStore(linger: Self.linger)
+        let store = LingerStore(linger: Self.linger, reduceMotion: { false })
         store.hold("a")
         store.hold("b")
         store.release("a")
@@ -249,7 +249,7 @@ struct DesignSystemTests {
     @Test("clear forgets every held row")
     @MainActor
     func lingerClear() async throws {
-        let store = LingerStore(linger: Self.linger)
+        let store = LingerStore(linger: Self.linger, reduceMotion: { false })
         store.hold("a")
         store.hold("b")
         store.clear()
@@ -259,5 +259,37 @@ struct DesignSystemTests {
         store.hold("c")
         try await Task.sleep(for: Self.linger / 2)
         #expect(store.ids == ["c"])
+    }
+
+    @Test("Reduce Motion fades the row out before the list closes the gap")
+    @MainActor
+    func lingerReduceMotionFades() async throws {
+        let store = LingerStore(linger: Self.linger, reduceMotion: { true })
+        store.hold("a")
+        #expect(store.fading.isEmpty)
+        // Past the linger, inside the fade: still listed, drawn transparent.
+        try await Task.sleep(for: Self.linger + Motion.fadeDuration / 3)
+        #expect(store.ids == ["a"])
+        #expect(store.fading == ["a"])
+        try await Task.sleep(for: Motion.fadeDuration * 2)
+        #expect(store.ids.isEmpty)
+        #expect(store.fading.isEmpty)
+    }
+
+    @Test("release during the Reduce Motion fade drops the row and its fade")
+    @MainActor
+    func lingerReduceMotionRelease() async throws {
+        let store = LingerStore(linger: Self.linger, reduceMotion: { true })
+        store.hold("a")
+        try await Task.sleep(for: Self.linger + Motion.fadeDuration / 3)
+        #expect(store.fading == ["a"])
+        store.release("a")
+        #expect(store.ids.isEmpty)
+        #expect(store.fading.isEmpty)
+        // A re-hold starts fresh and isn't drawn faded.
+        store.hold("a")
+        try await Task.sleep(for: Self.linger / 2)
+        #expect(store.ids == ["a"])
+        #expect(store.fading.isEmpty)
     }
 }
