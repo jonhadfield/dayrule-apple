@@ -15,7 +15,7 @@ enum SyncStatus: Equatable, Sendable {
         case .idle: "Not synced yet"
         case .syncing: "Syncing…"
         case .synced: "Up to date"
-        case .offline(let m): m
+        case .offline(let m): m.isEmpty ? "Offline — changes stay on this device." : m
         case .blocked(let m): m
         case .needsUpdate: "Update Dayrule to sync newer records."
         }

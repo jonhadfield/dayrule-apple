@@ -54,17 +54,29 @@ struct SettingsView: View {
                         Spacer()
                         Text(model.syncStatus.label)
                             .foregroundStyle(
-                                model.syncStatus == .needsUpdate || model.syncStatus.isBlocked
+                                model.syncStatus == .needsUpdate
+                                    || model.syncStatus.isBlocked
+                                    || model.needsServerSignIn
                                     ? Tokens.Light.deadline
                                     : colors.textSecondary
                             )
                             .multilineTextAlignment(.trailing)
                     }
+                    if model.needsServerSignIn {
+                        Text("Unlocked offline — edits stay on this device. Face ID does not create a server session.")
+                            .font(.footnote)
+                            .foregroundStyle(Tokens.Light.deadline)
+                        Button("Sign in to sync") {
+                            model.showSignInGate()
+                        }
+                        .foregroundStyle(colors.accent)
+                        .accessibilityIdentifier("settings.signInToSync")
+                    }
                     Button("Sync now") {
                         Task { await model.syncNow() }
                     }
                     .foregroundStyle(colors.accent)
-                    .disabled(model.syncStatus == .syncing)
+                    .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
                     .accessibilityIdentifier("settings.syncNow")
                 }
                 Section("Completed") {

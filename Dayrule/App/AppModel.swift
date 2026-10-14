@@ -357,6 +357,11 @@ final class AppModel {
         (try? sessions.loadToken()) != nil
     }
 
+    /// Unlocked locally but no Bearer — Adds stay on device until password sign-in.
+    var needsServerSignIn: Bool {
+        phase == .unlocked && !hasBearerSession()
+    }
+
     private func runSync() async {
         guard syncEngine != nil else { return }
         if syncInFlight {
@@ -385,12 +390,18 @@ final class AppModel {
         do {
             try await syncEngine.sync()
             noteEntitiesChanged()
+            let pending = (try? await cipherStore?.pendingKeys()) ?? []
             if syncEngine.sawUnknownAlg {
                 syncStatus = .needsUpdate
+            } else if !pending.isEmpty {
+                // Push ran but rows remain — surface it instead of a false "Up to date".
+                syncStatus = .offline("Sync incomplete — \(pending.count) change(s) still waiting.")
             } else {
                 syncStatus = .synced
             }
             if case .needsUpdate = syncStatus {
+                errorMessage = syncStatus.label
+            } else if case .offline = syncStatus {
                 errorMessage = syncStatus.label
             } else {
                 errorMessage = nil
@@ -438,13 +449,12 @@ final class AppModel {
         }
     }
 
-    /// Leave the lists and show the password gate (stuck empty / session gone).
+    /// Leave the lists and show the password gate (session missing / sync blocked).
     func showSignInGate() {
+        errorMessage = "Sign in with your password to sync."
         if hasBearerSession() {
-            errorMessage = "Sign in again"
             signOut()
         } else {
-            errorMessage = "Sign in again"
             lock()
             Task { await api.setToken(nil) }
         }

@@ -306,7 +306,11 @@ struct ListsBrowserView: View {
     /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS (PLAN §6.5).
     @ViewBuilder
     private func phoneBrowseRows(colors: DayruleColors) -> some View {
-        if model.syncStatus == .needsUpdate {
+        if model.needsServerSignIn {
+            syncSignInBanner(colors: colors)
+                .listRowBackground(colors.bg)
+                .listRowSeparator(.hidden)
+        } else if model.syncStatus == .needsUpdate {
             Text(model.syncStatus.label)
                 .font(.footnote)
                 .foregroundStyle(Tokens.Light.deadline)
@@ -473,6 +477,21 @@ struct ListsBrowserView: View {
         .dayruleListNavChrome(colors: colors)
         .scrollContentBackground(.hidden)
         .background(colors.bg)
+        .refreshable {
+            await model.syncNow()
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if model.needsServerSignIn {
+                syncSignInBanner(colors: colors)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(colors.sidebar)
+                    .overlay(alignment: .bottom) {
+                        colors.hairline.frame(height: 1)
+                    }
+            }
+        }
         .toolbar {
             // Pushed Browse destinations replace the tab-root toolbar — repeat chrome.
             if isCompact, !phonePath.isEmpty {
@@ -591,6 +610,27 @@ struct ListsBrowserView: View {
             .accessibilityIdentifier("list.signInAgain")
         }
         .padding(.vertical, 8)
+    }
+
+    /// Local vault works offline; sync needs a Bearer session (password sign-in).
+    @ViewBuilder
+    private func syncSignInBanner(colors: DayruleColors) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("On this device only")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(colors.text)
+            Text("Changes stay here until you sign in with your password. Face ID unlocks the vault but does not connect to the server.")
+                .font(.footnote)
+                .foregroundStyle(colors.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Sign in to sync") {
+                model.showSignInGate()
+            }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(colors.accent)
+            .accessibilityIdentifier("list.signInToSync")
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func scheduledDayHeader(_ date: LocalDate) -> String {
