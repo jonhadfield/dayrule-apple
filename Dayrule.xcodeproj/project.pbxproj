@@ -112,6 +112,7 @@
 		BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF7B27C792AA9376304425B /* ProjectDetailView.swift */; };
 		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
 		BEC639BA3492EB472E585D16 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED491D92E219DF041A432C75 /* SettingsView.swift */; };
+		BFE616BF9A2B6033405871D3 /* AppStoreScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */; };
 		C06E3E1DB4D0709329BA4E8C /* GateScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FA40065C14F9DB05A24F939 /* GateScaffold.swift */; };
 		C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E0BA4A1A69FF4F4A69B749 /* MemoryKeychain.swift */; };
 		C775694CCF82018A1D9A5071 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 6CE93B71E4258F313852B837 /* OFL.txt */; };
@@ -241,6 +242,7 @@
 		7EDA6EB07F5EF2CD6EE40649 /* Order.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Order.swift; sourceTree = "<group>"; };
 		81C6612B5F8DF84210CAE14D /* Find.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find.swift; sourceTree = "<group>"; };
 		8438C0E4D3766BEAE5D0763A /* EntityJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityJSON.swift; sourceTree = "<group>"; };
+		86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
 		87D7023605829FF55C543A3A /* Exchange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exchange.swift; sourceTree = "<group>"; };
 		881A2D3BBE5D545489661A97 /* NavigationChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationChrome.swift; sourceTree = "<group>"; };
 		8C247FD0C501C955CA797ECD /* PasswordValidation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordValidation.swift; sourceTree = "<group>"; };
@@ -357,6 +359,7 @@
 		4327DFF5DB300EF45B58E035 /* DayruleUITests */ = {
 			isa = PBXGroup;
 			children = (
+				86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */,
 				7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */,
 				A5C56A8FF9B8F8902EBAE14A /* SyncUITests.swift */,
 			);
@@ -877,6 +880,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BFE616BF9A2B6033405871D3 /* AppStoreScreenshotTests.swift in Sources */,
 				A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */,
 				ECE9B1AC9008964009DD6614 /* SyncUITests.swift in Sources */,
 			);
