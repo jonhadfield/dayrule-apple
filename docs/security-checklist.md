@@ -48,8 +48,9 @@ in code or by a named manual step — not by assumption.
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
-- [ ] App Review demo account + nutrition label (before external testers)
-- [ ] Confirm French encryption declaration rules before public store
+- [ ] App Review demo account — runbook `docs/app-review-demo.md` (create account, no second step, seed sample to-dos, credentials only in App Store Connect)
+- [ ] Privacy nutrition label (App Store Connect)
+- [ ] Confirm French encryption declaration / export-compliance rules before public store
 - [ ] Server `MIN_IOS_BUILD` / `426` floor — **not configured yet** (2026-10-14): client maps `426` / `upgrade_required` → needsUpdate (`AppModel`); dayrule `server/internal/httpapi` has no build-floor middleware. Confirm and set before external testers.
 
 **Signed off (code items above):** M7 branch review — remaining unchecked items are release ops / server config, not app code.
