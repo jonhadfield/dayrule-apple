@@ -59,10 +59,22 @@ final class AppStoreScreenshotTests: XCTestCase {
     private func dumpDebug(_ app: XCUIApplication, out: String, tag: String) {
         let dbg = (out as NSString).appendingPathComponent("debug-\(tag).txt")
         try? app.debugDescription.write(toFile: dbg, atomically: true, encoding: .utf8)
-        let shot = XCUIScreen.main.screenshot().pngRepresentation
+        let shot = windowPNG(app)
         try? shot.write(
             to: URL(fileURLWithPath: (out as NSString).appendingPathComponent("debug-\(tag).png"))
         )
+    }
+
+    /// Full screen on Simulator; the Dayrule window only on Mac (not the desktop).
+    @MainActor
+    private func windowPNG(_ app: XCUIApplication) -> Data {
+        #if os(macOS)
+        let window = app.windows.firstMatch
+        if window.exists {
+            return window.screenshot().pngRepresentation
+        }
+        #endif
+        return XCUIScreen.main.screenshot().pngRepresentation
     }
 
     @MainActor
@@ -81,6 +93,10 @@ final class AppStoreScreenshotTests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["DAYRULE_API"] = "https://dayrule.app"
         app.launch()
+        #if os(macOS)
+        app.activate()
+        _ = app.windows.firstMatch.waitForExistence(timeout: 10)
+        #endif
 
         let todayTab = app.buttons["phone.tab.today"]
         let emailField = app.textFields["gate.email"]
@@ -90,7 +106,7 @@ final class AppStoreScreenshotTests: XCTestCase {
             // continue
         } else if todayTab.waitForExistence(timeout: 3) || isUnlocked(app) {
             // continue
-        } else if emailField.waitForExistence(timeout: 12) {
+        } else if emailField.waitForExistence(timeout: 20) {
             emailField.tap()
             if let v = emailField.value as? String, !v.isEmpty, v != "Email" {
                 let clear = String(repeating: XCUIKeyboardKey.delete.rawValue, count: v.count)
@@ -113,7 +129,8 @@ final class AppStoreScreenshotTests: XCTestCase {
                 app.buttons["Unlock"].tap()
             }
         } else {
-            XCTFail("neither sign-in nor unlock UI appeared")
+            dumpDebug(app, out: out, tag: "no-gate")
+            XCTFail("neither sign-in nor unlock UI appeared — see debug-no-gate.*")
         }
 
         // Cold first login = Argon2 + vault pull.
@@ -146,10 +163,12 @@ final class AppStoreScreenshotTests: XCTestCase {
 
         let phone = todayTab.exists || app.buttons["phone.tab.inbox"].exists
         if !phone {
+            #if os(iOS)
             // Portrait split view overlays the sidebar on the list; landscape
             // keeps a real double-column so App Store shots aren't clipped.
             XCUIDevice.shared.orientation = .landscapeLeft
             Thread.sleep(forTimeInterval: 1.2)
+            #endif
             ensureSidebarVisible(app)
         }
 
@@ -185,7 +204,7 @@ final class AppStoreScreenshotTests: XCTestCase {
 
         func shot(_ name: String) {
             Thread.sleep(forTimeInterval: 0.6)
-            let data = XCUIScreen.main.screenshot().pngRepresentation
+            let data = windowPNG(app)
             let path = (out as NSString).appendingPathComponent("\(name).png")
             do {
                 try data.write(to: URL(fileURLWithPath: path))

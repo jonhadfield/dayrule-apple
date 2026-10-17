@@ -51,6 +51,7 @@ in code or by a named manual step — not by assumption.
 - [ ] App Review demo account — runbook `docs/app-review-demo.md` (create account, no second step, seed sample to-dos, credentials only in App Store Connect)
 - [ ] Privacy nutrition label (App Store Connect)
 - [ ] Confirm French encryption declaration / export-compliance rules before public store
+- [ ] Mac App Store packaging — `docs/mac-app-store.md` (build ≥ iPhone feature set; Mac screenshots; same demo account)
 - [ ] Server `MIN_IOS_BUILD` / `426` floor — **not configured yet** (2026-10-14): client maps `426` / `upgrade_required` → needsUpdate (`AppModel`); dayrule `server/internal/httpapi` has no build-floor middleware. Confirm and set before external testers.
 
 **Signed off (code items above):** M7 branch review — remaining unchecked items are release ops / server config, not app code.
