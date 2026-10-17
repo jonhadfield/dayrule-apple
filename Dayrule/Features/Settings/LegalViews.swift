@@ -24,7 +24,7 @@ struct LegalDocumentView: View {
 
     /// Last material change to both documents (matches the web legal pages).
     private static let lastUpdated: Date = {
-        var parts = DateComponents(year: 2026, month: 10, day: 4, hour: 12)
+        var parts = DateComponents(year: 2026, month: 10, day: 17, hour: 12)
         parts.calendar = Calendar(identifier: .gregorian)
         return parts.date ?? Date(timeIntervalSince1970: 0)
     }()
@@ -69,9 +69,9 @@ struct LegalDocumentView: View {
         para("Dayrule is built so that we can’t read your to-dos. They’re encrypted on your devices with a key made from your password before anything is sent, and only your devices can decrypt them. This notice explains the little we can see, why, and who else is involved.")
 
         heading("Who we are")
-        para("Dayrule is run by Jon Hadfield, an individual based in the United Kingdom, who is the data controller for the information below.")
-        Button("jon@lessknown.co.uk") {
-            if let u = URL(string: "mailto:jon@lessknown.co.uk") { openURL(u) }
+        para("Dayrule is a to-do app operated from the United Kingdom. For privacy questions, contact privacy@dayrule.app.")
+        Button("privacy@dayrule.app") {
+            if let u = URL(string: "mailto:privacy@dayrule.app") { openURL(u) }
         }
         .buttonStyle(.dayruleLink)
 
@@ -118,12 +118,11 @@ struct LegalDocumentView: View {
 
     @ViewBuilder
     private func termsBody(colors: DayruleColors) -> some View {
-        para("These are the terms for using Dayrule, a to-do app run by Jon Hadfield in the United Kingdom.")
-        Button("jon@lessknown.co.uk") {
-            if let u = URL(string: "mailto:jon@lessknown.co.uk") { openURL(u) }
+        para("These are the terms for using Dayrule, a to-do app operated from the United Kingdom (contact: privacy@dayrule.app). By creating an account you agree to them.")
+        Button("privacy@dayrule.app") {
+            if let u = URL(string: "mailto:privacy@dayrule.app") { openURL(u) }
         }
         .buttonStyle(.dayruleLink)
-        para("By creating an account you agree to them.")
 
         heading("The service")
         para("Dayrule is free. It’s provided as it is, without guarantees that it will always be available or free of faults, though we’ll do our best to keep it running and your data safe. We may change or stop the service; if we plan to stop it, we’ll give you notice and time to export your data.")
