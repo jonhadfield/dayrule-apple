@@ -70,18 +70,39 @@ struct PaperAddRow: View {
                     .dayruleBareField(colors: colors)
                     .focused(focusBinding)
                     .dayruleClearFieldEditor(isFocused: focusBinding.wrappedValue)
+                    .submitLabel(.done)
                     .accessibilityLabel("New to-do")
                     .accessibilityIdentifier(fieldIdentifier)
                     .onSubmit(submitFromField)
             }
         }
+        #if os(iOS)
+        // Phone hides the tab bar while the keyboard is up (§6.5); Done is how
+        // you leave Add and get the tabs back. Scroll-to-dismiss also works.
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") {
+                    focusBinding.wrappedValue = false
+                }
+                .fontWeight(.semibold)
+                .accessibilityIdentifier("list.addDone")
+            }
+        }
+        #endif
     }
 
     private func submitFromField() {
-        // Return on an empty field ends adding and lets the keyboard go.
-        guard canAdd else { return }
+        // Empty Done/Return ends adding and dismisses the keyboard (tabs return).
+        guard canAdd else {
+            focusBinding.wrappedValue = false
+            return
+        }
         onSubmit()
-        guard keepFocusAfterSubmit else { return }
+        guard keepFocusAfterSubmit else {
+            focusBinding.wrappedValue = false
+            return
+        }
         let binding = focusBinding
         // Land on the next runloop, after the field resigns on Return.
         Task { @MainActor in
