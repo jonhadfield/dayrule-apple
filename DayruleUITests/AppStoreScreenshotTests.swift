@@ -21,6 +21,7 @@ final class AppStoreScreenshotTests: XCTestCase {
         )
     }
 
+    @MainActor
     private func sidebar(_ app: XCUIApplication, _ list: String) -> XCUIElement {
         let id = "list.sidebar.\(list)"
         let cell = app.cells[id]
@@ -30,6 +31,7 @@ final class AppStoreScreenshotTests: XCTestCase {
         return app.buttons[id]
     }
 
+    @MainActor
     private func isUnlocked(_ app: XCUIApplication) -> Bool {
         app.buttons["sidebar.find"].exists
             || app.buttons["phone.tab.today"].exists
@@ -42,6 +44,7 @@ final class AppStoreScreenshotTests: XCTestCase {
     }
 
     /// iPad portrait collapses the split sidebar — open it so list ids exist.
+    @MainActor
     private func ensureSidebarVisible(_ app: XCUIApplication) {
         if sidebar(app, "inbox").exists || sidebar(app, "today").exists { return }
         let toggle = app.buttons["ToggleSidebar"]
@@ -52,6 +55,7 @@ final class AppStoreScreenshotTests: XCTestCase {
         }
     }
 
+    @MainActor
     private func dumpDebug(_ app: XCUIApplication, out: String, tag: String) {
         let dbg = (out as NSString).appendingPathComponent("debug-\(tag).txt")
         try? app.debugDescription.write(toFile: dbg, atomically: true, encoding: .utf8)
