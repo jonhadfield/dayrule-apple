@@ -34,7 +34,8 @@ struct DayruleApp: App {
                 }
             }
             #if os(macOS)
-            .frame(minWidth: 720, minHeight: 480)
+            // ASC Mac screenshots start at 1280×800; keep a usable smaller minimum.
+            .frame(minWidth: 800, minHeight: 500)
             // Dense desktop body (web 15px at ≥900px); explicit role fonts still win.
             .environment(\.font, Font.system(size: 15))
             .modifier(UserActivityMonitor(model: model))
@@ -60,7 +61,7 @@ struct DayruleApp: App {
             #endif
         }
         #if os(macOS)
-        .defaultSize(width: 1040, height: 700)
+        .defaultSize(width: 1280, height: 800)
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appSettings) {

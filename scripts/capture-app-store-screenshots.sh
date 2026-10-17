@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
-# Capture App Store screenshots on Simulator (demo account → production API).
+# Capture App Store screenshots (demo account → production API).
 # Usage: scripts/capture-app-store-screenshots.sh [path/to/creds.txt]
+# Env:   CAPTURE=iphone|ipad|macos|all  (default: all)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CREDS="${1:-$ROOT/creds.txt}"
 OUT="${SCREENSHOT_DIR:-$ROOT/docs/app-store-screenshots}"
-mkdir -p "$OUT/iphone" "$OUT/ipad"
+CAPTURE="${CAPTURE:-all}"
+mkdir -p "$OUT/iphone" "$OUT/ipad" "$OUT/macos"
 CFG=/tmp/dayrule-asc-capture.json
 
 if [[ ! -f "$CREDS" ]]; then
@@ -14,7 +16,7 @@ if [[ ! -f "$CREDS" ]]; then
 fi
 EMAIL="$(grep -v '^[[:space:]]*$' "$CREDS" | sed -n '1p')"
 PASSWORD="$(grep -v '^[[:space:]]*$' "$CREDS" | sed -n '2p')"
-echo "capturing as ${EMAIL}"
+echo "capturing as ${EMAIL} (CAPTURE=$CAPTURE)"
 
 write_cfg() {
   local dir="$1"
@@ -29,6 +31,7 @@ PY
 
 IPHONE_DEST='platform=iOS Simulator,name=iPhone 16 Pro,OS=18.0'
 IPAD_DEST='platform=iOS Simulator,name=iPad Pro 13-inch (M4),OS=18.0'
+MAC_DEST='platform=macOS'
 
 run() {
   local dest="$1" subdir="$2"
@@ -52,22 +55,31 @@ run() {
   fi
 }
 
-run "$IPHONE_DEST" iphone
-run "$IPAD_DEST" ipad
+want() {
+  [[ "$CAPTURE" == "all" || "$CAPTURE" == "$1" ]]
+}
+
+want iphone && run "$IPHONE_DEST" iphone
+want ipad && run "$IPAD_DEST" ipad
+want macos && run "$MAC_DEST" macos
 
 # iPad capture runs in landscape so NavigationSplitView is side-by-side (portrait
 # overlays the sidebar on the list). XCUIScreen still writes a portrait buffer —
 # rotate to ASC 13″ landscape size 2752×2064.
-for f in "$OUT"/ipad/*.png; do
-  [[ -f "$f" ]] || continue
-  w="$(sips -g pixelWidth "$f" 2>/dev/null | awk '/pixelWidth/ {print $2}')"
-  h="$(sips -g pixelHeight "$f" 2>/dev/null | awk '/pixelHeight/ {print $2}')"
-  if [[ "$w" -lt "$h" ]]; then
-    sips -r 270 "$f" --out "$f" >/dev/null
-  fi
-done
+if want ipad; then
+  for f in "$OUT"/ipad/*.png; do
+    [[ -f "$f" ]] || continue
+    w="$(sips -g pixelWidth "$f" 2>/dev/null | awk '/pixelWidth/ {print $2}')"
+    h="$(sips -g pixelHeight "$f" 2>/dev/null | awk '/pixelHeight/ {print $2}')"
+    if [[ "$w" -lt "$h" ]]; then
+      sips -r 270 "$f" --out "$f" >/dev/null
+    fi
+  done
+fi
 
 rm -f "$CFG"
 
 echo "Done. Upload from $OUT"
-sips -g pixelWidth -g pixelHeight "$OUT"/iphone/*.png "$OUT"/ipad/*.png 2>/dev/null | paste - - -
+shopt -s nullglob
+sips -g pixelWidth -g pixelHeight \
+  "$OUT"/iphone/*.png "$OUT"/ipad/*.png "$OUT"/macos/*.png 2>/dev/null | paste - - -

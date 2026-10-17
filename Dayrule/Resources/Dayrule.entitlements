@@ -6,6 +6,9 @@
 	<true/>
 	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Export (NSSavePanel) and Import (fileImporter) — Mac App Store sandbox. -->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:dayrule.app</string>
