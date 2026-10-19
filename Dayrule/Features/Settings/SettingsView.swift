@@ -432,7 +432,7 @@ struct SettingsView: View {
         if signOutHasPending {
             return "Changes that haven’t synced stay encrypted on this device and sync after your next sign-in."
         }
-        return "Your lists stay encrypted on this device. Sign in with your password to open them again."
+        return "Your lists stay encrypted on this device. Sign-in details are cleared — use your email and password to open them again."
     }
 
     // MARK: - Actions

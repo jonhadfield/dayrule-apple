@@ -30,6 +30,8 @@ final class AppModel {
     /// Set after the first successful sync since unlock (empty lists stop saying "Syncing…").
     private(set) var hasCompletedInitialSync = false
     var stayUnlocked = DeviceUnlockPrefs.stayUnlocked
+    /// Bumped on sign-out / account delete so the Gate clears password fields.
+    private(set) var gateResetEpoch = 0
     var email = ""
     var apiBaseURLString = APIConfig.defaultBaseURLString
     var vault: VaultSnapshot?
@@ -336,6 +338,12 @@ final class AppModel {
             await api.setToken(token)
             try sessions.saveToken(token)
             DeviceUnlockPrefs.stayUnlocked = stayUnlocked
+            #if os(iOS)
+            ReminderBackgroundRefresh.scheduleIfNeeded()
+            #endif
+            if !stayUnlocked {
+                try? await crypto.forgetDeviceWrapOnly(userId: pending.userId)
+            }
             let cached = SessionStore.CachedAccount(
                 userId: pending.userId,
                 email: pending.email,
@@ -689,14 +697,22 @@ final class AppModel {
         await api.setToken(token)
         try sessions.saveToken(token)
 
+        let previous = try? sessions.loadAccount()
         let deviceWrap = try await crypto.unlockWithPasswordWrap(
             kek: kek,
             userId: userId,
             wrapped: try wrapped.sealed(),
             stayUnlocked: stayUnlocked
         )
+        if !stayUnlocked {
+            // Drop any prior stay-unlocked Keychain key for this user.
+            try? await crypto.forgetDeviceWrapOnly(userId: userId)
+        }
 
         DeviceUnlockPrefs.stayUnlocked = stayUnlocked
+        #if os(iOS)
+        ReminderBackgroundRefresh.scheduleIfNeeded()
+        #endif
         var cached = SessionStore.CachedAccount(
             userId: userId,
             email: email.lowercased(),
@@ -704,8 +720,8 @@ final class AppModel {
             kdf: kdfDTO,
             wrappedPassword: wrapped,
             deviceWrappedAK: deviceWrap.map(WrappedB64.init),
-            biometricWrappedAK: (try? sessions.loadAccount())?.biometricWrappedAK,
-            passkey: (try? sessions.loadAccount())?.passkey
+            biometricWrappedAK: previous?.userId == userId ? previous?.biometricWrappedAK : nil,
+            passkey: previous?.userId == userId ? previous?.passkey : nil
         )
         if !stayUnlocked { cached.deviceWrappedAK = nil }
         try sessions.saveAccount(cached)
@@ -1006,17 +1022,41 @@ final class AppModel {
         lock()
     }
 
-    /// Revoke the server session and clear the Keychain token (Settings / 401).
+    /// Revoke the server session and forget this device's account identity
+    /// (email, password wrap, stay-unlocked / biometrics / passkey). Ciphertext
+    /// stays on disk until the same account signs in again — matches web
+    /// `signOut` → `forgetDevice` + `profiles.clear()` (session.ts).
     func signOut() {
         let tokenStillPresent = (try? sessions.loadToken()) != nil
+        let userId = (try? sessions.loadAccount())?.userId
+
+        // Drop Keychain identity first so a relaunch cannot tryDeviceUnlock
+        // or prefill email before the async Keychain wipe finishes.
+        try? sessions.clear()
+        stayUnlocked = false
+        DeviceUnlockPrefs.stayUnlocked = false
+        biometricUnlockAvailable = false
+        passkeyUnlockAvailable = false
+        accountEmail = nil
+        email = ""
+        inviteCode = ""
+        signupCode = ""
+        signupToken = nil
+        pendingRecoveryWords = []
+        pendingSignup = nil
+        clearPendingSecondStep()
+        gateResetEpoch += 1
+
         lock()
         Task {
+            if let userId {
+                try? await crypto.forgetDevice(userId: userId)
+            }
             if tokenStillPresent {
                 try? await api.logout()
             }
             await api.setToken(nil)
         }
-        try? sessions.deleteToken()
     }
 
     /// Delete the account on the server and wipe this device (PLAN §9.5).
@@ -1045,7 +1085,7 @@ final class AppModel {
             Primitives.wipe(&wipeKek)
             try await api.deleteAccount(authKeyB64: Base64Std.encode(authKey))
             let userId = cached.userId
-            try? await crypto.disableBiometricWrap(userId: userId)
+            try? await crypto.forgetDevice(userId: userId)
             await ReminderScheduler.clearAll()
             idleTask?.cancel()
             idleTask = nil
@@ -1067,9 +1107,18 @@ final class AppModel {
             try? sessions.clear()
             try? AppDatabase.remove(userId: userId)
             accountEmail = nil
+            email = ""
+            inviteCode = ""
+            signupCode = ""
+            signupToken = nil
+            pendingRecoveryWords = []
+            pendingSignup = nil
+            stayUnlocked = false
+            DeviceUnlockPrefs.stayUnlocked = false
             biometricUnlockAvailable = false
             passkeyUnlockAvailable = false
             clearPendingSecondStep()
+            gateResetEpoch += 1
             return true
         } catch {
             errorMessage = error.localizedDescription

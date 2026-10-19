@@ -86,6 +86,17 @@ struct GateView: View {
                 titleFocused = true
             }
         }
+        .onChange(of: model.gateResetEpoch) { _, _ in
+            clearSensitiveGateFields()
+        }
+    }
+
+    private func clearSensitiveGateFields() {
+        password = ""
+        confirmPassword = ""
+        recoveryPhrase = ""
+        codeSent = false
+        pending = nil
     }
 
     // MARK: - Sign in
@@ -138,15 +149,11 @@ struct GateView: View {
                     .dayruleField(isFocused: focus == .password, colors: colors)
                     .disabled(busy)
 
+                // Preference is written only after a successful unlock
+                // (`finishOnlineSession`); do not persist the toggle alone.
                 Toggle(isOn: $model.stayUnlocked) {
                     Text("Stay unlocked on this device")
                         .foregroundStyle(colors.text)
-                }
-                .onChange(of: model.stayUnlocked) { _, on in
-                    DeviceUnlockPrefs.stayUnlocked = on
-                    #if os(iOS)
-                    ReminderBackgroundRefresh.scheduleIfNeeded()
-                    #endif
                 }
                 .accessibilityIdentifier("gate.stayUnlocked")
                 .disabled(busy)
