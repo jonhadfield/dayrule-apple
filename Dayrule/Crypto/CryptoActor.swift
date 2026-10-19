@@ -107,6 +107,18 @@ actor CryptoActor {
         try biometricStore.delete(userId: userId)
     }
 
+    /// Drop device convenience wraps (stay-unlocked + biometric Keychain keys).
+    /// Matches web `keyring.forgetDevice` on sign-out — ciphertext stays on disk.
+    func forgetDevice(userId: String) throws {
+        try deviceStore.delete(userId: userId)
+        try biometricStore.delete(userId: userId)
+    }
+
+    /// Remove only the stay-unlocked device key (keep biometric wrap if any).
+    func forgetDeviceWrapOnly(userId: String) throws {
+        try deviceStore.delete(userId: userId)
+    }
+
     /// Wrap AK under HKDF(PRF, `dayrule/prf-kek/v1`) (PLAN §8.4). Wipes `prf`.
     func wrapForPrf(prf: inout [UInt8]) throws -> Primitives.Sealed {
         guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
