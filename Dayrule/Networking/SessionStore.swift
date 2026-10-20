@@ -105,3 +105,12 @@ struct SessionStore: Sendable {
         }
     }
 }
+
+/// Keychain Bearer may be reused only for the same unlocked user (recovery).
+enum SessionBinding {
+    static func canReuseBearer(unlockedUserId: String, cachedUserId: String?) -> Bool {
+        let unlocked = unlockedUserId.lowercased()
+        guard let cached = cachedUserId?.lowercased(), !cached.isEmpty else { return false }
+        return cached == unlocked
+    }
+}

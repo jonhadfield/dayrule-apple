@@ -67,6 +67,21 @@ struct ReminderPlanTests {
         #expect(titled[0].identifier.hasPrefix(ReminderPlan.idPrefix))
     }
 
+    @Test("sign-out revocation only touches Dayrule identifiers")
+    func dayruleIdentifiers() {
+        let ids = [
+            "dayrule.reminder.t1|2026-10-11T14:00",
+            "com.other.app.note",
+            "dayrule.reminder.t2|2026-10-12T09:00",
+        ]
+        #expect(
+            ReminderPlan.dayruleIdentifiers(in: ids) == [
+                "dayrule.reminder.t1|2026-10-11T14:00",
+                "dayrule.reminder.t2|2026-10-12T09:00",
+            ]
+        )
+    }
+
     private func makeTodo(id: ID, at: String, trashed: Bool = false) -> Todo {
         Todo(
             id: id,

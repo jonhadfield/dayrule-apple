@@ -157,4 +157,60 @@ struct SyncEngineTests {
         #expect(try await cipher.opaqueCount() == 1)
         #expect(try await cipher.isEmpty()) // no plaintext merge
     }
+
+    @Test func fullPullPrunesUnseenLocalEntities() async throws {
+        let crypto = try await unlockCrypto()
+        let net = MockNet()
+        net.pullPages = [
+            .success(PullResponse(records: [], cursor: 1, hasMore: false)),
+        ]
+        var e = Entities.empty()
+        e.todos["t1"] = sampleTodo(id: "t1", title: "Local")
+        let (engine, cipher, store) = try await makeEngine(crypto: crypto, net: net, entities: e)
+        try await cipher.replaceAll(e)
+        try await cipher.setUploaded(true)
+        try await engine.sync()
+        #expect(store.entities.todos["t1"] == nil)
+    }
+
+    @Test func unknownAlgFullPullDoesNotPruneLocalEntities() async throws {
+        let crypto = try await unlockCrypto()
+        let net = MockNet()
+        net.pullPages = [
+            .success(
+                PullResponse(
+                    records: [
+                        WireRecord(
+                            id: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                            seq: 9,
+                            alg: 99,
+                            keyId: 1,
+                            nonce: Base64Std.encode([UInt8](repeating: 1, count: 24)),
+                            ciphertext: Base64Std.encode([UInt8](repeating: 2, count: 32)),
+                            tombstone: nil
+                        ),
+                    ],
+                    cursor: 9,
+                    hasMore: false
+                )
+            ),
+        ]
+        var e = Entities.empty()
+        e.todos["t1"] = sampleTodo(id: "t1", title: "Keep me")
+        let (engine, cipher, store) = try await makeEngine(crypto: crypto, net: net, entities: e)
+        try await cipher.replaceAll(e)
+        try await cipher.setUploaded(true)
+        try await engine.sync()
+        #expect(engine.sawUnknownAlg)
+        #expect(try await cipher.needsUpgrade())
+        #expect(store.entities.todos["t1"]?.title == "Keep me")
+    }
+
+    private func sampleTodo(id: String, title: String) -> Todo {
+        EntityJSON.decodeTodo([
+            "type": "todo", "id": id, "title": title, "notes": "", "status": "open",
+            "start": "inbox", "tonight": false, "tagIds": [] as [String], "order": "a0",
+            "createdAt": "2026-10-01T09:00:00.000Z", "updatedAt": "2026-10-01T09:00:00.000Z",
+        ], id: id)
+    }
 }

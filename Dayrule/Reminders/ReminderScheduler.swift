@@ -17,9 +17,7 @@ enum ReminderScheduler {
     static func reschedule(entities: Entities) async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
-        let ours = pending
-            .map(\.identifier)
-            .filter { $0.hasPrefix(ReminderPlan.idPrefix) }
+        let ours = ReminderPlan.dayruleIdentifiers(in: pending.map(\.identifier))
         center.removePendingNotificationRequests(withIdentifiers: ours)
 
         guard DeviceReminderPrefs.enabled else { return }
@@ -45,9 +43,10 @@ enum ReminderScheduler {
     static func clearAll() async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
-        let ours = pending
-            .map(\.identifier)
-            .filter { $0.hasPrefix(ReminderPlan.idPrefix) }
+        let ours = ReminderPlan.dayruleIdentifiers(in: pending.map(\.identifier))
         center.removePendingNotificationRequests(withIdentifiers: ours)
+        let delivered = await center.deliveredNotifications()
+        let deliveredOurs = ReminderPlan.dayruleIdentifiers(in: delivered.map(\.request.identifier))
+        center.removeDeliveredNotifications(withIdentifiers: deliveredOurs)
     }
 }

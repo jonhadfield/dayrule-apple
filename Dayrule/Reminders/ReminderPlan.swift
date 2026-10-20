@@ -5,6 +5,10 @@ enum ReminderPlan {
     static let maxPending = 64
     static let idPrefix = "dayrule.reminder."
 
+    static func dayruleIdentifiers(in identifiers: [String]) -> [String] {
+        identifiers.filter { $0.hasPrefix(idPrefix) }
+    }
+
     struct Entry: Equatable, Sendable {
         var todoId: ID
         var fireAt: String // YYYY-MM-DDTHH:mm

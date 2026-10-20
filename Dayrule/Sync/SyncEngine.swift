@@ -57,6 +57,7 @@ final class SyncEngine {
         var cursor = try await db.cursor()
         let full = cursor == 0
         var seen = Set<String>()
+        var heldUnknownAlg = false
         while true {
             let page: PullResponse
             do {
@@ -74,6 +75,7 @@ final class SyncEngine {
                     if rec.alg != CryptoConstants.alg {
                         try await db.holdOpaque(rec)
                         sawUnknownAlg = true
+                        heldUnknownAlg = true
                         continue
                     }
                     guard let p = try await crypto.decryptSyncPayload(rec) else { continue }
@@ -104,7 +106,9 @@ final class SyncEngine {
             try await db.setCursor(cursor)
             if !page.hasMore { break }
         }
-        if full { try await prune(seen: seen) }
+        // Unknown alg means membership is incomplete — do not plant tombstones
+        // (PLAN §10.2: keep ciphertext, don't merge).
+        if full, !heldUnknownAlg { try await prune(seen: seen) }
     }
 
     private func prune(seen: Set<String>) async throws {
