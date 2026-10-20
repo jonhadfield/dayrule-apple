@@ -1065,6 +1065,7 @@ final class AppModel {
             if let userId {
                 try? await crypto.forgetDevice(userId: userId)
             }
+            await ReminderScheduler.clearAll()
             if tokenStillPresent {
                 try? await api.logout()
             }
