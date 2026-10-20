@@ -171,10 +171,13 @@ final class AppModel {
                 let entities = try await cipherStore.load()
                 await ReminderScheduler.reschedule(entities: entities)
             }
+            // A convenience unlock may have finished during load/reschedule.
+            if phase == .unlocked { return }
             cipherStore = nil
             syncEngine = nil
             await crypto.lock()
         } catch {
+            if phase == .unlocked { return }
             cipherStore = nil
             syncEngine = nil
             await crypto.lock()
@@ -770,16 +773,26 @@ final class AppModel {
             await api.setBaseURL(base)
             let proof = try await crypto.recoveryProofB64(phrase: phrase)
             let start = try await api.recoverStart(email: email, recoveryProofB64: proof)
+            let recoveredId = start.userId.lowercased()
             try await crypto.unlockFromRecovery(
                 phrase: phrase,
-                userId: start.userId.lowercased(),
+                userId: recoveredId,
                 wrappedRecovery: try start.wrappedRecovery.sealed()
             )
-            if let token = try sessions.loadToken() {
+            let cachedUserId = try sessions.loadAccount()?.userId
+            if SessionBinding.canReuseBearer(
+                unlockedUserId: recoveredId,
+                cachedUserId: cachedUserId
+            ),
+               let token = try sessions.loadToken()
+            {
                 await api.setToken(token)
+            } else {
+                try? sessions.deleteToken()
+                await api.setToken(nil)
             }
             accountEmail = email.lowercased()
-            try openPersistence(userId: start.userId.lowercased())
+            try openPersistence(userId: recoveredId)
             await openUnlockedVault()
         } catch {
             phase = .needsRecovery
