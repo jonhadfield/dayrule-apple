@@ -33,7 +33,8 @@ final class AppModel {
     /// Bumped on sign-out / account delete so the Gate clears password fields.
     private(set) var gateResetEpoch = 0
     var email = ""
-    var apiBaseURLString = APIConfig.defaultBaseURLString
+    /// Debug Gate override. Blank means `APIConfig.defaultBaseURLString`.
+    var apiBaseURLString = ""
     var vault: VaultSnapshot?
     var vaultLoading = false
     var accountEmail: String?
@@ -188,7 +189,7 @@ final class AppModel {
 
     init() {
         let defaultAPI = APIConfig.defaultBaseURLString
-        apiBaseURLString = defaultAPI
+        apiBaseURLString = APIConfig.hasLaunchOverride ? defaultAPI : ""
         api = APIClient(
             baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
         )
@@ -244,7 +245,7 @@ final class AppModel {
             gateBusy = false
         }
         do {
-            guard let base = URL(string: apiBaseURLString) else { throw APIError.offline }
+            guard let base = APIConfig.resolvedBaseURL(apiBaseURLString) else { throw APIError.offline }
             await api.setBaseURL(base)
             try await api.signupStart(email: email, inviteCode: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
             signupToken = nil
@@ -565,7 +566,7 @@ final class AppModel {
             errorMessage = "Use at least 10 characters."
             return
         }
-        guard let base = URL(string: apiBaseURLString) else {
+        guard let base = APIConfig.resolvedBaseURL(apiBaseURLString) else {
             errorMessage = "Invalid API URL."
             return
         }
@@ -769,7 +770,7 @@ final class AppModel {
         errorMessage = nil
         // Stay on the recovery screen while working.
         do {
-            guard let base = URL(string: apiBaseURLString) else { throw APIError.offline }
+            guard let base = APIConfig.resolvedBaseURL(apiBaseURLString) else { throw APIError.offline }
             await api.setBaseURL(base)
             let proof = try await crypto.recoveryProofB64(phrase: phrase)
             let start = try await api.recoverStart(email: email, recoveryProofB64: proof)

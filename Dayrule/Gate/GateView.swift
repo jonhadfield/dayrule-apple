@@ -9,6 +9,11 @@ struct GateView: View {
     @State private var codeSent = false
     /// The button that started the in-flight action; only it shows a busy title.
     @State private var pending: GateAction?
+    /// Debug Advanced options. UI tests with `DAYRULE_API` start open so
+    /// `gate.api` / `signup.api` stay in the tree.
+    #if DEBUG
+    @State private var showAdvancedOptions = APIConfig.hasLaunchOverride
+    #endif
     @FocusState private var focus: Field?
     @AccessibilityFocusState private var titleFocused: Bool
 
@@ -115,10 +120,6 @@ struct GateView: View {
                     colors: colors
                 )
 
-                #if DEBUG
-                apiField(identifier: "gate.api", next: .email, busy: busy, colors: colors)
-                #endif
-
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .email)
                     .accessibilityIdentifier("gate.email")
@@ -148,6 +149,10 @@ struct GateView: View {
                     }
                     .dayruleField(isFocused: focus == .password, colors: colors)
                     .disabled(busy)
+
+                #if DEBUG
+                advancedOptions(identifier: "gate.api", next: .email, busy: busy, colors: colors)
+                #endif
 
                 // Preference is written only after a successful unlock
                 // (`finishOnlineSession`); do not persist the toggle alone.
@@ -246,10 +251,6 @@ struct GateView: View {
                     colors: colors
                 )
 
-                #if DEBUG
-                apiField(identifier: "signup.api", next: .invite, busy: busy, colors: colors)
-                #endif
-
                 TextField("Invite code", text: $model.inviteCode, prompt: prompt("Invite code", colors))
                     .focused($focus, equals: .invite)
                     .accessibilityIdentifier("signup.invite")
@@ -274,6 +275,10 @@ struct GateView: View {
                     .dayruleField(isFocused: focus == .signupEmail, colors: colors)
                     .disabled(busy)
                     .onChange(of: model.email) { codeSent = false }
+
+                #if DEBUG
+                advancedOptions(identifier: "signup.api", next: .invite, busy: busy, colors: colors)
+                #endif
 
                 Button {
                     run(.sendCode) {
@@ -469,6 +474,10 @@ struct GateView: View {
                 .dayruleField(isFocused: focus == .phrase, colors: colors)
                 .disabled(busy)
 
+                #if DEBUG
+                advancedOptions(identifier: "gate.recovery.api", next: .phrase, busy: busy, colors: colors)
+                #endif
+
                 Button {
                     run(.recoveryUnlock) {
                         await model.unlockWithRecovery(phrase: recoveryPhrase)
@@ -509,26 +518,77 @@ struct GateView: View {
     }
 
     #if DEBUG
-    /// Debug-only server URL. It wraps rather than clips at large text sizes;
-    /// Return moves to the next field instead of adding a line break.
-    private func apiField(identifier: String, next: Field, busy: Bool, colors: DayruleColors) -> some View {
-        TextField("API", text: $model.apiBaseURLString, prompt: prompt("API", colors), axis: .vertical)
-            .lineLimit(1...3)
-            .focused($focus, equals: .api)
-            .accessibilityIdentifier(identifier)
-            .autocorrectionDisabled()
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            .keyboardType(.URL)
-            #endif
-            .submitLabel(.next)
-            .onSubmit { focus = next }
-            .onChange(of: model.apiBaseURLString) { _, value in
-                let single = value.filter { !$0.isNewline }
-                if single != value { model.apiBaseURLString = single }
+    /// Shown when Advanced is closed but the field is not the launch default.
+    private var customAPICaption: String? {
+        let current = APIConfig.resolvedBaseURLString(model.apiBaseURLString)
+        guard current != APIConfig.defaultBaseURLString else { return nil }
+        return "Using \(current)"
+    }
+
+    /// Disclosure only. Blank stays blank; a typed override stays typed.
+    private func advancedOptions(identifier: String, next: Field, busy: Bool, colors: DayruleColors) -> some View {
+        VStack(alignment: .leading, spacing: Tokens.Space.s) {
+            Button {
+                withAnimation(Motion.standard) {
+                    showAdvancedOptions.toggle()
+                }
+            } label: {
+                HStack(spacing: Tokens.Space.s) {
+                    Text("Advanced options")
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.semibold))
+                        .rotationEffect(.degrees(showAdvancedOptions ? 90 : 0))
+                        .accessibilityHidden(true)
+                }
             }
-            .dayruleField(isFocused: focus == .api, colors: colors)
+            .buttonStyle(.plain)
+            .font(DayruleType.link)
+            .foregroundStyle(colors.textSecondary)
+            .frame(minHeight: Tokens.minHit)
+            .accessibilityIdentifier("\(identifier).advanced")
+            .accessibilityLabel("Advanced options")
+            .accessibilityValue(showAdvancedOptions ? "Open" : "Closed")
             .disabled(busy)
+
+            if showAdvancedOptions {
+                HStack(alignment: .center, spacing: Tokens.Space.m) {
+                    Text("Server")
+                        .foregroundStyle(colors.text)
+                        .accessibilityHidden(true)
+                    TextField(
+                        "Server",
+                        text: $model.apiBaseURLString,
+                        prompt: prompt(APIConfig.defaultBaseURLString, colors),
+                        axis: .vertical
+                    )
+                    .labelsHidden()
+                    .lineLimit(1...3)
+                    .focused($focus, equals: .api)
+                    .accessibilityIdentifier(identifier)
+                    .autocorrectionDisabled()
+                    #if os(iOS)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    #endif
+                    .submitLabel(.next)
+                    .onSubmit { focus = next }
+                    .onChange(of: model.apiBaseURLString) { _, value in
+                        let single = value.filter { !$0.isNewline }
+                        if single != value { model.apiBaseURLString = single }
+                    }
+                    .dayruleField(isFocused: focus == .api, colors: colors)
+                    .disabled(busy)
+                }
+            } else if let using = customAPICaption {
+                Text(using)
+                    .font(.footnote)
+                    .foregroundStyle(colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("\(identifier).using")
+            }
+        }
+        .dayruleAnimation(Motion.standard, value: showAdvancedOptions)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     #endif
 
