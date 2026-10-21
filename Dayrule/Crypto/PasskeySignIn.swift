@@ -31,17 +31,14 @@ enum PasskeySignIn {
               let challenge = try? Base64URL.decode(challengeB64)
         else { throw Error.badOptions }
 
-        let rpId = (pk["rpId"] as? String) ?? PasskeyPRF.relyingPartyId
+        let rpId = try relyingPartyId(in: pk)
         let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(
             relyingPartyIdentifier: rpId
         )
         let request = provider.createCredentialAssertionRequest(challenge: Data(challenge))
-        if let allow = pk["allowCredentials"] as? [[String: Any]] {
-            request.allowedCredentials = allow.compactMap { item in
-                guard let id = item["id"] as? String,
-                      let bytes = try? Base64URL.decode(id)
-                else { return nil }
-                return ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: Data(bytes))
+        if let ids = try allowedCredentialIDs(in: pk) {
+            request.allowedCredentials = ids.map {
+                ASAuthorizationPlatformPublicKeyCredentialDescriptor(credentialID: $0)
             }
         }
         if let uv = pk["userVerification"] as? String {
@@ -69,6 +66,31 @@ enum PasskeySignIn {
         } catch {
             throw Error.failed(error.localizedDescription)
         }
+    }
+
+    /// Server `rpId` must be `dayrule.app`. Omitted uses that same value.
+    static func relyingPartyId(in pk: [String: Any]) throws -> String {
+        let rpId = (pk["rpId"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+            ?? PasskeyPRF.relyingPartyId
+        guard rpId == PasskeyPRF.relyingPartyId else { throw Error.badOptions }
+        return rpId
+    }
+
+    /// `nil` when the server omitted `allowCredentials` (discoverable). A
+    /// present list that decodes to nothing is rejected so we never assert
+    /// with an empty allow-list.
+    static func allowedCredentialIDs(in pk: [String: Any]) throws -> [Data]? {
+        guard let raw = pk["allowCredentials"] else { return nil }
+        guard let items = raw as? [[String: Any]] else { throw Error.badOptions }
+        let ids: [Data] = items.compactMap { item in
+            guard let id = item["id"] as? String,
+                  let bytes = try? Base64URL.decode(id),
+                  !bytes.isEmpty
+            else { return nil }
+            return Data(bytes)
+        }
+        guard !ids.isEmpty else { throw Error.badOptions }
+        return ids
     }
 
     private static func credentialJSON(

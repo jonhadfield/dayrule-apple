@@ -36,6 +36,7 @@
 		319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */; };
 		323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */; };
 		33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */; };
+		3471F9DBE5ED78CB6353B971 /* PasskeySignInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */; };
 		34FED0087086C173E8D97B31 /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9A6D321AF398DD22A708FC /* World.swift */; };
 		35B2037FC4B6BF6087528746 /* UuidV7Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21624A016DAA93040A515E60 /* UuidV7Tests.swift */; };
 		372B27D99B0DDB1039654C5F /* PasswordValidation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C247FD0C501C955CA797ECD /* PasswordValidation.swift */; };
@@ -59,6 +60,7 @@
 		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
 		5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
+		61B5465FA18F398B4823248C /* ATSLocalNetworkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */; };
 		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */; };
 		65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */; };
@@ -288,6 +290,7 @@
 		BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatsStoreTests.swift; sourceTree = "<group>"; };
 		C27C6E4851E216FA86CFF166 /* DayruleCheckbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleCheckbox.swift; sourceTree = "<group>"; };
 		C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainVectorsTests.swift; sourceTree = "<group>"; };
+		C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ATSLocalNetworkingTests.swift; sourceTree = "<group>"; };
 		C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceUnlockPrefs.swift; sourceTree = "<group>"; };
 		C9DB67593F5F177017269F6B /* VaultToEntitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultToEntitiesTests.swift; sourceTree = "<group>"; };
 		CA658F607831ED59FCA9C634 /* Draft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Draft.swift; sourceTree = "<group>"; };
@@ -302,6 +305,7 @@
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
 		D8952B8F3BECCB4CC3A31C74 /* DesignCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptureTests.swift; sourceTree = "<group>"; };
 		D917B1933E1E1DCDB240A5FD /* FindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindTests.swift; sourceTree = "<group>"; };
+		DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeySignInTests.swift; sourceTree = "<group>"; };
 		DFBE1D22F608EE636247658F /* Repeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeat.swift; sourceTree = "<group>"; };
 		E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineSheetView.swift; sourceTree = "<group>"; };
 		E1D8718EB1E6396EDCA15E8B /* Incoming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Incoming.swift; sourceTree = "<group>"; };
@@ -473,6 +477,7 @@
 				EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */,
 				BAA30D6213A5764218158BEF /* APIClientRateLimitTests.swift */,
 				32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */,
+				C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */,
 				3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */,
 				460E9E84AF5DF4F41A3DAD8E /* BreachCheckTests.swift */,
 				E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */,
@@ -490,6 +495,7 @@
 				7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */,
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
+				DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */,
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
 				777DAD146F35C4D1E9355E55 /* PrfUnlockTests.swift */,
 				178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */,
@@ -908,6 +914,7 @@
 			files = (
 				EA1A2659E1294CF2F03621ED /* APIClientRateLimitTests.swift in Sources */,
 				57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */,
+				61B5465FA18F398B4823248C /* ATSLocalNetworkingTests.swift in Sources */,
 				60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */,
 				27636766A432DA9040300663 /* BiometricUnlockTests.swift in Sources */,
 				E78FC6489412F9F58F1DBACD /* BreachCheckTests.swift in Sources */,
@@ -926,6 +933,7 @@
 				BD39E930978989BBD57E6EC9 /* KeyboardExtensionTests.swift in Sources */,
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
+				3471F9DBE5ED78CB6353B971 /* PasskeySignInTests.swift in Sources */,
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
 				B21B2727BD5595AE8BE08DE8 /* PrfUnlockTests.swift in Sources */,
 				B45AC67AF22E7122D0F81365 /* ReminderPlanTests.swift in Sources */,
@@ -1036,6 +1044,8 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
+				INFOPLIST_OTHER_PREPROCESSOR_FLAGS = "-DDAYRULE_DEBUG_ATS";
+				INFOPLIST_PREPROCESS = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -1219,6 +1229,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Dayrule/Resources/Info.plist;
+				INFOPLIST_PREPROCESS = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
