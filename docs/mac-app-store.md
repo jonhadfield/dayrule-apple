@@ -21,8 +21,9 @@ TestFlight upload (after the iPhone critical path).
 1. **Archive + upload** a Mac build whose number is at least as new as the
    iPhone build you care about (Help, privacy contact, Add Done, etc.).
 2. **Screenshots** — capture with
-   `CAPTURE=macos scripts/capture-app-store-screenshots.sh` (demo account
-   in local `creds.txt`). On first run, macOS may prompt to allow
+   `CAPTURE=macos scripts/capture-app-store-screenshots.sh` (agent test
+   account in local `agent-creds.txt` — not App Review `creds.txt`; see
+   `docs/agent-test-account.md`). On first run, macOS may prompt to allow
    **Accessibility** for Xcode (System Settings → Privacy & Security →
    Accessibility); without it the UITest cannot see the gate. Upload sizes
    Apple lists for Mac (commonly 1280×800, 1440×900, 2560×1600 /

@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
-# Capture App Store screenshots (demo account → production API).
-# Usage: scripts/capture-app-store-screenshots.sh [path/to/creds.txt]
+# Capture App Store screenshots (agent test account → production API).
+# Usage: scripts/capture-app-store-screenshots.sh [path/to/creds]
+# Default creds: agent-creds.txt (not App Review creds.txt). See docs/agent-test-account.md
 # Env:   CAPTURE=iphone|ipad|macos|all  (default: all)
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-CREDS="${1:-$ROOT/creds.txt}"
+CREDS="${1:-$ROOT/agent-creds.txt}"
 OUT="${SCREENSHOT_DIR:-$ROOT/docs/app-store-screenshots}"
 CAPTURE="${CAPTURE:-all}"
 mkdir -p "$OUT/iphone" "$OUT/ipad" "$OUT/macos"
@@ -36,16 +37,25 @@ MAC_DEST='platform=macOS'
 run() {
   local dest="$1" subdir="$2"
   local dir="$OUT/$subdir"
-  mkdir -p "$dir"
-  rm -f "$dir"/*.png
-  write_cfg "$dir"
-  echo "→ $subdir ($dest)"
+  # Mac UITest runner is sandboxed and cannot write into the repo docs/ tree;
+  # capture into /tmp then copy PNGs across.
+  local work="$dir"
+  if [[ "$subdir" == "macos" ]]; then
+    work="/tmp/dayrule-asc-macos"
+  fi
+  mkdir -p "$dir" "$work"
+  rm -f "$dir"/*.png "$work"/*.png
+  write_cfg "$work"
+  echo "→ $subdir ($dest) work=$work"
   xcodebuild \
     -project "$ROOT/Dayrule.xcodeproj" \
     -scheme Dayrule \
     -destination "$dest" \
     -only-testing:DayruleUITests/AppStoreScreenshotTests/testCaptureScreenshots \
     test
+  if [[ "$work" != "$dir" ]]; then
+    cp -f "$work"/*.png "$dir"/ 2>/dev/null || true
+  fi
   local n
   n="$(ls -1 "$dir"/*.png 2>/dev/null | wc -l | tr -d ' ')"
   echo "wrote $n pngs in $dir"
