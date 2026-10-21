@@ -49,7 +49,9 @@ synced vault.
 
 ## iOS-specific
 
-- Third-party keyboards are refused on password and recovery fields.
+- Third-party keyboards are refused app-wide
+  (`shouldAllowExtensionPointIdentifier` → `.keyboard`; UIKit has no
+  per-field hook). Password fields also use `SecureField`.
 - Recovery-phrase copy uses a local-only, expiring `UIPasteboard` item.
 
 ## macOS-specific
@@ -63,5 +65,6 @@ synced vault.
 
 ## Input hygiene
 
-Password and recovery fields refuse autocorrect (and third-party keyboards
-on iOS). Recovery-phrase copy never stays on the pasteboard indefinitely.
+Password and recovery fields refuse autocorrect. iOS refuses third-party
+keyboards app-wide. Recovery-phrase copy never stays on the pasteboard
+indefinitely.

@@ -5,6 +5,9 @@ import AppKit
 
 @main
 struct DayruleApp: App {
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(DayruleAppDelegate.self) private var appDelegate
+    #endif
     @State private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPrivacyCover = false
