@@ -16,7 +16,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Read SHARED.lock web commit
         id: lock
@@ -25,12 +25,13 @@ jobs:
       # path must not be "dayrule": macos runners are case-insensitive, so that
       # would clobber the native Dayrule/ source tree.
       - name: Checkout dayrule at SHARED.lock
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           repository: jonhadfield/dayrule
           ref: ${{ steps.lock.outputs.sha }}
           token: ${{ secrets.DAYRULE_WEB_TOKEN }}
           path: dayrule-web
+          persist-credentials: false
 
       - name: Select Xcode
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
