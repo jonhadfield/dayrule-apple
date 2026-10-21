@@ -57,6 +57,7 @@
 		57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */; };
 		581E7295BF175BDA84841426 /* UuidV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E1BF1D54C5D45D14D5AD42 /* UuidV5.swift */; };
 		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
+		5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
 		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */; };
@@ -112,6 +113,7 @@
 		BCDF26946850620BA7CAE6B3 /* DeviceReminderPrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */; };
 		BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFF7B27C792AA9376304425B /* ProjectDetailView.swift */; };
 		BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */; };
+		BD39E930978989BBD57E6EC9 /* KeyboardExtensionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */; };
 		BEC639BA3492EB472E585D16 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED491D92E219DF041A432C75 /* SettingsView.swift */; };
 		BFE616BF9A2B6033405871D3 /* AppStoreScreenshotTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */; };
 		C06E3E1DB4D0709329BA4E8C /* GateScaffold.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FA40065C14F9DB05A24F939 /* GateScaffold.swift */; };
@@ -213,6 +215,7 @@
 		39F13541F8210D40139B57E9 /* ListsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsTests.swift; sourceTree = "<group>"; };
 		3B3EFB30B8DEE3113910D329 /* ButtonStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ButtonStyles.swift; sourceTree = "<group>"; };
 		3B6A9F3E304118C6A55C4728 /* BiometricKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricKeyStore.swift; sourceTree = "<group>"; };
+		3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleAppDelegate.swift; sourceTree = "<group>"; };
 		43FC547FBEFB77D78A87433D /* GateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GateView.swift; sourceTree = "<group>"; };
 		4608F0B7201CE4C352E4294D /* Tokens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tokens.swift; sourceTree = "<group>"; };
 		460E9E84AF5DF4F41A3DAD8E /* BreachCheckTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreachCheckTests.swift; sourceTree = "<group>"; };
@@ -245,6 +248,7 @@
 		7B779DA6B2031BF08649C89C /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleUITests.swift; sourceTree = "<group>"; };
 		7EDA6EB07F5EF2CD6EE40649 /* Order.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Order.swift; sourceTree = "<group>"; };
+		7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardExtensionTests.swift; sourceTree = "<group>"; };
 		81C6612B5F8DF84210CAE14D /* Find.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find.swift; sourceTree = "<group>"; };
 		8438C0E4D3766BEAE5D0763A /* EntityJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityJSON.swift; sourceTree = "<group>"; };
 		86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
@@ -483,6 +487,7 @@
 				59193C5EF23C22974DFBFDE3 /* ForgetDeviceTests.swift */,
 				A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */,
 				0026AAA1C063454CC9B4A1B8 /* IncomingTests.swift */,
+				7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */,
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
@@ -573,6 +578,7 @@
 			children = (
 				60D1DD770A2B75C5501341ED /* AppModel.swift */,
 				50B739D187E09BA80EF8304B /* DayruleApp.swift */,
+				3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */,
 				510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */,
 				C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */,
 			);
@@ -799,6 +805,7 @@
 				EC72C196606D5324DEBC1640 /* CryptoActor.swift in Sources */,
 				159AAFD9B565E01F6DFA6B39 /* DateText.swift in Sources */,
 				30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */,
+				5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */,
 				D830CEFB488936F28111961A /* DayruleCheckbox.swift in Sources */,
 				4D60FE78C54EC00389F8C76D /* DeadlineSheetView.swift in Sources */,
 				15F3F8B98568C7338E90AA80 /* DesignCaptures.swift in Sources */,
@@ -916,6 +923,7 @@
 				ED439BBE696B9CCD49BD2EE0 /* ForgetDeviceTests.swift in Sources */,
 				57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */,
 				02A1DA607E312B851FD990F1 /* IncomingTests.swift in Sources */,
+				BD39E930978989BBD57E6EC9 /* KeyboardExtensionTests.swift in Sources */,
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,

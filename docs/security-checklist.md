@@ -41,6 +41,7 @@ in code or by a named manual step — not by assumption.
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code
 - [x] Notification titles opt-in; default body is time-only
 - [x] No third-party analytics / crash / ad SDKs
+- [x] iOS refuses third-party keyboard extensions (`DayruleAppDelegate` / PLAN §8.7) so recovery words are not delivered to a Full Access keyboard
 
 ## Manual / release gates
 
