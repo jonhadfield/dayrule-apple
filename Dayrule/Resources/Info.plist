@@ -30,11 +30,13 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+#ifdef DAYRULE_DEBUG_ATS
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
+#endif
 	<key>NSFaceIDUsageDescription</key>
 	<string>Unlock Dayrule without typing your password.</string>
 	<key>UIAppFonts</key>

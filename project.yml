@@ -63,6 +63,11 @@ targets:
         CODE_SIGN_ENTITLEMENTS[sdk=iphonesimulator*]: Dayrule/Resources/Dayrule-iOS.entitlements
         CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Dayrule/Resources/Dayrule.entitlements
         ENABLE_HARDENED_RUNTIME[sdk=macosx*]: YES
+        # Strip / keep NSAllowsLocalNetworking via Info.plist preprocess (PLAN §9.6).
+        INFOPLIST_PREPROCESS: YES
+      configs:
+        Debug:
+          INFOPLIST_OTHER_PREPROCESSOR_FLAGS: "-DDAYRULE_DEBUG_ATS"
     scheme:
       testTargets:
         - DayruleTests
