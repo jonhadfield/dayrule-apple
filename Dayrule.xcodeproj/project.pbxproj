@@ -54,6 +54,7 @@
 		515C795656DDAECD7FC36755 /* TodoRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = E33A5717E2C0EBD5E438D3D4 /* TodoRow.swift */; };
 		52DAE6F37E4412EE939E3F4D /* ListStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0B8E00A3624163478EC3959 /* ListStyle.swift */; };
 		57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */; };
+		57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */; };
 		581E7295BF175BDA84841426 /* UuidV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E1BF1D54C5D45D14D5AD42 /* UuidV5.swift */; };
 		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
@@ -200,6 +201,7 @@
 		29C225964995BA55648E51D5 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		2C87174387804A6982E10602 /* DesignCaptures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptures.swift; sourceTree = "<group>"; };
 		3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricUnlockTests.swift; sourceTree = "<group>"; };
+		32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfigTests.swift; sourceTree = "<group>"; };
 		32A368C1360A61A2C5320783 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 		32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceReminderPrefs.swift; sourceTree = "<group>"; };
 		336000FBB2DB5AD70D51A33A /* RepeatTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatTests.swift; sourceTree = "<group>"; };
@@ -466,6 +468,7 @@
 			children = (
 				EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */,
 				BAA30D6213A5764218158BEF /* APIClientRateLimitTests.swift */,
+				32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */,
 				3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */,
 				460E9E84AF5DF4F41A3DAD8E /* BreachCheckTests.swift */,
 				E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */,
@@ -897,6 +900,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EA1A2659E1294CF2F03621ED /* APIClientRateLimitTests.swift in Sources */,
+				57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */,
 				60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */,
 				27636766A432DA9040300663 /* BiometricUnlockTests.swift in Sources */,
 				E78FC6489412F9F58F1DBACD /* BreachCheckTests.swift in Sources */,
