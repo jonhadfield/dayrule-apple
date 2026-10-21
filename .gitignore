@@ -25,4 +25,8 @@ build/
 # SPM checkouts (Package.resolved is committed)
 Dayrule.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved.bak
 todo.txt
+# App Review demo (ASC only) — never for agent automation
 creds.txt
+# Agent / local automation test account (not App Review)
+agent-creds.txt
+agent-invite.txt

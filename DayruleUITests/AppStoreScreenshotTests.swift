@@ -57,12 +57,25 @@ final class AppStoreScreenshotTests: XCTestCase {
 
     @MainActor
     private func dumpDebug(_ app: XCUIApplication, out: String, tag: String) {
-        let dbg = (out as NSString).appendingPathComponent("debug-\(tag).txt")
-        try? app.debugDescription.write(toFile: dbg, atomically: true, encoding: .utf8)
+        let tree = app.debugDescription
+        // Always print — Mac sandbox often blocks writes into the repo docs/ tree.
+        print("debug hierarchy (\(tag), \(tree.count) chars):\n\(tree)")
+        let tmpRoot = NSTemporaryDirectory()
+        let dbgTmp = (tmpRoot as NSString).appendingPathComponent("dayrule-asc-debug-\(tag).txt")
+        let pngTmp = (tmpRoot as NSString).appendingPathComponent("dayrule-asc-debug-\(tag).png")
+        try? tree.write(toFile: dbgTmp, atomically: true, encoding: .utf8)
         let shot = windowPNG(app)
-        try? shot.write(
-            to: URL(fileURLWithPath: (out as NSString).appendingPathComponent("debug-\(tag).png"))
-        )
+        try? shot.write(to: URL(fileURLWithPath: pngTmp))
+        print("debug tmp: \(dbgTmp) / \(pngTmp)")
+        let dbg = (out as NSString).appendingPathComponent("debug-\(tag).txt")
+        let png = (out as NSString).appendingPathComponent("debug-\(tag).png")
+        do {
+            try tree.write(toFile: dbg, atomically: true, encoding: .utf8)
+            try shot.write(to: URL(fileURLWithPath: png))
+            print("debug also: \(dbg) / \(png)")
+        } catch {
+            print("debug outDir write skipped: \(error.localizedDescription)")
+        }
     }
 
     /// Full screen on Simulator; the Dayrule window only on Mac (not the desktop).
@@ -95,18 +108,27 @@ final class AppStoreScreenshotTests: XCTestCase {
         app.launch()
         #if os(macOS)
         app.activate()
-        _ = app.windows.firstMatch.waitForExistence(timeout: 10)
+        let window = app.windows.firstMatch
+        _ = window.waitForExistence(timeout: 15)
+        if window.exists { window.click() }
+        // Cold launch may sit on the restoring privacy cover before the gate.
+        let gateSignIn = app.buttons["gate.signIn"]
+        let brand = app.staticTexts["Dayrule"]
+        _ = gateSignIn.waitForExistence(timeout: 45)
+            || brand.waitForExistence(timeout: 1)
+            || isUnlocked(app)
         #endif
 
         let todayTab = app.buttons["phone.tab.today"]
-        let emailField = app.textFields["gate.email"]
-        let passwordField = app.secureTextFields["gate.password"]
+        // Mac sometimes surfaces these as Any, not TextField.
+        let emailField = app.descendants(matching: .any)["gate.email"]
+        let passwordField = app.descendants(matching: .any)["gate.password"]
 
         if isUnlocked(app) {
             // continue
         } else if todayTab.waitForExistence(timeout: 3) || isUnlocked(app) {
             // continue
-        } else if emailField.waitForExistence(timeout: 20) {
+        } else if emailField.waitForExistence(timeout: 25) {
             emailField.tap()
             if let v = emailField.value as? String, !v.isEmpty, v != "Email" {
                 let clear = String(repeating: XCUIKeyboardKey.delete.rawValue, count: v.count)
