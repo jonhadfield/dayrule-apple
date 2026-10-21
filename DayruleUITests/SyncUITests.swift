@@ -41,6 +41,11 @@ final class SyncUITests: XCTestCase {
 
         // Prefill API from launch env; clear anyway so we don't append garbage.
         clearAndType(app.textFields["signup.api"], api)
+        // Collapse Advanced so password fields aren't under the keyboard.
+        let advanced = app.buttons["signup.api.advanced"]
+        if advanced.waitForExistence(timeout: 2), (advanced.value as? String) == "Open" {
+            advanced.tap()
+        }
         clearAndType(app.textFields["signup.invite"], invite)
         clearAndType(app.textFields["signup.email"], email)
 
@@ -53,22 +58,22 @@ final class SyncUITests: XCTestCase {
 
         let code = try waitForEmailCode(email: email, logPath: logPath)
         clearAndType(app.textFields["signup.code"], code)
-        app.buttons["signup.verifyCode"].tap()
+        let verifyBtn = app.buttons["signup.verifyCode"]
+        verifyBtn.tap()
 
-        let passwordField = app.secureTextFields["signup.password"]
-        XCTAssertTrue(passwordField.waitForExistence(timeout: 10))
-        // Don't trust isEnabled on SecureField; wait until Continue is tappable after verify.
-        let continueBtn = app.buttons["signup.continue"]
-        let deadline = Date().addingTimeInterval(20)
-        while Date() < deadline, continueBtn.label == "Continue", app.staticTexts["Code verified"].exists == false {
-            // verify in flight
+        // Don't trust isEnabled on SecureField; wait for verify to finish.
+        let verifiedDeadline = Date().addingTimeInterval(20)
+        while Date() < verifiedDeadline, verifyBtn.label != "Code verified" {
             RunLoop.current.run(until: Date().addingTimeInterval(0.2))
             if err.exists { XCTFail("verify failed: \(err.label)") }
         }
+        XCTAssertEqual(verifyBtn.label, "Code verified", "verify code before password")
+
+        let passwordField = app.secureTextFields["signup.password"]
         pasteSecure(passwordField, password, in: app)
         let confirmField = app.secureTextFields["signup.confirmPassword"]
         pasteSecure(confirmField, password, in: app)
-        tapWhenHittable(continueBtn, in: app)
+        tapWhenHittable(app.buttons["signup.continue"], in: app)
 
         // Surface derive/register errors instead of waiting out Argon2 timeout.
         if err.waitForExistence(timeout: 2) {
@@ -139,22 +144,49 @@ final class SyncUITests: XCTestCase {
         XCTAssertEqual(element.value as? String, text)
     }
 
-    /// Paste into a SecureField — more reliable than typeText with the soft keyboard.
+    /// Paste into a SecureField. `typeText` often drops characters, which made
+    /// password and confirm diverge when only one field fell back to typing.
     @MainActor
     private func pasteSecure(_ field: XCUIElement, _ text: String, in app: XCUIApplication) {
         XCTAssertTrue(field.waitForExistence(timeout: 5))
         #if canImport(UIKit)
         UIPasteboard.general.string = text
-        field.tap()
-        field.press(forDuration: 1.0)
-        let paste = app.menuItems["Paste"]
-        if paste.waitForExistence(timeout: 3) {
-            paste.tap()
-            return
+        for _ in 0..<3 {
+            if !field.isHittable {
+                app.swipeUp()
+            }
+            field.tap()
+            dismissStrongPasswordIfNeeded(in: app)
+            allowPasteIfAsked(in: app)
+            field.press(forDuration: 1.2)
+            let paste = app.menuItems["Paste"]
+            if paste.waitForExistence(timeout: 2) {
+                paste.tap()
+                allowPasteIfAsked(in: app)
+                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+                return
+            }
+            // Dismiss a half-open edit menu before retrying.
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08)).tap()
         }
         #endif
-        field.tap()
-        field.typeText(text)
+        XCTFail("could not paste into \(field.identifier)")
+    }
+
+    @MainActor
+    private func dismissStrongPasswordIfNeeded(in app: XCUIApplication) {
+        let chooseOwn = app.buttons["Choose My Own Password"]
+        if chooseOwn.exists {
+            chooseOwn.tap()
+        }
+    }
+
+    @MainActor
+    private func allowPasteIfAsked(in app: XCUIApplication) {
+        let allow = app.alerts.buttons["Allow Paste"]
+        if allow.exists {
+            allow.tap()
+        }
     }
 
     @MainActor

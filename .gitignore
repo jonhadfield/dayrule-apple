@@ -30,3 +30,5 @@ creds.txt
 # Agent / local automation test account (not App Review)
 agent-creds.txt
 agent-invite.txt
+agent-invites.txt
+docs/app-review-notes.txt
