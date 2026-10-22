@@ -126,6 +126,7 @@
 		CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11BCE243A8FF31733F82EE30 /* ActorRecordCipher.swift */; };
 		D0FAC27020AEE466C0F3B63D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 10BAA0A24A1B4AE9481ABB64 /* Assets.xcassets */; };
 		D21D41CB86112AA455D78513 /* Tokens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4608F0B7201CE4C352E4294D /* Tokens.swift */; };
+		D2322E69D0E9F477501B47F1 /* MemoryKeychainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */; };
 		D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 951105343C5D083C09317947 /* RecordCipher.swift */; };
 		D39DC922D37ACD64C4737AE0 /* APIConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 14C10485E36552B5A2566472 /* APIConfig.swift */; };
 		D59EDEC8C2B0946A1AB12B6A /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB8C8968ECDB5433251704AB /* SessionStore.swift */; };
@@ -325,6 +326,7 @@
 		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
 		F47D18259248FBC451348D37 /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
 		F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaintextOnDiskTests.swift; sourceTree = "<group>"; };
+		FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychainTests.swift; sourceTree = "<group>"; };
 		FDA4D4586883A8C74E05BB93 /* BreachCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreachCheck.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -495,6 +497,7 @@
 				7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */,
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
+				FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */,
 				DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */,
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
 				777DAD146F35C4D1E9355E55 /* PrfUnlockTests.swift */,
@@ -933,6 +936,7 @@
 				BD39E930978989BBD57E6EC9 /* KeyboardExtensionTests.swift in Sources */,
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
+				D2322E69D0E9F477501B47F1 /* MemoryKeychainTests.swift in Sources */,
 				3471F9DBE5ED78CB6353B971 /* PasskeySignInTests.swift in Sources */,
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
 				B21B2727BD5595AE8BE08DE8 /* PrfUnlockTests.swift in Sources */,
