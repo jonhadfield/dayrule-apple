@@ -18,7 +18,7 @@ users to check.
 |---|---|
 | Record ciphertext | Application Support SQLite (GRDB) — ciphertext only (from M4); iOS file protection `completeUntilFirstUserAuthentication` |
 | Account key | `sodium_malloc` inside `CryptoActor` while unlocked; wiped on lock |
-| Device wrap key | Keychain, `WhenUnlockedThisDeviceOnly`, random 256-bit — **never** iCloud Keychain |
+| Device wrap key | Keychain, `WhenUnlockedThisDeviceOnly`, random 256-bit — **never** iCloud Keychain. `DAYRULE_MEMORY_KEYCHAIN` is Debug-only; Release always uses SecItem. |
 | Biometric wrap key | Keychain, `WhenPasscodeSetThisDeviceOnly` + `.biometryCurrentSet` |
 | Session token | Keychain (from M2), `WhenUnlockedThisDeviceOnly` — never logged |
 | Recovery phrase / password | Never persisted; SecureField copies are best-effort only |
@@ -62,6 +62,8 @@ synced vault.
   the content is unchanged (no iOS-style local-only / expiration API).
 - An unlocked Mac login session is a larger physical-access surface than a
   locked phone; stay-unlocked must explain that trade-off in Settings.
+- `DAYRULE_API` is ignored in Release, so launching the Mac binary with a
+  custom URL cannot send credentials off `dayrule.app`.
 
 ## Input hygiene
 

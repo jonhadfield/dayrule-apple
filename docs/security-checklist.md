@@ -28,6 +28,7 @@ in code or by a named manual step — not by assumption.
 
 - [x] Bearer + `X-Dayrule-Client: ios|macos/<build>`
 - [x] Production host is `dayrule.app` only (local server in Debug)
+- [x] `DAYRULE_API` and `DAYRULE_MEMORY_KEYCHAIN` are `#if DEBUG` (Release always production + SecItem; PLAN §9.6 / decision 16)
 - [x] `NSAllowsLocalNetworking` is Debug-only (`DAYRULE_DEBUG_ATS` Info.plist preprocess; PLAN §9.6)
 - [x] No APNs; reminders are local notifications only
 - [x] `x-vercel-mitigated` → plain-English rate-limit copy

@@ -1,10 +1,14 @@
 import Foundation
 
 /// Process-local Keychain stand-in for unsigned e2e / UITest hosts (`DAYRULE_MEMORY_KEYCHAIN=1`).
-/// Production never sets that env; SecItem remains the only path.
+/// Debug only: Release always uses SecItem (PLAN decision 16).
 enum MemoryKeychain {
     static var enabled: Bool {
+        #if DEBUG
         ProcessInfo.processInfo.environment["DAYRULE_MEMORY_KEYCHAIN"] == "1"
+        #else
+        false
+        #endif
     }
 
     private final class Store: @unchecked Sendable {
