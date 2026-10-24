@@ -192,4 +192,33 @@ struct ListsTests {
         #expect(prog.done == 1)
         #expect(prog.total == 2)
     }
+
+    @Test("areaView shows an area's open projects and loose to-dos")
+    func areaViewGroups() {
+        let w = World()
+        let area = w.area()
+        let p = w.project(areaId: area.id)
+        let t = w.todo(areaId: area.id, start: .ready)
+        w.todo(areaId: area.id, start: .later)
+        w.todo(projectId: p.id, areaId: area.id, start: .ready)
+        let v = Lists.areaView(w.e, area.id, ctx)
+        #expect(ids(v?.projects ?? []) == [p.id])
+        #expect(ids(v?.todos ?? []) == [t.id])
+    }
+
+    @Test("browseTree groups loose projects then areas with nested projects")
+    func browseTreeGroups() {
+        let w = World()
+        let area = w.area()
+        let nested = w.project(areaId: area.id)
+        let loose = w.project()
+        w.project(start: .later)
+        w.project(areaId: area.id, status: .completed, completedAt: "2026-10-02T00:00:00Z")
+        let empty = w.area(title: "Empty")
+        let tree = Lists.browseTree(w.e)
+        #expect(ids(tree.looseProjects) == [loose.id])
+        #expect(ids(tree.areaGroups.map(\.area)) == [area.id, empty.id])
+        #expect(ids(tree.areaGroups[0].projects) == [nested.id])
+        #expect(tree.areaGroups[1].projects.isEmpty)
+    }
 }

@@ -19,6 +19,7 @@ struct ProjectDetailView: View {
     @State private var moveTarget: WhenTarget?
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
+    @FocusState private var titleFocused: Bool
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -33,9 +34,21 @@ struct ProjectDetailView: View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         let ctx = ctx
         let view = Lists.projectView(model.entities, projectId, ctx)
-        let title = view?.project.title ?? "Project"
+        let title = displayTitle(view?.project.title)
         List {
             if let view {
+                RuledRow {
+                    TextField(
+                        "",
+                        text: projectTitleBinding,
+                        prompt: Text("New Project").foregroundStyle(colors.textSecondary)
+                    )
+                    .font(DayruleType.sectionSerif)
+                    .dayruleBareField(colors: colors)
+                    .focused($titleFocused)
+                    .accessibilityLabel("Project title")
+                    .accessibilityIdentifier("project.title")
+                }
                 if !view.project.notes.isEmpty {
                     RuledRow(style: .note) {
                         Text(view.project.notes)
@@ -102,6 +115,11 @@ struct ProjectDetailView: View {
         .navigationTitle(title)
         .dayruleListNavChrome(colors: colors)
         .dayrulePageTitle(title)
+        .onAppear {
+            if (view?.project.title ?? "").isEmpty {
+                titleFocused = true
+            }
+        }
         .onChange(of: view == nil, initial: true) { _, missing in
             if missing {
                 dismiss()
@@ -171,6 +189,23 @@ struct ProjectDetailView: View {
 
     private var ctx: Lists.Context {
         Lists.Context(today: When.toLocalDate(Date()), keepVisible: model.linger.keepVisible)
+    }
+
+    private func displayTitle(_ title: String?) -> String {
+        let value = title ?? ""
+        return value.isEmpty ? "New Project" : value
+    }
+
+    private var projectTitleBinding: Binding<String> {
+        Binding(
+            get: { model.entities.projects[projectId]?.title ?? "" },
+            set: { newValue in
+                model.store.run("Rename") { d, env in
+                    Commands.updateProject(d, env, id: projectId, title: newValue, notes: nil)
+                }
+                model.noteEntitiesChanged()
+            }
+        )
     }
 
     // MARK: - Editor presentation (PLAN §6.5: full screen on iPhone, sheet elsewhere)

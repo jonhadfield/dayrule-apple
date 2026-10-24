@@ -8,13 +8,20 @@ private struct WhenTarget: Identifiable {
     var ids: [ID]
 }
 
-/// Phone stack routes (PLAN §6.5: home → list → project).
+/// Phone stack routes (PLAN §6.5: home → list → project / area).
 private enum PhoneRoute: Hashable {
     case list(ListName)
     case project(ID)
+    case area(ID)
 }
 
-/// Compact bottom bar: daily path + Browse (Backlog / Done / Trash / projects).
+/// Split-view detail stack: a project or area opened from the sidebar.
+private enum OrgRoute: Hashable {
+    case project(ID)
+    case area(ID)
+}
+
+/// Compact bottom bar: daily path + Browse (Backlog / Done / Trash / projects / areas).
 private enum PhoneTab: Hashable, CaseIterable {
     case inbox, today, scheduled, browse
 
@@ -65,7 +72,7 @@ struct ListsBrowserView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selection: ListName? = .inbox
-    /// Compact: Browse root; push for Backlog / Done / Trash / projects.
+    /// Compact: Browse root; push for Backlog / Done / Trash / projects / areas.
     @State private var phonePath: [PhoneRoute] = []
     @State private var phoneTab: PhoneTab = .inbox
     @State private var didApplyDefaultList = false
@@ -78,7 +85,7 @@ struct ListsBrowserView: View {
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
     @State private var editTarget: EditTarget?
-    @State private var projectPath: [ID] = []
+    @State private var orgPath: [OrgRoute] = []
     /// Find result held until the sheet has gone, so navigation isn't fought by the dismissal.
     @State private var pendingFind: Find.Result?
     @State private var confirmEmptyTrash = false
@@ -111,7 +118,7 @@ struct ListsBrowserView: View {
             if !loading { applyDefaultDestinationIfNeeded() }
         }
         .onChange(of: selection) { _, _ in
-            if !isCompact { projectPath = [] }
+            if !isCompact { orgPath = [] }
             exitSelecting()
         }
         .onChange(of: phoneTab) { _, _ in
@@ -196,6 +203,11 @@ struct ListsBrowserView: View {
                         case .project(let projectId):
                             ProjectDetailView(model: model, projectId: projectId)
                                 .toolbar { chromeToolbar(colors: colors) }
+                        case .area(let areaId):
+                            AreaDetailView(model: model, areaId: areaId) { projectId in
+                                phonePath.append(.project(projectId))
+                            }
+                            .toolbar { chromeToolbar(colors: colors) }
                         }
                     }
             }
@@ -312,12 +324,20 @@ struct ListsBrowserView: View {
                 // Lock / Find / Settings live on the detail column so they stay
                 // reachable when the Mac sidebar is collapsed.
         } detail: {
-            NavigationStack(path: $projectPath) {
+            NavigationStack(path: $orgPath) {
                 listDetail(list: activeList, colors: colors)
                     .toolbar { chromeToolbar(colors: colors) }
-                    .navigationDestination(for: ID.self) { projectId in
-                        ProjectDetailView(model: model, projectId: projectId)
+                    .navigationDestination(for: OrgRoute.self) { route in
+                        switch route {
+                        case .project(let projectId):
+                            ProjectDetailView(model: model, projectId: projectId)
+                                .toolbar { chromeToolbar(colors: colors) }
+                        case .area(let areaId):
+                            AreaDetailView(model: model, areaId: areaId) { projectId in
+                                orgPath.append(.project(projectId))
+                            }
                             .toolbar { chromeToolbar(colors: colors) }
+                        }
                     }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -382,11 +402,14 @@ struct ListsBrowserView: View {
             .background(colors.sidebar)
             .dayruleAnimation(Motion.standard, value: model.syncStatus == .needsUpdate)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                SyncStatusView(
-                    status: model.syncStatus,
-                    needsServerSignIn: model.needsServerSignIn,
-                    compact: true
-                )
+                VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                    newListMenu(colors: colors)
+                    SyncStatusView(
+                        status: model.syncStatus,
+                        needsServerSignIn: model.needsServerSignIn,
+                        compact: true
+                    )
+                }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Tokens.rowInset)
                 .padding(.vertical, Tokens.Space.s)
@@ -409,7 +432,7 @@ struct ListsBrowserView: View {
             .transition(.dayruleBanner)
     }
 
-    /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS (PLAN §6.5).
+    /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS / areas (PLAN §6.5).
     @ViewBuilder
     private func phoneBrowseRows(colors: DayruleColors) -> some View {
         if model.needsServerSignIn {
@@ -450,32 +473,81 @@ struct ListsBrowserView: View {
             .listRowBackground(colors.bg)
             .listRowSeparatorTint(colors.hairline)
         }
-        let projects = browseProjects
-        if !projects.isEmpty {
+        Menu {
+            newListButtons
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "plus")
+                    .font(.body)
+                    .foregroundStyle(colors.textSecondary)
+                    .frame(width: browseIconWidth)
+                    .accessibilityHidden(true)
+                Text("New List")
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(colors.textSecondary)
+                Spacer(minLength: 0)
+            }
+            .frame(minHeight: Tokens.rowHeight)
+        }
+        .accessibilityIdentifier("browse.newList")
+        .listRowBackground(colors.bg)
+        .listRowSeparatorTint(colors.hairline)
+
+        let tree = Lists.browseTree(model.entities)
+        if !tree.looseProjects.isEmpty {
             Section {
-                ForEach(projects, id: \.id) { project in
-                    NavigationLink(value: PhoneRoute.project(project.id)) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "bookmark")
-                                .font(.body)
-                                .foregroundStyle(colors.textSecondary)
-                                .frame(width: browseIconWidth)
-                                .accessibilityHidden(true)
-                            Text(project.title.isEmpty ? "Untitled" : project.title)
-                                .font(DayruleType.sectionSerif)
-                                .foregroundStyle(colors.text)
-                            Spacer(minLength: 0)
-                        }
-                        .frame(minHeight: Tokens.rowHeight)
-                    }
-                    .accessibilityIdentifier("list.sidebar.project.\(project.id)")
-                    .listRowBackground(colors.bg)
-                    .listRowSeparatorTint(colors.hairline)
+                ForEach(tree.looseProjects, id: \.id) { project in
+                    phoneProjectLink(project, colors: colors)
                 }
             } header: {
                 DayruleSectionHeader(title: "Projects", tone: .muted, style: .caps)
             }
         }
+        ForEach(tree.areaGroups) { group in
+            Section {
+                NavigationLink(value: PhoneRoute.area(group.area.id)) {
+                    phoneOrgLabel(
+                        title: areaTitle(group.area),
+                        systemImage: "shippingbox",
+                        colors: colors
+                    )
+                }
+                .accessibilityIdentifier("list.sidebar.area.\(group.area.id)")
+                .listRowBackground(colors.bg)
+                .listRowSeparatorTint(colors.hairline)
+                ForEach(group.projects, id: \.id) { project in
+                    phoneProjectLink(project, colors: colors)
+                }
+            }
+        }
+    }
+
+    private func phoneProjectLink(_ project: Project, colors: DayruleColors) -> some View {
+        NavigationLink(value: PhoneRoute.project(project.id)) {
+            phoneOrgLabel(
+                title: projectTitle(project),
+                systemImage: "bookmark",
+                colors: colors
+            )
+        }
+        .accessibilityIdentifier("list.sidebar.project.\(project.id)")
+        .listRowBackground(colors.bg)
+        .listRowSeparatorTint(colors.hairline)
+    }
+
+    private func phoneOrgLabel(title: String, systemImage: String, colors: DayruleColors) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body)
+                .foregroundStyle(colors.textSecondary)
+                .frame(width: browseIconWidth)
+                .accessibilityHidden(true)
+            Text(title)
+                .font(DayruleType.sectionSerif)
+                .foregroundStyle(colors.text)
+            Spacer(minLength: 0)
+        }
+        .frame(minHeight: Tokens.rowHeight)
     }
 
     @ViewBuilder
@@ -513,48 +585,115 @@ struct ListsBrowserView: View {
             .tag(Optional(name))
             .listRowBackground(selection == name ? colors.selectedRow : Color.clear)
         }
-        let projects = browseProjects
-        if !projects.isEmpty {
+        let tree = Lists.browseTree(model.entities)
+        if !tree.looseProjects.isEmpty {
             Section {
-                ForEach(projects, id: \.id) { project in
-                    Button {
-                        projectPath = [project.id]
-                    } label: {
-                        HStack(spacing: 0) {
-                            RoundedRectangle(cornerRadius: 1.5)
-                                .fill(projectPath.last == project.id ? colors.accent : .clear)
-                                .frame(width: 3)
-                                .padding(.trailing, 8)
-                            Label {
-                                Text(project.title.isEmpty ? "Untitled" : project.title)
-                                    .font(DayruleType.sectionSerif)
-                                    .foregroundStyle(colors.text)
-                            } icon: {
-                                Image(systemName: "bookmark")
-                                    .foregroundStyle(colors.textSecondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("list.sidebar.project.\(project.id)")
-                    .listRowBackground(projectPath.last == project.id ? colors.selectedRow : Color.clear)
+                ForEach(tree.looseProjects, id: \.id) { project in
+                    sidebarProjectRow(project, colors: colors)
                 }
             } header: {
                 DayruleSectionHeader(title: "Projects", tone: .muted, style: .caps, surface: .sidebar)
             }
         }
+        ForEach(tree.areaGroups) { group in
+            Section {
+                sidebarOrgRow(
+                    title: areaTitle(group.area),
+                    systemImage: "shippingbox",
+                    selected: isSelected(.area(group.area.id)),
+                    identifier: "list.sidebar.area.\(group.area.id)",
+                    colors: colors
+                ) {
+                    orgPath = [.area(group.area.id)]
+                }
+                ForEach(group.projects, id: \.id) { project in
+                    sidebarProjectRow(project, colors: colors)
+                }
+            }
+        }
     }
 
-    private var browseProjects: [Project] {
-        model.entities.projects.values
-            .filter { !Lists.isTrashed(model.entities, .project($0)) && $0.status == .open }
-            .sorted {
-                let c = Order.compareKeys($0.order, $1.order)
-                if c != 0 { return c < 0 }
-                return Order.compareKeys($0.id, $1.id) < 0
+    private func sidebarProjectRow(_ project: Project, colors: DayruleColors) -> some View {
+        sidebarOrgRow(
+            title: projectTitle(project),
+            systemImage: "bookmark",
+            selected: isSelected(.project(project.id)),
+            identifier: "list.sidebar.project.\(project.id)",
+            colors: colors
+        ) {
+            orgPath = [.project(project.id)]
+        }
+    }
+
+    private func sidebarOrgRow(
+        title: String,
+        systemImage: String,
+        selected: Bool,
+        identifier: String,
+        colors: DayruleColors,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(selected ? colors.accent : .clear)
+                    .frame(width: 3)
+                    .padding(.trailing, 8)
+                Label {
+                    Text(title)
+                        .font(DayruleType.sectionSerif)
+                        .foregroundStyle(colors.text)
+                } icon: {
+                    Image(systemName: systemImage)
+                        .foregroundStyle(colors.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+        .listRowBackground(selected ? colors.selectedRow : Color.clear)
+    }
+
+    private func isSelected(_ route: OrgRoute) -> Bool {
+        orgPath.last == route
+    }
+
+    private func projectTitle(_ project: Project) -> String {
+        project.title.isEmpty ? "New Project" : project.title
+    }
+
+    private func areaTitle(_ area: Area) -> String {
+        area.title.isEmpty ? "New Area" : area.title
+    }
+
+    @ViewBuilder
+    private func newListMenu(colors: DayruleColors) -> some View {
+        Menu {
+            newListButtons
+        } label: {
+            Label("New List", systemImage: "plus")
+                .font(DayruleType.meta)
+                .foregroundStyle(colors.textSecondary)
+        }
+        .accessibilityIdentifier("browse.newList")
+    }
+
+    @ViewBuilder
+    private var newListButtons: some View {
+        Button {
+            addProject()
+        } label: {
+            Label("New Project", systemImage: "bookmark")
+        }
+        .accessibilityIdentifier("browse.newProject")
+        Button {
+            addArea()
+        } label: {
+            Label("New Area", systemImage: "shippingbox")
+        }
+        .accessibilityIdentifier("browse.newArea")
     }
 
     private func browseCount(for name: ListName) -> Int? {
@@ -1095,7 +1234,43 @@ struct ListsBrowserView: View {
         if isCompact {
             phonePath.append(.project(id))
         } else {
-            projectPath = [id]
+            orgPath = [.project(id)]
+        }
+    }
+
+    private func openArea(_ id: ID) {
+        if isCompact {
+            if phoneTab != .browse {
+                selectTab(.browse, path: [.area(id)])
+            } else {
+                phonePath.append(.area(id))
+            }
+        } else {
+            orgPath = [.area(id)]
+        }
+    }
+
+    private func addProject(areaId: ID? = nil) {
+        do {
+            let project = try model.store.run("New Project") { d, env in
+                try Commands.createProject(d, env, title: "", areaId: areaId)
+            }
+            model.noteEntitiesChanged()
+            openProject(project.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
+    }
+
+    private func addArea() {
+        do {
+            let area = try model.store.run("New Area") { d, env in
+                try Commands.createArea(d, env, title: "")
+            }
+            model.noteEntitiesChanged()
+            openArea(area.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 
@@ -1422,24 +1597,22 @@ struct ListsBrowserView: View {
         switch result.destination {
         case .list(let name):
             selection = name
-            projectPath = []
+            orgPath = []
             if isCompact { navigatePhone(to: name) }
         case .todo(let id, let home):
             selection = home
-            projectPath = []
+            orgPath = []
             if isCompact { navigatePhone(to: home) }
             editTarget = EditTarget(id: id)
         case .project(let id):
-            selection = .backlog
-            projectPath = isCompact ? [] : [id]
+            orgPath = isCompact ? [] : [.project(id)]
             if isCompact {
-                selectTab(.browse, path: [.list(.backlog), .project(id)])
+                selectTab(.browse, path: [.project(id)])
             }
-        case .area:
-            selection = .backlog
-            projectPath = []
+        case .area(let id):
+            orgPath = isCompact ? [] : [.area(id)]
             if isCompact {
-                selectTab(.browse, path: [.list(.backlog)])
+                selectTab(.browse, path: [.area(id)])
             }
         }
     }

@@ -34,7 +34,7 @@ struct MoveSheetView: View {
                         }
                         ForEach(liveAreas, id: \.id) { area in
                             moveRow(
-                                title: area.title.isEmpty ? "Untitled" : area.title,
+                                title: area.title.isEmpty ? "New Area" : area.title,
                                 systemImage: "shippingbox",
                                 tint: colors.textSecondary,
                                 selected: isSelected(.area(areaId: area.id)),
@@ -103,7 +103,7 @@ struct MoveSheetView: View {
                     Color.clear.frame(width: Tokens.Space.l)
                 }
                 ProjectProgressGlyph(progress: progress)
-                Text(project.title.isEmpty ? "Untitled" : project.title)
+                Text(project.title.isEmpty ? "New Project" : project.title)
                     .foregroundStyle(colors.text)
                 Spacer()
                 if isSelected(.project(projectId: project.id)) {

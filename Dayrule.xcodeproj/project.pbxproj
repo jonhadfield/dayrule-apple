@@ -156,6 +156,7 @@
 		F789CCC818758E07D06A8ED4 /* FieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7002250834D980A75C6C5150 /* FieldStyle.swift */; };
 		F913F1DE7E957405EA69B8AD /* Exchange.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D7023605829FF55C543A3A /* Exchange.swift */; };
 		FD5DAC4BCC18FBD39E4375BB /* PasskeyAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = 469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */; };
+		FDC5BB82A1946173B66659F2 /* AreaDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C91757075DD49299DC548210 /* AreaDetailView.swift */; };
 		FF8D2280E924CB771079F3EA /* StoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1160CD5B09CB87451563810B /* StoreTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -292,6 +293,7 @@
 		C27C6E4851E216FA86CFF166 /* DayruleCheckbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayruleCheckbox.swift; sourceTree = "<group>"; };
 		C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DomainVectorsTests.swift; sourceTree = "<group>"; };
 		C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ATSLocalNetworkingTests.swift; sourceTree = "<group>"; };
+		C91757075DD49299DC548210 /* AreaDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AreaDetailView.swift; sourceTree = "<group>"; };
 		C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceUnlockPrefs.swift; sourceTree = "<group>"; };
 		C9DB67593F5F177017269F6B /* VaultToEntitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultToEntitiesTests.swift; sourceTree = "<group>"; };
 		CA658F607831ED59FCA9C634 /* Draft.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Draft.swift; sourceTree = "<group>"; };
@@ -346,6 +348,7 @@
 		01CBA67AB7214905145C1B92 /* Lists */ = {
 			isa = PBXGroup;
 			children = (
+				C91757075DD49299DC548210 /* AreaDetailView.swift */,
 				E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */,
 				B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */,
 				9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */,
@@ -801,6 +804,7 @@
 				CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */,
 				96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */,
 				9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */,
+				FDC5BB82A1946173B66659F2 /* AreaDetailView.swift in Sources */,
 				AC9269A5101C25EBCD4E2390 /* BIP39.swift in Sources */,
 				F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */,
 				2C3BF86E62AD938EF4E4B054 /* BiometricKeyStore.swift in Sources */,

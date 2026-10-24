@@ -118,7 +118,7 @@ struct HelpArticleView: View {
             ("Trash", "Deleted to-dos and projects, until you empty it."),
         ], colors)
         para(
-            "On a phone the tabs are Inbox · Today · Scheduled · Browse. Browse holds Backlog, Done, Trash and your projects. On iPad and Mac the same lists sit in the sidebar.",
+            "On a phone the tabs are Inbox · Today · Scheduled · Browse. Browse holds Backlog, Done, Trash, projects and areas. New List creates a project or an area. On iPad and Mac the same lists sit in the sidebar.",
             colors
         )
         para(
@@ -217,7 +217,7 @@ struct HelpArticleView: View {
         }
         heading("Make one", colors)
         para(
-            "Create projects and areas from Browse (or the sidebar on iPad and Mac). Open a project and use Add for to-dos inside it.",
+            "Create projects and areas from Browse (or the sidebar on iPad and Mac). Open a project or area and use Add for to-dos inside it.",
             colors
         )
         heading("Headings", colors)

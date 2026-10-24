@@ -395,4 +395,68 @@ enum Lists {
         }
         return Progress(done: done, total: total)
     }
+
+    struct AreaView: Equatable, Sendable {
+        var area: Area
+        var projects: [Project]
+        var todos: [Todo]
+    }
+
+    /// An area's visible projects and loose to-dos (web `areaView`).
+    static func areaView(_ e: Entities, _ areaId: ID, _ ctx: Context) -> AreaView? {
+        guard let area = e.areas[areaId] else { return nil }
+        return AreaView(
+            area: area,
+            projects: e.projects.values
+                .filter { $0.areaId == areaId && isVisible(e, .project($0), ctx) }
+                .sorted { byOrder(.project($0), .project($1)) },
+            todos: e.todos.values
+                .filter {
+                    $0.areaId == areaId
+                        && $0.projectId == nil
+                        && isVisible(e, .todo($0), ctx)
+                        && effectiveStart(e, .todo($0)) != .later
+                }
+                .sorted { byOrder(.todo($0), .todo($1)) }
+        )
+    }
+
+    struct AreaGroup: Equatable, Sendable, Identifiable {
+        var area: Area
+        var projects: [Project]
+        var id: ID { area.id }
+    }
+
+    /// Sidebar / Browse tree: open projects that are not Later, grouped under live areas
+    /// (web Sidebar). Later projects stay in Not now.
+    struct BrowseTree: Equatable, Sendable {
+        var looseProjects: [Project]
+        var areaGroups: [AreaGroup]
+    }
+
+    static func browseTree(_ e: Entities) -> BrowseTree {
+        let liveAreaIds = Set(e.areas.values.filter { $0.trashedAt == nil }.map(\.id))
+        let projects = e.projects.values
+            .filter {
+                !isTrashed(e, .project($0)) && $0.status == .open && $0.start != .later
+            }
+            .sorted { byOrder(.project($0), .project($1)) }
+        let loose = projects.filter { project in
+            guard let areaId = project.areaId else { return true }
+            return !liveAreaIds.contains(areaId)
+        }
+        let groups = e.areas.values
+            .filter { $0.trashedAt == nil }
+            .sorted { byOrderKeys($0.order, $0.id, $1.order, $1.id) }
+            .map { area in
+                AreaGroup(area: area, projects: projects.filter { $0.areaId == area.id })
+            }
+        return BrowseTree(looseProjects: loose, areaGroups: groups)
+    }
+
+    private static func byOrderKeys(_ aOrder: OrderKey, _ aId: ID, _ bOrder: OrderKey, _ bId: ID) -> Bool {
+        let c = Order.compareKeys(aOrder, bOrder)
+        if c != 0 { return c < 0 }
+        return Order.compareKeys(aId, bId) < 0
+    }
 }
