@@ -32,3 +32,5 @@ agent-creds.txt
 agent-invite.txt
 agent-invites.txt
 docs/app-review-notes.txt
+# Derived ASC upload sizes (regenerate with sips from macos/)
+docs/app-store-screenshots/macos-2560x1600/
