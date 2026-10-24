@@ -36,19 +36,6 @@ struct AreaDetailView: View {
         let title = displayTitle(view?.area.title)
         List {
             if let view {
-                RuledRow {
-                    TextField(
-                        "",
-                        text: areaTitleBinding,
-                        prompt: Text("New Area").foregroundStyle(colors.textSecondary)
-                    )
-                    .font(DayruleType.sectionSerif)
-                    .dayruleBareField(colors: colors)
-                    .focused($titleFocused)
-                    .accessibilityLabel("Area title")
-                    .accessibilityIdentifier("area.title")
-                }
-
                 ForEach(view.projects, id: \.id) { project in
                     Button {
                         onOpenProject(project.id)
@@ -98,7 +85,13 @@ struct AreaDetailView: View {
         .background(colors.bg)
         .navigationTitle(title)
         .dayruleListNavChrome(colors: colors)
-        .dayrulePageTitle(title)
+        .dayruleEditablePageTitle(
+            text: areaTitleBinding,
+            prompt: "New Area",
+            accessibilityLabel: "Area title",
+            identifier: "area.title",
+            focused: $titleFocused
+        )
         .onAppear {
             if (view?.area.title ?? "").isEmpty {
                 titleFocused = true

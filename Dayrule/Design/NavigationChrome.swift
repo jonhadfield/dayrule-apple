@@ -85,12 +85,53 @@ struct DayrulePageTitle: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        VStack(alignment: .leading, spacing: 0) {
+        DayrulePageTitleChrome {
             Text(title)
                 .font(DayruleType.pageTitle)
                 .tracking(DayruleType.titleTracking)
                 .foregroundStyle(colors.text)
                 .accessibilityAddTraits(.isHeader)
+        }
+    }
+}
+
+/// Area / project heading: the page title *is* the rename field (web ListShell).
+struct DayruleEditablePageTitle: View {
+    @Binding var text: String
+    var prompt: String
+    var accessibilityLabel: String
+    var identifier: String
+    var focused: FocusState<Bool>.Binding
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        DayrulePageTitleChrome {
+            TextField(
+                "",
+                text: $text,
+                prompt: Text(prompt).foregroundStyle(colors.textSecondary)
+            )
+            .font(DayruleType.pageTitle)
+            .tracking(DayruleType.titleTracking)
+            .dayruleBareField(colors: colors)
+            .focused(focused)
+            .dayruleClearFieldEditor(isFocused: focused.wrappedValue)
+            .accessibilityLabel(accessibilityLabel)
+            .accessibilityAddTraits(.isHeader)
+            .accessibilityIdentifier(identifier)
+        }
+    }
+}
+
+private struct DayrulePageTitleChrome<Content: View>: View {
+    @ViewBuilder var content: Content
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        VStack(alignment: .leading, spacing: 0) {
+            content
                 .padding(.bottom, 8)
             colors.text.frame(height: 2)
         }
@@ -117,6 +158,34 @@ private struct DayrulePageTitleModifier: ViewModifier {
     }
 }
 
+private struct DayruleEditablePageTitleModifier: ViewModifier {
+    @Binding var text: String
+    var prompt: String
+    var accessibilityLabel: String
+    var identifier: String
+    var focused: FocusState<Bool>.Binding
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        content
+            #if os(iOS)
+            // List chrome sets large titles; the editable heading replaces that slot.
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
+            #endif
+            .safeAreaInset(edge: .top, spacing: 0) {
+                DayruleEditablePageTitle(
+                    text: $text,
+                    prompt: prompt,
+                    accessibilityLabel: accessibilityLabel,
+                    identifier: identifier,
+                    focused: focused
+                )
+                .background(DayruleColors.resolve(colorScheme: colorScheme).bg)
+            }
+    }
+}
+
 extension View {
     func dayruleListNavChrome(colors: DayruleColors) -> some View {
         modifier(DayruleListNavChrome(colors: colors))
@@ -125,5 +194,25 @@ extension View {
     /// macOS: Fraunces page title inset above the content. iOS: no-op (nav bar shows it).
     func dayrulePageTitle(_ title: String) -> some View {
         modifier(DayrulePageTitleModifier(title: title))
+    }
+
+    /// Fraunces page title is the rename field (web ListShell). Suppresses the
+    /// large nav title on iOS so the name is not drawn twice.
+    func dayruleEditablePageTitle(
+        text: Binding<String>,
+        prompt: String,
+        accessibilityLabel: String,
+        identifier: String,
+        focused: FocusState<Bool>.Binding
+    ) -> some View {
+        modifier(
+            DayruleEditablePageTitleModifier(
+                text: text,
+                prompt: prompt,
+                accessibilityLabel: accessibilityLabel,
+                identifier: identifier,
+                focused: focused
+            )
+        )
     }
 }

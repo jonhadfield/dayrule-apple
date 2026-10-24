@@ -37,18 +37,6 @@ struct ProjectDetailView: View {
         let title = displayTitle(view?.project.title)
         List {
             if let view {
-                RuledRow {
-                    TextField(
-                        "",
-                        text: projectTitleBinding,
-                        prompt: Text("New Project").foregroundStyle(colors.textSecondary)
-                    )
-                    .font(DayruleType.sectionSerif)
-                    .dayruleBareField(colors: colors)
-                    .focused($titleFocused)
-                    .accessibilityLabel("Project title")
-                    .accessibilityIdentifier("project.title")
-                }
                 if !view.project.notes.isEmpty {
                     RuledRow(style: .note) {
                         Text(view.project.notes)
@@ -114,7 +102,13 @@ struct ProjectDetailView: View {
         .background(colors.bg)
         .navigationTitle(title)
         .dayruleListNavChrome(colors: colors)
-        .dayrulePageTitle(title)
+        .dayruleEditablePageTitle(
+            text: projectTitleBinding,
+            prompt: "New Project",
+            accessibilityLabel: "Project title",
+            identifier: "project.title",
+            focused: $titleFocused
+        )
         .onAppear {
             if (view?.project.title ?? "").isEmpty {
                 titleFocused = true

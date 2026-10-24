@@ -94,6 +94,7 @@ struct ListsBrowserView: View {
     /// Multi-select mode (PLAN §6.5): bar replaces Add; taps toggle membership.
     @State private var selecting = false
     @State private var selectedIds: Set<ID> = []
+    @State private var showNewList = false
     @ScaledMetric(relativeTo: .body) private var tabIconSize: CGFloat = 18
     @ScaledMetric(relativeTo: .body) private var browseIconWidth: CGFloat = 22
 
@@ -414,6 +415,9 @@ struct ListsBrowserView: View {
                 .padding(.horizontal, Tokens.rowInset)
                 .padding(.vertical, Tokens.Space.s)
                 .background(colors.sidebar)
+                .overlay(alignment: .top) {
+                    colors.hairline.frame(height: 1)
+                }
             }
         }
     }
@@ -473,25 +477,9 @@ struct ListsBrowserView: View {
             .listRowBackground(colors.bg)
             .listRowSeparatorTint(colors.hairline)
         }
-        Menu {
-            newListButtons
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "plus")
-                    .font(.body)
-                    .foregroundStyle(colors.textSecondary)
-                    .frame(width: browseIconWidth)
-                    .accessibilityHidden(true)
-                Text("New List")
-                    .font(.body.weight(.medium))
-                    .foregroundStyle(colors.textSecondary)
-                Spacer(minLength: 0)
-            }
-            .frame(minHeight: Tokens.rowHeight)
-        }
-        .accessibilityIdentifier("browse.newList")
-        .listRowBackground(colors.bg)
-        .listRowSeparatorTint(colors.hairline)
+        newListTrigger(colors: colors, style: .browseRow)
+            .listRowBackground(colors.bg)
+            .listRowSeparatorTint(colors.hairline)
 
         let tree = Lists.browseTree(model.entities)
         if !tree.looseProjects.isEmpty {
@@ -668,32 +656,126 @@ struct ListsBrowserView: View {
         area.title.isEmpty ? "New Area" : area.title
     }
 
-    @ViewBuilder
-    private func newListMenu(colors: DayruleColors) -> some View {
-        Menu {
-            newListButtons
-        } label: {
-            Label("New List", systemImage: "plus")
-                .font(DayruleType.meta)
-                .foregroundStyle(colors.textSecondary)
-        }
-        .accessibilityIdentifier("browse.newList")
+    /// Paper New List control (web Sidebar). System `Menu` uses footnote-sized
+    /// pull-downs on Mac and a compact List picker on iPhone — both too small
+    /// next to 15pt / body rows.
+    private enum NewListTriggerStyle {
+        case browseRow
+        case sidebarFooter
     }
 
-    @ViewBuilder
-    private var newListButtons: some View {
+    private func newListTrigger(colors: DayruleColors, style: NewListTriggerStyle) -> some View {
         Button {
-            addProject()
+            showNewList = true
         } label: {
-            Label("New Project", systemImage: "bookmark")
+            switch style {
+            case .browseRow:
+                HStack(spacing: 12) {
+                    Image(systemName: "plus")
+                        .font(DayruleType.rowTitle)
+                        .foregroundStyle(colors.textSecondary)
+                        .frame(width: browseIconWidth)
+                        .accessibilityHidden(true)
+                    Text("New List")
+                        .font(DayruleType.rowTitle.weight(.medium))
+                        .foregroundStyle(colors.textSecondary)
+                    Spacer(minLength: 0)
+                }
+                .frame(minHeight: Tokens.rowHeight)
+            case .sidebarFooter:
+                NewListFooterLabel(colors: colors)
+            }
         }
-        .accessibilityIdentifier("browse.newProject")
+        .buttonStyle(.plain)
+        .controlSize(.regular)
+        .accessibilityIdentifier("browse.newList")
+        .popover(isPresented: $showNewList, arrowEdge: style == .sidebarFooter ? .top : .bottom) {
+            newListPicker(colors: colors)
+                .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    private func newListMenu(colors: DayruleColors) -> some View {
+        newListTrigger(colors: colors, style: .sidebarFooter)
+    }
+
+    private func newListPicker(colors: DayruleColors) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous)
+        return VStack(alignment: .leading, spacing: 0) {
+            newListChoice(
+                title: "New Project",
+                systemImage: "bookmark",
+                identifier: "browse.newProject",
+                colors: colors,
+                action: { addProject() }
+            )
+            newListChoice(
+                title: "New Area",
+                systemImage: "shippingbox",
+                identifier: "browse.newArea",
+                colors: colors,
+                action: { addArea() }
+            )
+        }
+        .padding(Tokens.Space.xs)
+        .frame(minWidth: 176)
+        .background(colors.bg)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(colors.hairline, lineWidth: 1))
+        .presentationBackground(colors.bg)
+    }
+
+    private func newListChoice(
+        title: String,
+        systemImage: String,
+        identifier: String,
+        colors: DayruleColors,
+        action: @escaping () -> Void
+    ) -> some View {
         Button {
-            addArea()
+            showNewList = false
+            action()
         } label: {
-            Label("New Area", systemImage: "shippingbox")
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: systemImage)
+                    .font(DayruleType.rowTitle)
+                    .foregroundStyle(colors.textSecondary)
+                    .frame(width: 18)
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(DayruleType.rowTitle)
+                    .foregroundStyle(colors.text)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Tokens.Space.s)
+            .frame(maxWidth: .infinity, minHeight: Tokens.rowHeight, alignment: .leading)
         }
-        .accessibilityIdentifier("browse.newArea")
+        .buttonStyle(.dayruleRow)
+        .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+        .accessibilityIdentifier(identifier)
+    }
+
+    private struct NewListFooterLabel: View {
+        let colors: DayruleColors
+        @State private var hovering = false
+
+        var body: some View {
+            HStack(spacing: Tokens.Space.s) {
+                Image(systemName: "plus")
+                    .font(DayruleType.rowTitle)
+                Text("New List")
+                    .font(DayruleType.rowTitle)
+            }
+            .foregroundStyle(colors.textSecondary)
+            .padding(.horizontal, Tokens.Space.s)
+            .padding(.vertical, Tokens.Space.xs)
+            .background(
+                RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
+                    .fill(hovering ? colors.hairline.opacity(0.6) : Color.clear)
+            )
+            .contentShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
+            .onHover { hovering = $0 }
+        }
     }
 
     private func browseCount(for name: ListName) -> Int? {
