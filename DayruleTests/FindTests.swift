@@ -33,6 +33,19 @@ struct FindTests {
         #expect(f.search("post parcel").compactMap(\.todoId) == [a.id])
     }
 
+    @Test func emptyContainerTitlesShowUntitledInDetail() {
+        let w = World()
+        let area = w.area(title: "")
+        let project = w.project(title: "")
+        let inArea = w.todo(title: "Wipe the tiles", areaId: area.id, start: .ready)
+        let inProject = w.todo(title: "Buy brushes", projectId: project.id, start: .ready)
+        let f = Find.buildFinder(w.e, ctx)
+        #expect(f.search("tiles").first?.todoId == inArea.id)
+        #expect(f.search("tiles").first?.detail == "Untitled area")
+        #expect(f.search("brushes").first?.todoId == inProject.id)
+        #expect(f.search("brushes").first?.detail == "Untitled project")
+    }
+
     @Test func omitsTrashedProjectsAndAreas() {
         let w = World()
         _ = w.project(title: "Old plan", trashedAt: "2026-10-01T00:00:00Z")

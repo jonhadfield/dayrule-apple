@@ -221,4 +221,27 @@ struct ListsTests {
         #expect(ids(tree.areaGroups[0].projects) == [nested.id])
         #expect(tree.areaGroups[1].projects.isEmpty)
     }
+
+    @Test("browseTree includes empty-title New List items")
+    func browseTreeEmptyTitles() {
+        let w = World()
+        let area = w.area(title: "")
+        let nested = w.project(title: "", areaId: area.id)
+        let loose = w.project(title: "")
+        let tree = Lists.browseTree(w.e)
+        #expect(ids(tree.looseProjects) == [loose.id])
+        #expect(ids(tree.areaGroups.map(\.area)) == [area.id])
+        #expect(ids(tree.areaGroups[0].projects) == [nested.id])
+    }
+
+    @Test("browseTree omits a trashed area and does not promote its projects")
+    func browseTreeTrashedArea() {
+        let w = World()
+        let area = w.area(trashedAt: "2026-10-03T00:00:00Z")
+        w.project(areaId: area.id)
+        let live = w.project()
+        let tree = Lists.browseTree(w.e)
+        #expect(ids(tree.looseProjects) == [live.id])
+        #expect(tree.areaGroups.isEmpty)
+    }
 }
