@@ -117,6 +117,9 @@ sharing.
 • After unlock: tabs / sidebar — Inbox, Today, Scheduled, Backlog, Done,
   Trash; open a project from the sidebar; tap a row to edit; use Add;
   Settings for sync, appearance, Help, export and Delete account.
+• Mac: lists are a sidebar (Inbox · Today · Scheduled · Backlog · Done ·
+  Trash), not phone tabs. New List under the sidebar creates a Project or
+  Area. Lock is ⇧⌘L or the toolbar lock. Settings is ⌘,; Find is ⌘F.
 • Sample to-dos are pre-seeded and synced. Editing/completing them is fine.
 • Lock: Settings toolbar lock, or idle auto-lock (~15 min) unless Stay
   unlocked was chosen at sign-in. Unlock with the same password.

@@ -14,6 +14,7 @@ fi
 OUT="${SCREENSHOT_DIR:-$ROOT/docs/app-store-screenshots/macos}"
 APP="${DAYRULE_APP:-}"
 WINID_BIN=/tmp/dayrule-winid
+CLICK_BIN=/tmp/dayrule-click
 
 if [[ ! -f "$CREDS" ]]; then
   echo "missing creds file: $CREDS" >&2
@@ -56,8 +57,46 @@ SWIFT
   swiftc /tmp/dayrule-winid.swift -o "$WINID_BIN" -framework Cocoa
 fi
 
+# SwiftUI sidebar rows often ignore System Events `click at`; HID does not.
+if [[ ! -x "$CLICK_BIN" ]]; then
+  cat > /tmp/dayrule-click.swift <<'SWIFT'
+import Cocoa
+let args = CommandLine.arguments
+guard args.count >= 3, let x = Double(args[1]), let y = Double(args[2]) else {
+  fputs("usage: click x y\n", stderr); exit(1)
+}
+let pt = CGPoint(x: x, y: y)
+let down = CGEvent(mouseEventSource: nil, mouseType: .leftMouseDown, mouseCursorPosition: pt, mouseButton: .left)
+let up = CGEvent(mouseEventSource: nil, mouseType: .leftMouseUp, mouseCursorPosition: pt, mouseButton: .left)
+down?.post(tap: .cghidEventTap)
+usleep(40000)
+up?.post(tap: .cghidEventTap)
+SWIFT
+  swiftc /tmp/dayrule-click.swift -o "$CLICK_BIN" -framework Cocoa
+fi
+
 mkdir -p "$OUT"
-find "$OUT" -maxdepth 1 -name '*.png' -delete 2>/dev/null || true
+
+activate_dayrule() {
+  osascript <<'EOF'
+tell application "System Events"
+  if not (exists process "Dayrule") then error "Dayrule process missing"
+  set frontmost of process "Dayrule" to true
+end tell
+EOF
+}
+
+wait_for_process() {
+  local i
+  for i in $(seq 1 20); do
+    if pgrep -x Dayrule >/dev/null 2>&1; then
+      activate_dayrule 2>/dev/null && return 0
+    fi
+    sleep 0.5
+  done
+  echo "Dayrule process never became frontmost" >&2
+  return 1
+}
 
 if [[ "$EMAIL" == *appreview* ]]; then
   echo "refusing App Review mailbox — use agent-creds.txt" >&2
@@ -65,19 +104,29 @@ if [[ "$EMAIL" == *appreview* ]]; then
 fi
 
 killall Dayrule 2>/dev/null || true
-sleep 1
+for i in $(seq 1 20); do
+  pgrep -x Dayrule >/dev/null 2>&1 || break
+  sleep 0.25
+done
+if pgrep -x Dayrule >/dev/null 2>&1; then
+  echo "Dayrule still running after killall — retrying SIGKILL" >&2
+  killall -9 Dayrule 2>/dev/null || true
+  sleep 1
+fi
 open "$APP"
-sleep 3
-
-osascript <<'EOF'
-tell application "Dayrule" to activate
-delay 0.8
-EOF
+wait_for_process
+# Wait until the layer-0 window exists (Launch Services can return before it does).
+for i in $(seq 1 20); do
+  if [[ -x "$WINID_BIN" ]] && "$WINID_BIN" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 0.4
+done
+sleep 1
 
 # Lock to the password gate (⇧⌘L). Escape any open sheet first.
+# Do not `tell application "Dayrule"` — SwiftUI often times out AppleEvents.
 osascript <<'EOF' || true
-tell application "Dayrule" to activate
-delay 0.3
 tell application "System Events"
   tell process "Dayrule"
     set frontmost to true
@@ -90,7 +139,8 @@ tell application "System Events"
 end tell
 EOF
 
-# Wait until the Debug gate's three text fields exist (API / email / password).
+# Wait for the sign-in form. Advanced options (API field) stay collapsed, so
+# the usual gate is email + password (2 fields), not 3.
 echo "waiting for sign-in gate…"
 GATE=0
 for i in $(seq 1 30); do
@@ -111,7 +161,7 @@ end tell
 EOF
 )"
   COUNT="$(echo "$COUNT" | tr -d '[:space:]')"
-  if [[ "$COUNT" =~ ^[0-9]+$ ]] && [[ "$COUNT" -ge 3 ]]; then
+  if [[ "$COUNT" =~ ^[0-9]+$ ]] && [[ "$COUNT" -ge 2 ]]; then
     GATE=1
     echo "gate ready ($COUNT fields)"
     break
@@ -126,9 +176,10 @@ if [[ "$GATE" -ne 1 ]]; then
   exit 1
 fi
 
-# Debug Mac gate: API + email + password are ordinary AX text fields.
-# Clipboard/keystroke paste is unreliable on SwiftUI — set AX value instead.
-echo "filling gate (production API + agent account)…"
+# Gate fields are AX text fields. Advanced (API) is collapsed, so usually
+# email + password. Overwrite email with the agent account so a personal
+# vault is never unlocked. Clipboard paste is unreliable on SwiftUI.
+echo "filling gate (agent account)…"
 python3 - "$EMAIL" "$PASSWORD" <<'PY'
 import json, subprocess, sys
 email, password = sys.argv[1], sys.argv[2]
@@ -142,11 +193,32 @@ def run_as(script: str) -> str:
 
 run_as(
     """
-tell application "Dayrule" to activate
-delay 0.3
-tell application "System Events" to tell process "Dayrule" to set frontmost to true
+tell application "System Events"
+  tell process "Dayrule"
+    set frontmost to true
+  end tell
+end tell
 """
 )
+
+def field_count() -> int:
+    n = run_as(
+        """
+tell application "System Events"
+  tell process "Dayrule"
+    set ui to entire contents of window 1
+    set n to 0
+    repeat with e in ui
+      try
+        if (class of e as string) is "text field" then set n to n + 1
+      end try
+    end repeat
+    return n
+  end tell
+end tell
+"""
+    )
+    return int(n)
 
 def set_field(index: int, value: str) -> None:
     lit = json.dumps(value)
@@ -173,12 +245,9 @@ end tell
 """
     )
 
-set_field(1, api)
-set_field(2, email)
-set_field(3, password)
-
-verify = run_as(
-    """
+def field_values():
+    raw = run_as(
+        """
 tell application "System Events"
   tell process "Dayrule"
     set ui to entire contents of window 1
@@ -188,15 +257,35 @@ tell application "System Events"
         if (class of e as string) is "text field" then set end of fields to e
       end try
     end repeat
-    return (value of item 1 of fields as string) & "|" & (value of item 2 of fields as string) & "|" & (length of (value of item 3 of fields as string) as string)
+    set bits to {}
+    repeat with f in fields
+      set end of bits to (value of f as string)
+    end repeat
+    set AppleScript's text item delimiters to linefeed
+    return bits as string
   end tell
 end tell
 """
-)
-api_v, email_v, pass_len = verify.split("|", 2)
-if "dayrule.app" not in api_v or email_v != email or int(pass_len) < 1:
-    raise SystemExit(f"gate fill failed: api={api_v!r} email={email_v!r} pass_len={pass_len}")
-print(f"gate ok api={api_v} email={email_v} pass_len={pass_len}")
+    )
+    return raw.splitlines()
+
+n = field_count()
+if n >= 3:
+    set_field(1, api)
+    set_field(2, email)
+    set_field(3, password)
+elif n == 2:
+    set_field(1, email)
+    set_field(2, password)
+else:
+    raise SystemExit(f"unexpected gate field count: {n}")
+
+vals = field_values()
+email_v = vals[-2] if len(vals) >= 2 else ""
+pass_len = len(vals[-1]) if vals else 0
+if email_v != email or pass_len < 1:
+    raise SystemExit("gate fill failed: email mismatch or empty password")
+print(f"gate ok fields={len(vals)} email={email_v} pass_len={pass_len}")
 PY
 PASSWORD=""
 
@@ -236,7 +325,10 @@ tell application "System Events"
 end tell
 EOF
 
-echo "waiting for agent vault (Kitchen)…"
+# Project rows are omitted from the AX tree. Trash is the last built-in
+# list and is exposed; after unlock, HID-click below it and require the
+# window title Kitchen so a personal vault is never captured.
+echo "waiting for lists chrome (Trash)…"
 READY=0
 for i in $(seq 1 90); do
   sleep 2
@@ -246,15 +338,9 @@ tell application "System Events"
     set ui to entire contents of window 1
     repeat with e in ui
       try
-        if ((class of e as string) is "static text") and (name of e is "Kitchen") then
-          return "yes"
-        end if
-      end try
-    end repeat
-    repeat with e in ui
-      try
-        if (class of e as string) is "static text" then
+        if ((class of e as string) is "static text") then
           set nm to name of e as string
+          if nm is "Trash" then return "yes"
           if nm contains "wrong" or nm contains "Could" or nm contains "network" or nm contains "Invalid" or nm contains "try again" then
             return "err:" & nm
           end if
@@ -280,11 +366,11 @@ EOF
 done
 
 if [[ "$READY" -ne 1 ]]; then
-  echo "agent vault (Kitchen) never appeared — refusing to capture" >&2
+  echo "lists chrome never appeared — refusing to capture" >&2
   killall Dayrule 2>/dev/null || true
   exit 1
 fi
-echo "agent vault visible (Kitchen)"
+echo "lists chrome visible"
 
 shot() {
   local name="$1"
@@ -295,11 +381,9 @@ shot() {
   echo "wrote $name.png"
 }
 
-click_sidebar() {
+label_center() {
   local label="$1"
   osascript <<EOF
-tell application "Dayrule" to activate
-delay 0.2
 tell application "System Events"
   tell process "Dayrule"
     set frontmost to true
@@ -309,19 +393,64 @@ tell application "System Events"
         if ((class of e as string) is "static text") and (name of e is "$label") then
           set p to position of e
           set s to size of e
-          set x to (item 1 of p) + (item 1 of s) / 2
-          set y to (item 2 of p) + (item 2 of s) / 2
-          click at {x, y}
-          delay 1.0
-          return
+          return ((item 1 of p) + (item 1 of s) / 2 as integer as text) & "," & ((item 2 of p) + (item 2 of s) / 2 as integer as text)
         end if
       end try
     end repeat
-    error "sidebar label not found: $label"
+    error "label not found: $label"
   end tell
 end tell
 EOF
 }
+
+hid_click() {
+  local x="$1" y="$2"
+  activate_dayrule 2>/dev/null || true
+  "$CLICK_BIN" "$x" "$y"
+  sleep 0.85
+}
+
+click_sidebar() {
+  local label="$1"
+  local xy x y
+  xy="$(label_center "$label")"
+  x="${xy%,*}"
+  y="${xy#*,}"
+  # Hit the icon column — label center alone often misses SwiftUI rows.
+  hid_click $((x - 40)) "$y"
+}
+
+click_kitchen() {
+  local xy x y
+  xy="$(label_center "Trash")"
+  x="${xy%,*}"; y="${xy#*,}"
+  hid_click $((x - 20)) $((y + 56))
+}
+
+window_name() {
+  osascript -e 'tell application "System Events" to tell process "Dayrule" to name of window 1 as string' 2>/dev/null || true
+}
+
+# Project rows aren't in AX. Opening the first project under Trash and
+# requiring the title Kitchen is how we refuse a personal vault.
+echo "probing Kitchen via HID…"
+KITCHEN_OK=0
+for i in $(seq 1 20); do
+  click_kitchen
+  if [[ "$(window_name)" == "Kitchen" ]]; then
+    KITCHEN_OK=1
+    echo "agent vault visible (Kitchen)"
+    break
+  fi
+  sleep 1
+done
+if [[ "$KITCHEN_OK" -ne 1 ]]; then
+  echo "Kitchen project never opened — refusing to capture" >&2
+  killall Dayrule 2>/dev/null || true
+  exit 1
+fi
+
+find "$OUT" -maxdepth 1 -name '*.png' -delete 2>/dev/null || true
 
 click_sidebar "Today"
 shot "01-today"
@@ -332,49 +461,20 @@ shot "03-scheduled"
 click_sidebar "Backlog"
 shot "04-backlog"
 
-# Kitchen project then Paint todo / editor if possible
-osascript <<'EOF'
-tell application "Dayrule" to activate
-delay 0.2
-tell application "System Events"
-  tell process "Dayrule"
-    set frontmost to true
-    set ui to entire contents of window 1
-    repeat with e in ui
-      try
-        if ((class of e as string) is "static text") and (name of e is "Kitchen") then
-          set p to position of e
-          set s to size of e
-          click at {(item 1 of p) + (item 1 of s) / 2, (item 2 of p) + (item 2 of s) / 2}
-          delay 1.2
-          exit repeat
-        end if
-      end try
-    end repeat
-  end tell
-end tell
-EOF
+click_kitchen
+# Blur the editable page title so the shot isn't a rename field.
+osascript -e 'tell application "System Events" to tell process "Dayrule" to key code 53' 2>/dev/null || true
+sleep 0.3
 shot "05-project-kitchen"
 
-osascript <<'EOF' || true
-tell application "System Events"
-  tell process "Dayrule"
-    set frontmost to true
-    set ui to entire contents of window 1
-    repeat with e in ui
-      try
-        if ((class of e as string) is "static text") and (name of e is "Paint the cupboards") then
-          set p to position of e
-          set s to size of e
-          click at {(item 1 of p) + (item 1 of s) / 2, (item 2 of p) + (item 2 of s) / 2}
-          delay 1.2
-          exit repeat
-        end if
-      end try
-    end repeat
-  end tell
-end tell
-EOF
+# Paint the cupboards may be missing from AX; click the first todo row.
+if xy="$(label_center "Paint the cupboards" 2>/dev/null)"; then
+  x="${xy%,*}"; y="${xy#*,}"
+  hid_click "$x" "$y"
+else
+  ix="$(label_center "Inbox")"
+  hid_click $((${ix%,*} + 340)) $((${ix#*,} + 110))
+fi
 shot "06-editor-checklist"
 
 # Leave the gate so the user's personal session isn't left open mid-automation;

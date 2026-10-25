@@ -27,8 +27,11 @@ Dayrule.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved.bak
 todo.txt
 # App Review demo (ASC only) — never for agent automation
 creds.txt
+appreview-macos-recovery.txt
 # Agent / local automation test account (not App Review)
 agent-creds.txt
 agent-invite.txt
 agent-invites.txt
 docs/app-review-notes.txt
+# Derived ASC upload sizes (regenerate with sips from macos/)
+docs/app-store-screenshots/macos-2560x1600/
