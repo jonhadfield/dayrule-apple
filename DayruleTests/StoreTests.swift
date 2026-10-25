@@ -13,6 +13,23 @@ struct StoreTests {
         )
     }
 
+    /// Unique ids so New List can create an area and a nested project in one store.
+    private func sequentialStore() -> EntityStore {
+        final class Seq: @unchecked Sendable {
+            private var n = 0
+            func next() -> String {
+                n += 1
+                return String(format: "id-%04d", n)
+            }
+        }
+        let seq = Seq()
+        return EntityStore(clock: StoreClock(
+            now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            newId: { seq.next() },
+            hlc: HLC(device: "testdevice1") { 1_700_000_000_000 }
+        ))
+    }
+
     @Test func createTodoStampsClockAndUndoRestores() throws {
         let store = EntityStore(clock: fixedClock())
         let todo = try store.run("Add") { d, env in
@@ -174,6 +191,44 @@ struct StoreTests {
         #expect(store.entities.todos["t1"]?.unknown["futureField"]?.stringValue == "keep-me")
         #expect(store.entities.todos["t1"]?.clock?["title"] != nil)
         #expect(store.entities.todos["t1"]?.clock?["futureField"] == nil)
+    }
+
+    @Test func createAreaEmptyTitleRenameAndUndo() throws {
+        let store = sequentialStore()
+        let area = try store.run("New Area") { d, env in
+            try Commands.createArea(d, env, title: "")
+        }
+        #expect(store.entities.areas[area.id]?.title == "")
+        #expect(store.entities.areas[area.id]?.clock?["title"] != nil)
+        #expect(Lists.browseTree(store.entities).areaGroups.map(\.area.id) == [area.id])
+
+        store.run("Rename") { d, env in
+            Commands.renameArea(d, env, id: area.id, title: "Kitchen")
+        }
+        #expect(store.entities.areas[area.id]?.title == "Kitchen")
+
+        #expect(store.undo() == "Rename")
+        #expect(store.entities.areas[area.id]?.title == "")
+        #expect(store.undo() == "New Area")
+        #expect(store.entities.areas[area.id] == nil)
+        #expect(Lists.browseTree(store.entities).areaGroups.isEmpty)
+    }
+
+    @Test func createProjectInAreaIsNestedNotLoose() throws {
+        let store = sequentialStore()
+        let area = try store.run("New Area") { d, env in
+            try Commands.createArea(d, env, title: "")
+        }
+        let project = try store.run("New Project") { d, env in
+            try Commands.createProject(d, env, title: "", areaId: area.id)
+        }
+        #expect(store.entities.projects[project.id]?.title == "")
+        #expect(store.entities.projects[project.id]?.areaId == area.id)
+        #expect(store.entities.projects[project.id]?.start == .ready)
+        let tree = Lists.browseTree(store.entities)
+        #expect(tree.looseProjects.isEmpty)
+        #expect(tree.areaGroups.map(\.area.id) == [area.id])
+        #expect(tree.areaGroups[0].projects.map(\.id) == [project.id])
     }
 
     @Test func createProjectUpdateAndEmptyTrash() throws {
