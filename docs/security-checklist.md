@@ -55,6 +55,6 @@ in code or by a named manual step — not by assumption.
 - [ ] Privacy nutrition label (App Store Connect)
 - [ ] Confirm French encryption declaration / export-compliance rules before public store
 - [ ] Mac App Store packaging — `docs/mac-app-store.md` (Mac 0.1.0 (16) pkg uploaded 2026-10-24; Kitchen screenshots recaptured unique 2026-10-24; iOS+Mac 0.1.0 (17) uploaded to TestFlight 2026-10-24, processing; demo account + Add for Review still open)
-- [ ] Server `MIN_IOS_BUILD` / `426` floor — **not configured yet** (2026-10-14): client maps `426` / `upgrade_required` → needsUpdate (`AppModel`); dayrule `server/internal/httpapi` has no build-floor middleware. Confirm and set before external testers.
+- [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops:** leave env unset until deliberately cutting old builds; then set floors ≥ oldest supported `CFBundleVersion`.
 
 **Signed off (code items above):** M7 branch review — remaining unchecked items are release ops / server config, not app code.

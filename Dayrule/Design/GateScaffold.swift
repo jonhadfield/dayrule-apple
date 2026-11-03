@@ -38,38 +38,40 @@ struct GateScaffold<Content: View>: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: alignment, spacing: Tokens.Space.l) {
-                    if let title {
-                        Text(title)
-                            .font(titleFont)
-                            .tracking(DayruleType.titleTracking)
-                            .multilineTextAlignment(textAlignment)
-                            .accessibilityAddTraits(.isHeader)
+        FoldSafeContainer {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: alignment, spacing: Tokens.Space.l) {
+                        if let title {
+                            Text(title)
+                                .font(titleFont)
+                                .tracking(DayruleType.titleTracking)
+                                .multilineTextAlignment(textAlignment)
+                                .accessibilityAddTraits(.isHeader)
+                        }
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.body)
+                                .foregroundStyle(colors.textSecondary)
+                                .multilineTextAlignment(textAlignment)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        content(proxy)
                     }
-                    if let subtitle {
-                        Text(subtitle)
-                            .font(.body)
-                            .foregroundStyle(colors.textSecondary)
-                            .multilineTextAlignment(textAlignment)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    content(proxy)
+                    .frame(maxWidth: Tokens.formMaxWidth)
+                    .padding(.horizontal, Tokens.Space.xl)
+                    .padding(.vertical, Tokens.Space.xxl)
+                    .frame(maxWidth: .infinity, minHeight: viewportHeight, alignment: .center)
                 }
-                .frame(maxWidth: Tokens.formMaxWidth)
-                .padding(.horizontal, Tokens.Space.xl)
-                .padding(.vertical, Tokens.Space.xxl)
-                .frame(maxWidth: .infinity, minHeight: viewportHeight, alignment: .center)
+                .onGeometryChange(for: CGFloat.self) { proxy in
+                    proxy.size.height
+                } action: { height in
+                    viewportHeight = height
+                }
+                .scrollDismissesKeyboard(.interactively)
+                .background(colors.bg)
+                .foregroundStyle(colors.text)
             }
-            .onGeometryChange(for: CGFloat.self) { proxy in
-                proxy.size.height
-            } action: { height in
-                viewportHeight = height
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .background(colors.bg)
-            .foregroundStyle(colors.text)
         }
     }
 }
