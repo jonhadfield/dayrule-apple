@@ -111,7 +111,12 @@ struct ListsBrowserView: View {
             if isCompact {
                 phoneBrowser(colors: colors)
             } else {
-                splitBrowser(colors: colors)
+                // Duo book pose: keep the split entirely on one side of an
+                // active fold (same FoldSafeContainer as Gate). Flat open is
+                // a no-op (no division → full container).
+                FoldSafeContainer {
+                    splitBrowser(colors: colors)
+                }
             }
         }
         .onAppear { applyDefaultDestinationIfNeeded() }
