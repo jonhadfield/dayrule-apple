@@ -92,7 +92,7 @@ struct RecoveryPhraseView: View {
             .accessibilityIdentifier("recovery.continue")
             .disabled(!confirmed || busy)
         }
-        .background(colors.bg.ignoresSafeArea())
+        .background(colors.bg)
         .task {
             // Arrives via a screen transition; move VoiceOver to the title once it lands.
             try? await Task.sleep(for: .milliseconds(350))

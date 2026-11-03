@@ -47,8 +47,7 @@ struct GateView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        ZStack {
-            colors.bg.ignoresSafeArea()
+        Group {
             switch model.phase {
             case .locked, .unlocking:
                 if model.isRestoringSession {
@@ -79,6 +78,10 @@ struct GateView: View {
                 ListsBrowserView(model: model)
                     .transition(.dayruleScreen)
             }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            colors.bg.ignoresSafeArea()
         }
         .dayruleAnimation(Motion.screen, value: screen)
         .task { await model.tryDeviceUnlock() }

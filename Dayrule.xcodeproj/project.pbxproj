@@ -32,6 +32,7 @@
 		2BF4C47D521435E78A947EF1 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDA6EB07F5EF2CD6EE40649 /* Order.swift */; };
 		2C3BF86E62AD938EF4E4B054 /* BiometricKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6A9F3E304118C6A55C4728 /* BiometricKeyStore.swift */; };
 		2CC31B890CE1BD8E39BAECC3 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3EFB30B8DEE3113910D329 /* ButtonStyles.swift */; };
+		2FC5F630FA85CEAEC637E306 /* FoldLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC97C4DD616C0DD3AC537AC8 /* FoldLayout.swift */; };
 		30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B739D187E09BA80EF8304B /* DayruleApp.swift */; };
 		319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */; };
 		323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */; };
@@ -133,6 +134,7 @@
 		D830CEFB488936F28111961A /* DayruleCheckbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = C27C6E4851E216FA86CFF166 /* DayruleCheckbox.swift */; };
 		DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 336000FBB2DB5AD70D51A33A /* RepeatTests.swift */; };
 		DB8E55D9D16612CA224EB233 /* SyncConvergenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E760B37539EA8DA121BE562E /* SyncConvergenceTests.swift */; };
+		DBD3269375DA6670E27A103A /* FoldLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843BD93B9F23BD03234E9047 /* FoldLayoutTests.swift */; };
 		E07D26082132443B3A2CF7A1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E7E230BA135789962B607A3D /* PrivacyInfo.xcprivacy */; platformFilters = (ios, ); };
 		E223009C5C3E712A2664BA6A /* SelectionBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */; };
 		E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */; };
@@ -255,6 +257,7 @@
 		7FF01F521ADF46D429E83152 /* KeyboardExtensionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardExtensionTests.swift; sourceTree = "<group>"; };
 		81C6612B5F8DF84210CAE14D /* Find.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Find.swift; sourceTree = "<group>"; };
 		8438C0E4D3766BEAE5D0763A /* EntityJSON.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityJSON.swift; sourceTree = "<group>"; };
+		843BD93B9F23BD03234E9047 /* FoldLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldLayoutTests.swift; sourceTree = "<group>"; };
 		86C9326AC09BFCFB95F9AE84 /* AppStoreScreenshotTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreScreenshotTests.swift; sourceTree = "<group>"; };
 		87D7023605829FF55C543A3A /* Exchange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exchange.swift; sourceTree = "<group>"; };
 		881A2D3BBE5D545489661A97 /* NavigationChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationChrome.swift; sourceTree = "<group>"; };
@@ -329,6 +332,7 @@
 		F47D18259248FBC451348D37 /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
 		F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaintextOnDiskTests.swift; sourceTree = "<group>"; };
 		FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychainTests.swift; sourceTree = "<group>"; };
+		FC97C4DD616C0DD3AC537AC8 /* FoldLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldLayout.swift; sourceTree = "<group>"; };
 		FDA4D4586883A8C74E05BB93 /* BreachCheck.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BreachCheck.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -413,6 +417,7 @@
 				C27C6E4851E216FA86CFF166 /* DayruleCheckbox.swift */,
 				2C87174387804A6982E10602 /* DesignCaptures.swift */,
 				7002250834D980A75C6C5150 /* FieldStyle.swift */,
+				FC97C4DD616C0DD3AC537AC8 /* FoldLayout.swift */,
 				5FA40065C14F9DB05A24F939 /* GateScaffold.swift */,
 				24A6D8DB11402268708E999A /* LingerStore.swift */,
 				A0B8E00A3624163478EC3959 /* ListStyle.swift */,
@@ -494,6 +499,7 @@
 				90ED870FC5811C8C825D9E3C /* EntityJSONTests.swift */,
 				9768B05C34F23899AB96D4A8 /* ExchangeTests.swift */,
 				D917B1933E1E1DCDB240A5FD /* FindTests.swift */,
+				843BD93B9F23BD03234E9047 /* FoldLayoutTests.swift */,
 				59193C5EF23C22974DFBFDE3 /* ForgetDeviceTests.swift */,
 				A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */,
 				0026AAA1C063454CC9B4A1B8 /* IncomingTests.swift */,
@@ -834,6 +840,7 @@
 				F789CCC818758E07D06A8ED4 /* FieldStyle.swift in Sources */,
 				663D4D9CFEDB78E5F0756CC0 /* FileProtection.swift in Sources */,
 				17FA39351C63860FD3F1C96D /* Find.swift in Sources */,
+				2FC5F630FA85CEAEC637E306 /* FoldLayout.swift in Sources */,
 				9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */,
 				C06E3E1DB4D0709329BA4E8C /* GateScaffold.swift in Sources */,
 				66B3AE7E8A5FD9422E1DF140 /* GateView.swift in Sources */,
@@ -934,6 +941,7 @@
 				00470845145395E42246DC2E /* EntityJSONTests.swift in Sources */,
 				2BC1B7839FA00D34CB9D3159 /* ExchangeTests.swift in Sources */,
 				720A9BFA150D6DF7A7821149 /* FindTests.swift in Sources */,
+				DBD3269375DA6670E27A103A /* FoldLayoutTests.swift in Sources */,
 				ED439BBE696B9CCD49BD2EE0 /* ForgetDeviceTests.swift in Sources */,
 				57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */,
 				02A1DA607E312B851FD990F1 /* IncomingTests.swift in Sources */,
