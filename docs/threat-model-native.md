@@ -46,6 +46,10 @@ synced vault.
   symmetric in the Keychain.
 - **Swift `String` / `Data`** cannot be reliably zeroed after use; only
   `sodium_malloc` key buffers are wiped.
+- **TLS pinning** — not used yet. System TLS to `dayrule.app` only.
+  Pinning waits until Cloudflare (or equivalent) terminates client TLS
+  with a key we control (PLAN decision 27); pinning Vercel-rotated
+  leafs is intentionally avoided.
 
 ## iOS-specific
 

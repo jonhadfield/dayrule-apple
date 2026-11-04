@@ -88,6 +88,7 @@
 		910BF09EAAF5267C75FBC57B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C225964995BA55648E51D5 /* HelpView.swift */; };
 		919A8CB7BA0D8ACD5660A90D /* DeviceAppearancePrefs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */; };
 		92C1E6F585E476513C3404D0 /* RepeatSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */; };
+		95BA9B8DE7DECD83E0D60575 /* AppModelLockTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53DB8A42C5E24C14EEEC081 /* AppModelLockTests.swift */; };
 		9630E39A9B748604114CECCB /* DuoUnlockedChromeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF3CBA3B43D3A030CD264323 /* DuoUnlockedChromeTests.swift */; };
 		96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08878191201EF746BA57A180 /* AppDatabase.swift */; };
 		9AD313A903BED7BDB049D6E3 /* FractionalIndexing.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F6D31E62FE3120AF9311906 /* FractionalIndexing.swift */; };
@@ -320,6 +321,7 @@
 		E33A5717E2C0EBD5E438D3D4 /* TodoRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRow.swift; sourceTree = "<group>"; };
 		E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CipherStoreTests.swift; sourceTree = "<group>"; };
 		E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatformTests.swift; sourceTree = "<group>"; };
+		E53DB8A42C5E24C14EEEC081 /* AppModelLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelLockTests.swift; sourceTree = "<group>"; };
 		E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPhraseView.swift; sourceTree = "<group>"; };
 		E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncE2ETests.swift; sourceTree = "<group>"; };
 		E760B37539EA8DA121BE562E /* SyncConvergenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConvergenceTests.swift; sourceTree = "<group>"; };
@@ -490,6 +492,7 @@
 				EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */,
 				BAA30D6213A5764218158BEF /* APIClientRateLimitTests.swift */,
 				32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */,
+				E53DB8A42C5E24C14EEEC081 /* AppModelLockTests.swift */,
 				C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */,
 				3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */,
 				460E9E84AF5DF4F41A3DAD8E /* BreachCheckTests.swift */,
@@ -934,6 +937,7 @@
 				57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */,
 				61B5465FA18F398B4823248C /* ATSLocalNetworkingTests.swift in Sources */,
 				60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */,
+				95BA9B8DE7DECD83E0D60575 /* AppModelLockTests.swift in Sources */,
 				27636766A432DA9040300663 /* BiometricUnlockTests.swift in Sources */,
 				E78FC6489412F9F58F1DBACD /* BreachCheckTests.swift in Sources */,
 				B92BC3DEDEE1C309337B6152 /* CipherStoreTests.swift in Sources */,

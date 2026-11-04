@@ -33,7 +33,7 @@ in code or by a named manual step — not by assumption.
 - [x] No APNs; reminders are local notifications only
 - [x] `x-vercel-mitigated` → plain-English rate-limit copy
 - [x] HTTP `426` / `upgrade_required` → stop sync, keep data, “Update Dayrule”
-- [ ] Certificate pinning (open PLAN §18 point 3 — not yet)
+- [x] Certificate pinning deferred until Cloudflare (or equivalent) terminates TLS (PLAN decision 27 / §18.3); no pin code while Vercel alone issues the leaf
 
 ## System surfaces (must stay content-free)
 
