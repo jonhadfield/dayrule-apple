@@ -19,6 +19,7 @@ struct ProjectDetailView: View {
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
     @State private var moveTarget: WhenTarget?
+    @State private var moveProjectPresented = false
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
     @FocusState private var titleFocused: Bool
@@ -155,6 +156,12 @@ struct ProjectDetailView: View {
                         Label("Convert to To-Do", systemImage: "checklist")
                     }
                     .accessibilityIdentifier("project.convertToTodo")
+                    Button {
+                        moveProjectPresented = true
+                    } label: {
+                        Label("Move…", systemImage: "arrow.right.square")
+                    }
+                    .accessibilityIdentifier("project.move")
                     Divider()
                     Button { model.undoLast() } label: {
                         Label("Undo", systemImage: "arrow.uturn.backward")
@@ -206,6 +213,9 @@ struct ProjectDetailView: View {
         }
         .sheet(item: $moveTarget) { target in
             MoveSheetView(model: model, ids: target.ids)
+        }
+        .sheet(isPresented: $moveProjectPresented) {
+            MoveProjectSheetView(model: model, projectId: projectId)
         }
         .sheet(item: $repeatTarget) { target in
             RepeatSheetView(model: model, todoId: target.id)

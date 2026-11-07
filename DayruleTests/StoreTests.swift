@@ -342,6 +342,35 @@ struct StoreTests {
         #expect(tree.areaGroups[0].projects.map(\.id) == [project.id])
     }
 
+    @Test func moveProjectBetweenAreaAndLoose() throws {
+        let store = sequentialStore()
+        let home = try store.run("Area") { d, env in
+            try Commands.createArea(d, env, title: "Home")
+        }
+        let work = try store.run("Area") { d, env in
+            try Commands.createArea(d, env, title: "Work")
+        }
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Kitchen", areaId: home.id)
+        }
+
+        try store.run("Move Project") { d, env in
+            try Commands.moveProject(d, env, id: project.id, areaId: work.id)
+        }
+        #expect(store.entities.projects[project.id]?.areaId == work.id)
+        var tree = Lists.browseTree(store.entities)
+        #expect(tree.looseProjects.isEmpty)
+        #expect(tree.areaGroups.first { $0.area.id == work.id }?.projects.map(\.id) == [project.id])
+        #expect(tree.areaGroups.first { $0.area.id == home.id }?.projects.isEmpty == true)
+
+        try store.run("Move Project") { d, env in
+            try Commands.moveProject(d, env, id: project.id, areaId: nil)
+        }
+        #expect(store.entities.projects[project.id]?.areaId == nil)
+        tree = Lists.browseTree(store.entities)
+        #expect(tree.looseProjects.map(\.id) == [project.id])
+    }
+
     @Test func createProjectUpdateAndEmptyTrash() throws {
         final class Seq: @unchecked Sendable {
             private var n = 0

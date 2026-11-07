@@ -101,6 +101,7 @@
 		A2CFACFAC1A936AB6B5B5ABB /* ReminderSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */; };
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
 		A7642620481BCDB6C5051300 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C2F8FC1ACA025108C7461E2 /* SectionHeader.swift */; };
+		A779C0BB09146FCA6959FD83 /* MoveProjectSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F059402C1EB2400D5B39BA66 /* MoveProjectSheetView.swift */; };
 		A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */; };
 		A95AE9FF4C4A82DBCD25D8CE /* PaperAddRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620BD0386281AA2BD1755C4F /* PaperAddRow.swift */; };
 		AA554C553310463AD0D2FD75 /* Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19069DB52AC6606DCAFA09FC /* Commands.swift */; };
@@ -334,6 +335,7 @@
 		EE0EDF3660BA35915F0DF1E2 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActorRecordCipherTests.swift; sourceTree = "<group>"; };
 		EF3CBA3B43D3A030CD264323 /* DuoUnlockedChromeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuoUnlockedChromeTests.swift; sourceTree = "<group>"; };
+		F059402C1EB2400D5B39BA66 /* MoveProjectSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoveProjectSheetView.swift; sourceTree = "<group>"; };
 		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
 		F47D18259248FBC451348D37 /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
 		F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaintextOnDiskTests.swift; sourceTree = "<group>"; };
@@ -363,6 +365,7 @@
 				B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */,
 				9D42704F75AD8BF8EC9A8B5C /* ItemEditorSheet.swift */,
 				28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */,
+				F059402C1EB2400D5B39BA66 /* MoveProjectSheetView.swift */,
 				79F6D6E8203CAF71DE807BD5 /* MoveSheetView.swift */,
 				CFF7B27C792AA9376304425B /* ProjectDetailView.swift */,
 				5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */,
@@ -872,6 +875,7 @@
 				C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */,
 				02CEB9BD1F3938CA38CBE210 /* Merge.swift in Sources */,
 				76E7BE693BD7BDC45E624C19 /* Motion.swift in Sources */,
+				A779C0BB09146FCA6959FD83 /* MoveProjectSheetView.swift in Sources */,
 				0D82713DEE3CF1BE17F718D0 /* MoveSheetView.swift in Sources */,
 				433E7ADBF179FCFB7D94DBD6 /* NavigationChrome.swift in Sources */,
 				A2CCC9475AC3454183015582 /* Notice.swift in Sources */,

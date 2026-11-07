@@ -217,7 +217,7 @@ struct HelpArticleView: View {
         }
         heading("Make one", colors)
         para(
-            "Create projects and areas from Browse (or the sidebar on iPad and Mac). Open a project or area and use Add for to-dos inside it.",
+            "Create projects and areas from Browse (or the sidebar on iPad and Mac). Open a project or area and use Add for to-dos inside it. Move… on a project (··· menu or sidebar) puts it in an area or takes it out.",
             colors
         )
         heading("Headings", colors)

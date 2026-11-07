@@ -666,10 +666,48 @@ struct ListsBrowserView: View {
                 Label("Reopen Project", systemImage: "arrow.uturn.backward.circle")
             }
         }
+        Menu {
+            Button {
+                moveSidebarProject(project, areaId: nil)
+            } label: {
+                Label("No area", systemImage: "bookmark")
+            }
+            let areas = model.entities.areas.values
+                .filter { $0.trashedAt == nil }
+                .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+            ForEach(areas, id: \.id) { area in
+                Button {
+                    moveSidebarProject(project, areaId: area.id)
+                } label: {
+                    Text(area.title.isEmpty ? "New Area" : area.title)
+                }
+            }
+        } label: {
+            Label("Move…", systemImage: "arrow.right.square")
+        }
         Button(role: .destructive) {
             trashSidebarProject(project)
         } label: {
             Label("Move to Trash", systemImage: "trash")
+        }
+    }
+
+    private func moveSidebarProject(_ project: Project, areaId: ID?) {
+        let title = projectTitle(project)
+        do {
+            try model.store.run("Move Project") { d, env in
+                try Commands.moveProject(d, env, id: project.id, areaId: areaId)
+            }
+            model.noteEntitiesChanged()
+            if let areaId, let areaTitle = model.entities.areas[areaId]?.title, !areaTitle.isEmpty {
+                model.undoNotice("Moved \(title) to \(areaTitle)")
+            } else if areaId != nil {
+                model.undoNotice("Moved \(title) to area")
+            } else {
+                model.undoNotice("Moved \(title) out of area")
+            }
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 

@@ -118,6 +118,17 @@ enum Commands {
         d.putProject(p)
     }
 
+    /// Move a project into an area, or out to the loose list (`areaId == nil`)
+    /// (web `moveProject`). Reorders to the end of the destination sibling list.
+    static func moveProject(_ d: Draft, _ env: EntityStore.Env, id: ID, areaId: ID?) throws {
+        guard var p = d.getProject(id) else { return }
+        let siblings = d.allProjects().filter { $0.id != id && $0.areaId == areaId }
+        p.areaId = areaId
+        p.order = try Order.keyAfterLast(siblings.map(\.order))
+        p.updatedAt = ISOStamp.format(env.now)
+        d.putProject(p)
+    }
+
     @discardableResult
     static func createProject(_ d: Draft, _ env: EntityStore.Env, title: String, areaId: ID? = nil) throws -> Project {
         let siblings = d.allProjects().filter { $0.areaId == areaId }
