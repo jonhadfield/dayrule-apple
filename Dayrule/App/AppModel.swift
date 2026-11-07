@@ -183,6 +183,12 @@ final class AppModel {
             }
             // Defense in depth: a path that bypassed gateBusy should not be torn down.
             if phase == .unlocked { return }
+            #if DEBUG
+            if let hook = testingBeforeBackgroundEpilogueLock {
+                await hook()
+                if phase == .unlocked { return }
+            }
+            #endif
             cipherStore = nil
             syncEngine = nil
             await crypto.lock()
@@ -1096,6 +1102,15 @@ final class AppModel {
     /// Test hook: hold or release `gateBusy` without starting a gate action.
     func testingSetGateBusy(_ busy: Bool) {
         gateBusy = busy
+    }
+
+    /// Invoked after the unlocked-phase check on the BG success path, before
+    /// tearing down the silent device-wrap session (concurrency tests).
+    var testingBeforeBackgroundEpilogueLock: (@MainActor () async -> Void)?
+
+    /// Seed Keychain-cached account material for lock / BG tests.
+    func testingSaveCachedAccount(_ account: SessionStore.CachedAccount) throws {
+        try sessions.saveAccount(account)
     }
     #endif
 
