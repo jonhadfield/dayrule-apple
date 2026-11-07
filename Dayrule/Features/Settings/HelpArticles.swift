@@ -389,7 +389,12 @@ struct HelpArticleView: View {
         ], colors)
         heading("Export and import", colors)
         para(
-            "Settings → Your data. Export JSON saves everything in a file you can import again; Export Markdown saves a readable outline. Exports aren’t encrypted, so keep them safe. Import JSON adds a copy of a Dayrule export and never replaces what’s there.",
+            "Settings → Your data. Export JSON saves everything in a file you can import again; Export Markdown saves a readable outline. Exports aren’t encrypted, so keep them safe. Import adds a copy of a Dayrule export (or a Things 3 file from things-export) and never replaces what’s there.",
+            colors
+        )
+        heading("Import from Things 3", colors)
+        para(
+            "On a Mac with Things 3, run the read-only exporter in the Dayrule web repo (tools/things-export) to write a JSON file, then Import… here. Mapping happens on this device; day / week / month / year repeats come across when Things encoded them.",
             colors
         )
         heading("Delete your account", colors)
