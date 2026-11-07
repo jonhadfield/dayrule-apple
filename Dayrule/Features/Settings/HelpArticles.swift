@@ -383,6 +383,7 @@ struct HelpArticleView: View {
         heading("Deleting", colors)
         numbered([
             "Open a to-do and choose Trash, or use Trash on the context menu / selection bar.",
+            "To remove a project, open it and choose Move to Trash from the ··· menu. Areas have Trash in the toolbar.",
             "This works anywhere, including in Done.",
             "Anything in Trash can be restored. In Trash, Empty Trash deletes them for good.",
         ], colors)
