@@ -100,6 +100,49 @@ struct StoreTests {
         #expect(store.entities.checklistItems[item.id] == nil)
     }
 
+    @Test func convertProjectToTodoWithChecklistChildren() throws {
+        let store = sequentialStore()
+        let project = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Trip")
+        }
+        _ = try store.run("Heading") { d, env in
+            try Commands.createHeading(d, env, projectId: project.id, title: "Drop me")
+        }
+        let book = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env,
+                .init(title: "Book", placement: .project(projectId: project.id, headingId: nil))
+            )
+        }
+        let pack = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env,
+                .init(title: "Pack", placement: .project(projectId: project.id, headingId: nil))
+            )
+        }
+        store.run("Complete") { d, env in
+            Commands.setStatus(d, env, ids: [pack.id], status: .completed)
+        }
+
+        let todo = try store.run("Convert to To-Do") { d, env in
+            try Commands.convertProjectToTodo(d, env, projectId: project.id)
+        }
+
+        #expect(store.entities.projects[project.id] == nil)
+        #expect(store.entities.todos[book.id] == nil)
+        #expect(store.entities.todos[pack.id] == nil)
+        #expect(store.entities.headings.isEmpty)
+        #expect(todo.title == "Trip")
+        let checks = store.entities.checklistItems.values
+            .filter { $0.todoId == todo.id }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+        #expect(checks.count == 2)
+        #expect(checks[0].title == "Book")
+        #expect(checks[0].done == false)
+        #expect(checks[1].title == "Pack")
+        #expect(checks[1].done == true)
+    }
+
     @Test func moveTodosToProjectAndInbox() throws {
         final class Seq: @unchecked Sendable {
             private var n = 0

@@ -140,6 +140,12 @@ struct ProjectDetailView: View {
                         }
                     }
                     .accessibilityIdentifier("project.toggleComplete")
+                    Button {
+                        convertToTodo(title: title)
+                    } label: {
+                        Label("Convert to To-Do", systemImage: "checklist")
+                    }
+                    .accessibilityIdentifier("project.convertToTodo")
                     Divider()
                     Button { model.undoLast() } label: {
                         Label("Undo", systemImage: "arrow.uturn.backward")
@@ -431,6 +437,18 @@ struct ProjectDetailView: View {
         model.noteEntitiesChanged()
         if status == .completed {
             model.undoNotice("Completed \(title)")
+        }
+    }
+
+    private func convertToTodo(title: String) {
+        do {
+            _ = try model.store.run("Convert to To-Do") { d, env in
+                try Commands.convertProjectToTodo(d, env, projectId: projectId)
+            }
+            model.noteEntitiesChanged()
+            model.undoNotice("Converted \(title) to a to-do")
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 }
