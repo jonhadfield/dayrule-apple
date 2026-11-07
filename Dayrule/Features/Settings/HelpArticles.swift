@@ -348,7 +348,7 @@ struct HelpArticleView: View {
         ], colors)
         heading("On a Mac", colors)
         para(
-            "Click a to-do to open it. Right-click (or Control-click) for the same menu as a long-press on a phone. Select from the menu or swipe to select several, then use the selection bar.",
+            "Click a to-do to open it. Right-click (or Control-click) for the same menu as a long-press on a phone. Select from the menu or swipe to select several, then use the selection bar. Right-click a project or area in the sidebar to Complete or Move to Trash without opening it.",
             colors
         )
         definitionList([
@@ -387,7 +387,7 @@ struct HelpArticleView: View {
         heading("Deleting", colors)
         numbered([
             "Open a to-do and choose Trash, or use Trash on the context menu / selection bar.",
-            "To remove a project, open it and choose Move to Trash from the ··· menu. Areas have Trash in the toolbar.",
+            "To remove a project, open it and choose Move to Trash from the ··· menu, or right-click / long-press it in the sidebar or Browse. Areas have Trash in the toolbar or the same sidebar menu.",
             "This works anywhere, including in Done.",
             "Anything in Trash can be restored. In Trash, Empty Trash deletes them for good.",
         ], colors)

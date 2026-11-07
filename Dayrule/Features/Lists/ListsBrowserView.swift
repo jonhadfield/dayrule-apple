@@ -535,6 +535,7 @@ struct ListsBrowserView: View {
                     )
                 }
                 .accessibilityIdentifier("list.sidebar.area.\(group.area.id)")
+                .contextMenu { areaContextMenu(group.area) }
                 .listRowBackground(colors.bg)
                 .listRowSeparatorTint(colors.hairline)
                 ForEach(group.projects, id: \.id) { project in
@@ -553,6 +554,7 @@ struct ListsBrowserView: View {
             )
         }
         .accessibilityIdentifier("list.sidebar.project.\(project.id)")
+        .contextMenu { projectContextMenu(project) }
         .listRowBackground(colors.bg)
         .listRowSeparatorTint(colors.hairline)
     }
@@ -628,6 +630,7 @@ struct ListsBrowserView: View {
                 ) {
                     orgPath = [.area(group.area.id)]
                 }
+                .contextMenu { areaContextMenu(group.area) }
                 ForEach(group.projects, id: \.id) { project in
                     sidebarProjectRow(project, colors: colors)
                 }
@@ -644,6 +647,80 @@ struct ListsBrowserView: View {
             colors: colors
         ) {
             orgPath = [.project(project.id)]
+        }
+        .contextMenu { projectContextMenu(project) }
+    }
+
+    @ViewBuilder
+    private func projectContextMenu(_ project: Project) -> some View {
+        Button {
+            toggleSidebarProjectComplete(project)
+        } label: {
+            if project.status == .open {
+                Label("Complete Project", systemImage: "checkmark.circle")
+            } else {
+                Label("Reopen Project", systemImage: "arrow.uturn.backward.circle")
+            }
+        }
+        Button(role: .destructive) {
+            trashSidebarProject(project)
+        } label: {
+            Label("Move to Trash", systemImage: "trash")
+        }
+    }
+
+    @ViewBuilder
+    private func areaContextMenu(_ area: Area) -> some View {
+        Button(role: .destructive) {
+            trashSidebarArea(area)
+        } label: {
+            Label("Move to Trash", systemImage: "trash")
+        }
+    }
+
+    private func toggleSidebarProjectComplete(_ project: Project) {
+        let title = projectTitle(project)
+        let status: Status = project.status == .open ? .completed : .open
+        model.store.run(status == .completed ? "Complete Project" : "Reopen Project") { d, env in
+            Commands.setStatus(d, env, ids: [project.id], status: status)
+        }
+        model.noteEntitiesChanged()
+        if status == .completed {
+            model.undoNotice("Completed \(title)")
+        }
+    }
+
+    private func trashSidebarProject(_ project: Project) {
+        let title = projectTitle(project)
+        model.store.run("Trash Project") { d, env in
+            Commands.trashItems(d, env, ids: [project.id])
+        }
+        model.noteEntitiesChanged()
+        model.undoNotice("Moved \(title) to Trash")
+        clearOrgNavigation(matching: .project(project.id))
+    }
+
+    private func trashSidebarArea(_ area: Area) {
+        let title = areaTitle(area)
+        model.store.run("Trash Area") { d, env in
+            Commands.trashItems(d, env, ids: [area.id])
+        }
+        model.noteEntitiesChanged()
+        model.undoNotice("Moved \(title) to Trash")
+        clearOrgNavigation(matching: .area(area.id))
+    }
+
+    private func clearOrgNavigation(matching route: OrgRoute) {
+        if orgPath.contains(route) {
+            orgPath = []
+        }
+        phonePath.removeAll { phone in
+            switch (phone, route) {
+            case (.project(let a), .project(let b)), (.area(let a), .area(let b)):
+                return a == b
+            default:
+                return false
+            }
         }
     }
 
