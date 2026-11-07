@@ -291,7 +291,13 @@ enum DesignCaptures {
                     menuRow("Settings…", shortcut: "⌘,", colors: colors)
                     menuRow("Lock", shortcut: "⇧⌘L", colors: colors)
                     Divider().background(colors.hairline)
+                    menuRow("New Project", shortcut: "⌥⌘N", colors: colors)
+                    menuRow("New Area", shortcut: "⌥⌘A", colors: colors)
+                    Divider().background(colors.hairline)
+                    menuRow("Undo", shortcut: "⌘Z", colors: colors)
+                    menuRow("Redo", shortcut: "⇧⌘Z", colors: colors)
                     menuRow("Find…", shortcut: "⌘F", colors: colors)
+                    menuRow("Move to Trash", shortcut: "⌫", colors: colors)
                 }
                 .padding(Tokens.Space.m)
                 .background(colors.bg)
@@ -301,7 +307,7 @@ enum DesignCaptures {
                 )
                 .padding(Tokens.Space.m)
             }
-            .frame(width: 320, height: 200, alignment: .topLeading)
+            .frame(width: 320, height: 280, alignment: .topLeading)
             .background(colors.bg)
         }
 

@@ -355,9 +355,13 @@ struct HelpArticleView: View {
             ("Settings…", "⌘,"),
             ("Lock", "⇧⌘L"),
             ("Find…", "⌘F"),
+            ("Undo / Redo", "⌘Z / ⇧⌘Z"),
+            ("Move to Trash", "⌫"),
+            ("New Project", "⌥⌘N"),
+            ("New Area", "⌥⌘A"),
         ], colors)
         tip(
-            "The website has more keyboard shortcuts when you’re signed in on a computer. This app keeps the paper lists and menus instead.",
+            "Select one or more to-dos first for Move to Trash. New Project opens under the area you’re viewing when you’re in one.",
             colors
         )
     }

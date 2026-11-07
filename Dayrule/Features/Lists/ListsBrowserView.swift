@@ -173,6 +173,35 @@ struct ListsBrowserView: View {
                 pendingFind = result
             }
         }
+        .onChange(of: model.pendingMacChromeAction) { _, action in
+            guard let action else { return }
+            model.pendingMacChromeAction = nil
+            handleMacChromeAction(action)
+        }
+    }
+
+    private func handleMacChromeAction(_ action: AppModel.MacChromeAction) {
+        switch action {
+        case .trashSelection:
+            trashSelection()
+        case .newProject:
+            addProject(areaId: areaIdForNewProject)
+        case .newArea:
+            addArea()
+        }
+    }
+
+    /// Prefer the open area; otherwise the area of the open project (PLAN §6.6 New List).
+    private var areaIdForNewProject: ID? {
+        if case .area(let id) = orgPath.last { return id }
+        if case .area(let id) = phonePath.last { return id }
+        if case .project(let id) = orgPath.last {
+            return model.entities.projects[id]?.areaId
+        }
+        if case .project(let id) = phonePath.last {
+            return model.entities.projects[id]?.areaId
+        }
+        return nil
     }
 
     private var editorSheetTarget: Binding<EditTarget?> {
