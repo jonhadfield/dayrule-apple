@@ -81,12 +81,40 @@ struct DayruleApp: App {
                 .keyboardShortcut("l", modifiers: [.command, .shift])
                 .disabled(model.phase != .unlocked)
             }
-            CommandGroup(replacing: .newItem) {}
+            CommandGroup(replacing: .newItem) {
+                Button("New Project") {
+                    model.requestMacChromeAction(.newProject)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .option])
+                .disabled(model.phase != .unlocked)
+                Button("New Area") {
+                    model.requestMacChromeAction(.newArea)
+                }
+                .keyboardShortcut("a", modifiers: [.command, .option])
+                .disabled(model.phase != .unlocked)
+            }
+            CommandGroup(replacing: .undoRedo) {
+                Button("Undo") {
+                    model.undoLast()
+                }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(model.phase != .unlocked || !model.store.canUndo)
+                Button("Redo") {
+                    model.redoLast()
+                }
+                .keyboardShortcut("z", modifiers: [.command, .shift])
+                .disabled(model.phase != .unlocked || !model.store.canRedo)
+            }
             CommandGroup(after: .pasteboard) {
                 Button("Find…") {
                     model.showFind = true
                 }
                 .keyboardShortcut("f", modifiers: .command)
+                .disabled(model.phase != .unlocked)
+                Button("Move to Trash") {
+                    model.requestMacChromeAction(.trashSelection)
+                }
+                .keyboardShortcut(.delete)
                 .disabled(model.phase != .unlocked)
             }
         }

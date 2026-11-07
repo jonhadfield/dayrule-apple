@@ -130,6 +130,25 @@ final class AppModel {
         noteEntitiesChanged()
     }
 
+    func redoLast() {
+        guard store.redo() != nil else { return }
+        noteEntitiesChanged()
+    }
+
+    /// Mac menu bar → list shell (PLAN §6.6). Consumed by `ListsBrowserView`.
+    enum MacChromeAction: Equatable {
+        case trashSelection
+        case newProject
+        case newArea
+    }
+
+    var pendingMacChromeAction: MacChromeAction?
+
+    func requestMacChromeAction(_ action: MacChromeAction) {
+        guard phase == .unlocked else { return }
+        pendingMacChromeAction = action
+    }
+
     /// Show `message` with an Undo action for the last store change. Undo only acts while
     /// that change is still the newest history entry.
     func undoNotice(_ message: String) {
@@ -1032,6 +1051,7 @@ final class AppModel {
     /// Clear unlocked UI synchronously (phase, store, sync). Does not wipe the AK.
     private func applyLockedUI() {
         showFind = false
+        pendingMacChromeAction = nil
         clearPendingSecondStep()
         idleTask?.cancel()
         idleTask = nil
