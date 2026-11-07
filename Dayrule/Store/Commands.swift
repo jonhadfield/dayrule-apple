@@ -1,6 +1,11 @@
 import Foundation
 
 enum Commands {
+    struct CommandError: Error, LocalizedError, Sendable {
+        var message: String
+        var errorDescription: String? { message }
+    }
+
     enum Placement: Sendable, Equatable {
         case inbox, today, ready, later
         case project(projectId: ID, headingId: ID?)
@@ -445,6 +450,59 @@ enum Commands {
 
     static func removeChecklistItem(_ d: Draft, id: ID) {
         d.remove(.checklistItems, id: id)
+    }
+
+    /// Turn a project into a to-do. Child to-dos become checklist items; headings
+    /// are dropped. The project and its children are removed (web `convertProjectToTodo`).
+    @discardableResult
+    static func convertProjectToTodo(_ d: Draft, _ env: EntityStore.Env, projectId: ID) throws -> Todo {
+        guard let p = d.getProject(projectId) else {
+            throw CommandError(message: "project not found")
+        }
+        let children = d.allTodos()
+            .filter { $0.projectId == projectId && $0.trashedAt == nil }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+
+        let placement: Placement = p.areaId.map { .area(areaId: $0) } ?? .ready
+        var todo = try createTodo(d, env, .init(title: p.title, notes: p.notes, placement: placement))
+
+        let status: Status = p.status == .canceled ? .open : p.status
+        if p.startDate != nil {
+            todo.start = .ready
+        } else if p.start == .later {
+            todo.start = .later
+        }
+        todo.status = status
+        todo.tagIds = p.tagIds
+        if let startDate = p.startDate { todo.startDate = startDate }
+        if let deadline = p.deadline { todo.deadline = deadline }
+        if status != .open {
+            todo.completedAt = p.completedAt ?? ISOStamp.format(env.now)
+        }
+        if let startDate = p.startDate, startDate <= env.today {
+            todo.todayOrder = try Order.keyAfterLast(todayKeys(d, env))
+        }
+        todo.updatedAt = ISOStamp.format(env.now)
+        d.putTodo(todo)
+
+        for c in children {
+            let item = try addChecklistItem(d, env, todoId: todo.id, title: c.title)
+            if c.status == .completed {
+                updateChecklistItem(d, env, id: item.id, done: true)
+            }
+            for ch in d.allChecklistItems() where ch.todoId == c.id {
+                d.remove(.checklistItems, id: ch.id)
+            }
+            d.remove(.todos, id: c.id)
+        }
+        for h in d.allHeadings() where h.projectId == projectId {
+            d.remove(.headings, id: h.id)
+        }
+        d.remove(.projects, id: projectId)
+        guard let result = d.getTodo(todo.id) else {
+            throw CommandError(message: "project not found")
+        }
+        return result
     }
 
     struct ImportCounts: Equatable, Sendable {
