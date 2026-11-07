@@ -47,9 +47,14 @@ jobs:
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
 
+      # Hung simctl/xcodebuild has burned the job timeout on several PRs
+      # (empty-commit retries). Reset + boot the chosen device, and fail this
+      # step well under the 45m job budget if it stalls.
       - name: Test iOS
+        timeout-minutes: 20
         run: |
-          DEST=$(xcrun simctl list devices available -j | python3 -c "
+          set -euo pipefail
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
           import json,sys,re
           devices=json.load(sys.stdin)['devices']
           # Prefer iPhone 16 on iOS 18+ (deployment target).
@@ -66,11 +71,16 @@ jobs:
           if not candidates:
             raise SystemExit('no iPhone simulator on iOS 18+')
           candidates.sort(reverse=True)
-          print(f\"platform=iOS Simulator,id={candidates[0][1]}\")
+          print(candidates[0][1])
           ")
+          echo "Using simulator $UDID"
+          xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
+          xcrun simctl erase "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
           xcodebuild test \
             -project Dayrule.xcodeproj \
             -scheme Dayrule \
-            -destination "$DEST" \
+            -destination "platform=iOS Simulator,id=$UDID" \
             -skip-testing:DayruleUITests \
             CODE_SIGNING_ALLOWED=NO
