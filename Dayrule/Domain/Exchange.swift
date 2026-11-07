@@ -1,6 +1,6 @@
 import Foundation
 
-/// Export / import (`dayrule-export` v1, web `domain/exchange.ts`, PLAN §12).
+/// Export / import (`dayrule-export` v1 + Things intermediate, web `domain/exchange.ts`, PLAN §12).
 enum Exchange {
     static let format = "dayrule-export"
     static let version = 1
@@ -156,7 +156,11 @@ enum Exchange {
 
     // MARK: - Import parse
 
+    /// Accepts `dayrule-export` and `dayrule-things-export` (web `parseImport`).
     static func parseImport(_ text: String) throws -> ExportData {
+        if ThingsImport.looksLike(text) {
+            return try ThingsImport.parseAndMap(text)
+        }
         guard let data = text.data(using: .utf8),
               let rawAny = try? JSONSerialization.jsonObject(with: data),
               let raw = rawAny as? [String: Any]

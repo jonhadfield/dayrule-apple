@@ -97,6 +97,94 @@ struct ExchangeTests {
         }
     }
 
+    @Test("imports a Things intermediate export")
+    func thingsImport() throws {
+        let json = sampleThingsJSON()
+        let data = try Exchange.parseImport(json)
+        #expect(data.areas.count == 1)
+        #expect(data.todos.count == 6)
+        let daily = data.todos.first { $0.id == "todo-repeat" }?.repeat
+        #expect(daily?.freq == .day)
+        #expect(daily?.every == 1)
+        #expect(daily?.mode == .fixed)
+        #expect(daily?.anchor == "2026-11-08")
+        let weekly = data.todos.first { $0.id == "todo-weekly" }?.repeat
+        #expect(weekly?.freq == .week)
+        #expect(weekly?.every == 2)
+        #expect(weekly?.weekdays == [0, 2])
+        #expect(weekly?.next == "2026-11-10")
+
+        let target = store()
+        let counts = try target.run("Import") { d, env in
+            Commands.importData(d, env, try Exchange.parseImport(json))
+        }
+        #expect(counts.todos == 6)
+        #expect(counts.checklistItems == 1)
+        #expect(target.entities.todos.values.contains { $0.title == "Buy milk" && $0.start == .inbox })
+    }
+
+    private func sampleThingsJSON() -> String {
+        """
+        {
+          "format": "dayrule-things-export",
+          "version": 1,
+          "thingsDatabaseVersion": 21,
+          "exportedAt": "2026-11-07T12:00:00.000Z",
+          "areas": [{ "id": "area-1", "title": "Personal", "order": 0 }],
+          "tags": [{ "id": "tag-1", "title": "Errand", "order": 0 }],
+          "projects": [{
+            "id": "proj-1", "title": "Kitchen", "notes": "", "areaId": "area-1",
+            "status": "open", "start": "ready", "order": 0, "tagIds": [],
+            "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+          }],
+          "headings": [{
+            "id": "head-1", "projectId": "proj-1", "title": "Morning", "order": 0,
+            "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+          }],
+          "todos": [
+            {
+              "id": "todo-inbox", "title": "Buy milk", "notes": "", "status": "open",
+              "start": "inbox", "order": 0, "tagIds": ["tag-1"],
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-sched", "title": "Scheduled chore", "notes": "",
+              "projectId": "proj-1", "headingId": "head-1", "status": "open",
+              "start": "ready", "startDate": "2020-01-01", "order": 1,
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-done", "title": "Old completed", "notes": "", "status": "completed",
+              "start": "ready", "order": 2, "completedAt": "2026-10-01T00:00:00.000Z",
+              "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-10-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-later", "title": "Someday read", "notes": "", "areaId": "area-1",
+              "status": "open", "start": "later", "order": 3,
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-repeat", "title": "Daily stretch", "notes": "", "status": "open",
+              "start": "ready", "order": 4, "repeatTemplate": true, "repeatNext": "2026-11-08",
+              "afterCompletion": false,
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-weekly", "title": "Gym", "notes": "", "status": "open",
+              "start": "ready", "order": 5, "repeatTemplate": true, "repeatNext": "2026-11-10",
+              "afterCompletion": false, "repeatFreq": "week", "repeatEvery": 2,
+              "repeatWeekdays": [0, 2],
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            }
+          ],
+          "checklistItems": [{
+            "id": "check-1", "todoId": "todo-sched", "title": "Sub-step", "done": true, "order": 0,
+            "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+          }]
+        }
+        """
+    }
+
     @Test("markdown export includes titles")
     func markdown() throws {
         let s = store()

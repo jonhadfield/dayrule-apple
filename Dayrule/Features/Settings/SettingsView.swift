@@ -337,7 +337,7 @@ struct SettingsView: View {
             DayruleSectionHeader(title: "Your data")
         } footer: {
             FooterStack {
-                footerText("Exports are made on this device and are not encrypted. Keep the files safe.", colors: colors)
+                footerText("Exports are made on this device and are not encrypted. Keep the files safe. Import accepts a Dayrule export or a Things 3 file from things-export.", colors: colors)
                 footerText("Device backups may include your encrypted vault. Unlock keys stay on this device only, so a backup alone can’t open Dayrule on another phone or Mac.", colors: colors)
                     .accessibilityIdentifier("settings.backupNote")
             }

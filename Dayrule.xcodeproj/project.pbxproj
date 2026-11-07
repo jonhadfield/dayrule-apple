@@ -155,6 +155,7 @@
 		F188F9BD9A5AC0D327980E4B /* HelpTopic.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F1D1F273A301899449B4BF8 /* HelpTopic.swift */; };
 		F1BAB03732D8621115934C26 /* Incoming.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1D8718EB1E6396EDCA15E8B /* Incoming.swift */; };
 		F2DC83362DF71A9B29C7DD79 /* BIP39Wordlist.swift in Sources */ = {isa = PBXBuildFile; fileRef = 589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */; };
+		F3338C1D6E32A4F56F561BB7 /* ThingsImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30FEBE8973C6AC877997556D /* ThingsImport.swift */; };
 		F346AD2992D016BBDC804EBC /* TagSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */; };
 		F42607F897E574A5DE03A5DC /* RepeatsStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */; };
 		F789CCC818758E07D06A8ED4 /* FieldStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7002250834D980A75C6C5150 /* FieldStyle.swift */; };
@@ -211,6 +212,7 @@
 		29C225964995BA55648E51D5 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		2C87174387804A6982E10602 /* DesignCaptures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptures.swift; sourceTree = "<group>"; };
 		3037F2486DC68756EDD60968 /* BiometricUnlockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BiometricUnlockTests.swift; sourceTree = "<group>"; };
+		30FEBE8973C6AC877997556D /* ThingsImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThingsImport.swift; sourceTree = "<group>"; };
 		32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIConfigTests.swift; sourceTree = "<group>"; };
 		32A368C1360A61A2C5320783 /* DesignSystemTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystemTests.swift; sourceTree = "<group>"; };
 		32E0FE96904C3827A741FEE6 /* DeviceReminderPrefs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceReminderPrefs.swift; sourceTree = "<group>"; };
@@ -547,6 +549,7 @@
 				4E6C23642DCB6C41B26D8671 /* Merge.swift */,
 				7EDA6EB07F5EF2CD6EE40649 /* Order.swift */,
 				DFBE1D22F608EE636247658F /* Repeat.swift */,
+				30FEBE8973C6AC877997556D /* ThingsImport.swift */,
 				58C9377E81FBB2D6C813497B /* Types.swift */,
 				A022752FC1044F75EE926924 /* When.swift */,
 			);
@@ -905,6 +908,7 @@
 				C8182DA2B1A801B357F38156 /* SyncStatus.swift in Sources */,
 				E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */,
 				F346AD2992D016BBDC804EBC /* TagSheetView.swift in Sources */,
+				F3338C1D6E32A4F56F561BB7 /* ThingsImport.swift in Sources */,
 				515C795656DDAECD7FC36755 /* TodoRow.swift in Sources */,
 				D21D41CB86112AA455D78513 /* Tokens.swift in Sources */,
 				A1ADF984C09C62EBD6CCB462 /* Types.swift in Sources */,
