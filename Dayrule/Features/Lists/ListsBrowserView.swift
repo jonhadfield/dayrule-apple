@@ -236,8 +236,10 @@ struct ListsBrowserView: View {
                         case .list(let name):
                             listDetail(list: name, colors: colors)
                         case .project(let projectId):
-                            ProjectDetailView(model: model, projectId: projectId)
-                                .toolbar { chromeToolbar(colors: colors) }
+                            ProjectDetailView(model: model, projectId: projectId) { id in
+                                phonePath.append(.project(id))
+                            }
+                            .toolbar { chromeToolbar(colors: colors) }
                         case .area(let areaId):
                             AreaDetailView(model: model, areaId: areaId) { projectId in
                                 phonePath.append(.project(projectId))
@@ -365,8 +367,10 @@ struct ListsBrowserView: View {
                     .navigationDestination(for: OrgRoute.self) { route in
                         switch route {
                         case .project(let projectId):
-                            ProjectDetailView(model: model, projectId: projectId)
-                                .toolbar { chromeToolbar(colors: colors) }
+                            ProjectDetailView(model: model, projectId: projectId) { id in
+                                orgPath.append(.project(id))
+                            }
+                            .toolbar { chromeToolbar(colors: colors) }
                         case .area(let areaId):
                             AreaDetailView(model: model, areaId: areaId) { projectId in
                                 orgPath.append(.project(projectId))
@@ -1413,6 +1417,11 @@ struct ListsBrowserView: View {
                             Label("Reopen", systemImage: "circle")
                         }
                     }
+                    Button {
+                        convertTodoToProject(row.id, title: row.title)
+                    } label: {
+                        Label("Convert to Project", systemImage: "bookmark")
+                    }
                 }
             }
             Button(role: .destructive) {
@@ -1420,6 +1429,19 @@ struct ListsBrowserView: View {
             } label: {
                 Label("Trash", systemImage: "trash")
             }
+        }
+    }
+
+    private func convertTodoToProject(_ id: ID, title: String) {
+        do {
+            let project = try model.store.run("Convert to Project") { d, env in
+                try Commands.convertTodoToProject(d, env, todoId: id)
+            }
+            model.noteEntitiesChanged()
+            model.undoNotice("Converted \(title) to a project")
+            openProject(project.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 

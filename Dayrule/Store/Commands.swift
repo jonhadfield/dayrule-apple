@@ -452,6 +452,57 @@ enum Commands {
         d.remove(.checklistItems, id: id)
     }
 
+    /// Turn a to-do into a project (PLAN §8.2). Checklist items become to-dos
+    /// in the new project; the original to-do is removed (web `convertTodoToProject`).
+    @discardableResult
+    static func convertTodoToProject(_ d: Draft, _ env: EntityStore.Env, todoId: ID) throws -> Project {
+        guard let t = d.getTodo(todoId) else {
+            throw CommandError(message: "to-do not found")
+        }
+        let siblings = d.allProjects().filter { $0.areaId == t.areaId }
+        let status: Status = t.status == .canceled ? .open : t.status
+        let start: StartBucket = t.start == .inbox ? .ready : t.start
+        var project = Project(
+            id: env.newId(),
+            createdAt: ISOStamp.format(env.now),
+            updatedAt: ISOStamp.format(env.now),
+            clock: nil,
+            title: t.title,
+            notes: t.notes,
+            areaId: t.areaId,
+            status: status,
+            start: start,
+            startDate: t.startDate,
+            tonight: false,
+            deadline: t.deadline,
+            tagIds: t.tagIds,
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            todayOrder: nil,
+            completedAt: status != .open ? (t.completedAt ?? ISOStamp.format(env.now)) : nil,
+            trashedAt: nil
+        )
+        if let startDate = project.startDate, startDate <= env.today {
+            project.todayOrder = try Order.keyAfterLast(todayKeys(d, env))
+        }
+        d.putProject(project)
+
+        let checks = d.allChecklistItems()
+            .filter { $0.todoId == todoId }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+        for c in checks {
+            let child = try createTodo(
+                d, env,
+                .init(title: c.title, placement: .project(projectId: project.id, headingId: nil))
+            )
+            if c.done {
+                setStatus(d, env, ids: [child.id], status: .completed)
+            }
+            d.remove(.checklistItems, id: c.id)
+        }
+        d.remove(.todos, id: todoId)
+        return project
+    }
+
     /// Turn a project into a to-do. Child to-dos become checklist items; headings
     /// are dropped. The project and its children are removed (web `convertProjectToTodo`).
     @discardableResult

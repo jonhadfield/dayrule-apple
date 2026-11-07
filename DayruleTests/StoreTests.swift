@@ -100,6 +100,42 @@ struct StoreTests {
         #expect(store.entities.checklistItems[item.id] == nil)
     }
 
+    @Test func convertTodoToProjectWithChecklistChildren() throws {
+        let store = sequentialStore()
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env,
+                .init(title: "Pack", placement: .today)
+            )
+        }
+        _ = try store.run("Checklist") { d, env in
+            try Commands.addChecklistItem(d, env, todoId: todo.id, title: "socks")
+        }
+        let passport = try store.run("Checklist") { d, env in
+            try Commands.addChecklistItem(d, env, todoId: todo.id, title: "passport")
+        }
+        store.run("Checklist") { d, env in
+            Commands.updateChecklistItem(d, env, id: passport.id, done: true)
+        }
+
+        let project = try store.run("Convert to Project") { d, env in
+            try Commands.convertTodoToProject(d, env, todoId: todo.id)
+        }
+
+        #expect(store.entities.todos[todo.id] == nil)
+        #expect(project.title == "Pack")
+        let expectedToday = When.toLocalDate(Date(timeIntervalSince1970: 1_700_000_000))
+        #expect(project.startDate == expectedToday)
+        #expect(project.todayOrder != nil)
+        let kids = store.entities.todos.values
+            .filter { $0.projectId == project.id }
+            .sorted { $0.title < $1.title }
+        #expect(kids.map(\.title) == ["passport", "socks"])
+        #expect(kids.first { $0.title == "passport" }?.status == .completed)
+        #expect(kids.first { $0.title == "socks" }?.status == .open)
+        #expect(store.entities.checklistItems.isEmpty)
+    }
+
     @Test func convertProjectToTodoWithChecklistChildren() throws {
         let store = sequentialStore()
         let project = try store.run("Project") { d, env in

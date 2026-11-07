@@ -230,7 +230,10 @@ struct HelpArticleView: View {
             "The progress next to a project fills in as you complete its to-dos. Complete the project itself and everything left in it is completed too.",
             colors
         )
-        tip("Move a to-do into a project with Move… on the to-do.", colors)
+        tip(
+            "Move a to-do into a project with Move… on the to-do. Or Convert to Project from the to-do menu — checklist steps become to-dos in the new project. A project’s ··· menu can Convert to To-Do the other way.",
+            colors
+        )
     }
 
     @ViewBuilder

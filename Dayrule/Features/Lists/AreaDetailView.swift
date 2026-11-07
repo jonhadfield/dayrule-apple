@@ -261,10 +261,26 @@ struct AreaDetailView: View {
                         Label("Reopen", systemImage: "arrow.uturn.backward.circle")
                     }
                 }
+                Button { convertTodoToProject(todo.id, title: title) } label: {
+                    Label("Convert to Project", systemImage: "bookmark")
+                }
             }
             Button(role: .destructive) { trash(todo.id, title: title) } label: {
                 Label("Trash", systemImage: "trash")
             }
+        }
+    }
+
+    private func convertTodoToProject(_ id: ID, title: String) {
+        do {
+            let project = try model.store.run("Convert to Project") { d, env in
+                try Commands.convertTodoToProject(d, env, todoId: id)
+            }
+            model.noteEntitiesChanged()
+            model.undoNotice("Converted \(title) to a project")
+            onOpenProject(project.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 
