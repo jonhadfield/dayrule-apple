@@ -134,7 +134,7 @@ enum ThingsImport {
                 areaId: areaId.flatMap { areaIds.contains($0) ? $0 : nil },
                 status: status(p["status"]),
                 start: projectStart(p["start"]),
-                startDate: localDate(p["startDate"]).flatMap { $0 >= today ? $0 : nil },
+                startDate: keepStartDate(localDate(p["startDate"]), today: today),
                 tonight: false,
                 deadline: localDate(p["deadline"]),
                 tagIds: filterIds(p["tagIds"], keep: tagIds),
@@ -186,7 +186,9 @@ enum ThingsImport {
                 areaId: areaId,
                 status: status(t["status"]),
                 start: todoStart(t["start"]),
-                startDate: rule == nil ? localDate(t["startDate"]).flatMap { $0 >= today ? $0 : nil } : nil,
+                startDate: rule == nil
+                    ? keepStartDate(localDate(t["startDate"]), today: today)
+                    : nil,
                 tonight: false,
                 deadline: localDate(t["deadline"]),
                 tagIds: filterIds(t["tagIds"], keep: tagIds),
@@ -339,5 +341,10 @@ enum ThingsImport {
     private static func projectStart(_ v: Any?) -> StartBucket {
         let s = StartBucket(rawValue: string(v, fallback: "ready")) ?? .ready
         return s == .inbox ? .ready : s
+    }
+
+    /// Keep When dates that are today or later; past dates flood Today as overdue.
+    private static func keepStartDate(_ date: LocalDate?, today: LocalDate) -> LocalDate? {
+        date.flatMap { $0 >= today ? $0 : nil }
     }
 }

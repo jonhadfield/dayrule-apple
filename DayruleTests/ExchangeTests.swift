@@ -103,11 +103,15 @@ struct ExchangeTests {
         let today = "2026-11-07"
         let data = try Exchange.parseImport(json, today: today)
         #expect(data.areas.count == 1)
-        #expect(data.todos.count == 6)
+        #expect(data.todos.count == 7)
 
         // Past startDate (2020-01-01) must be dropped so the item lands in Backlog, not Today.
-        let sched = data.todos.first { $0.id == "todo-sched" }
-        #expect(sched?.startDate == nil)
+        let sched = try #require(data.todos.first { $0.id == "todo-sched" })
+        #expect(sched.startDate == nil)
+        let future = try #require(data.todos.first { $0.id == "todo-future" })
+        #expect(future.startDate == "2026-12-01")
+        let kitchen = try #require(data.projects.first { $0.id == "proj-1" })
+        #expect(kitchen.startDate == today)
 
         let daily = data.todos.first { $0.id == "todo-repeat" }?.repeat
         #expect(daily?.freq == .day)
@@ -124,12 +128,19 @@ struct ExchangeTests {
         let counts = try target.run("Import") { d, env in
             Commands.importData(d, env, try Exchange.parseImport(json, today: today))
         }
-        #expect(counts.todos == 6)
+        #expect(counts.todos == 7)
         #expect(counts.checklistItems == 1)
         #expect(target.entities.todos.values.contains { $0.title == "Buy milk" && $0.start == .inbox })
         // After import the scheduled chore should have no startDate and live in Backlog.
         // (importData assigns new IDs, so match by title.)
-        #expect(target.entities.todos.values.contains { $0.title == "Scheduled chore" && $0.startDate == nil })
+        let importedSched = try #require(
+            target.entities.todos.values.first { $0.title == "Scheduled chore" }
+        )
+        #expect(importedSched.startDate == nil)
+        let importedFuture = try #require(
+            target.entities.todos.values.first { $0.title == "Next month" }
+        )
+        #expect(importedFuture.startDate == "2026-12-01")
     }
 
     private func sampleThingsJSON() -> String {
@@ -143,7 +154,7 @@ struct ExchangeTests {
           "tags": [{ "id": "tag-1", "title": "Errand", "order": 0 }],
           "projects": [{
             "id": "proj-1", "title": "Kitchen", "notes": "", "areaId": "area-1",
-            "status": "open", "start": "ready", "order": 0, "tagIds": [],
+            "status": "open", "start": "ready", "startDate": "2026-11-07", "order": 0, "tagIds": [],
             "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
           }],
           "headings": [{
@@ -183,6 +194,11 @@ struct ExchangeTests {
               "start": "ready", "order": 5, "repeatTemplate": true, "repeatNext": "2026-11-10",
               "afterCompletion": false, "repeatFreq": "week", "repeatEvery": 2,
               "repeatWeekdays": [0, 2],
+              "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
+            },
+            {
+              "id": "todo-future", "title": "Next month", "notes": "", "status": "open",
+              "start": "ready", "startDate": "2026-12-01", "order": 6,
               "createdAt": "2026-11-01T00:00:00.000Z", "updatedAt": "2026-11-01T00:00:00.000Z"
             }
           ],

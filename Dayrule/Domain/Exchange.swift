@@ -157,6 +157,7 @@ enum Exchange {
     // MARK: - Import parse
 
     /// Accepts `dayrule-export` and `dayrule-things-export` (web `parseImport`).
+    /// `today` is used only for Things imports (past When dates are dropped).
     static func parseImport(_ text: String, today: LocalDate = When.toLocalDate(Date())) throws -> ExportData {
         if ThingsImport.looksLike(text) {
             return try ThingsImport.parseAndMap(text, today: today)
