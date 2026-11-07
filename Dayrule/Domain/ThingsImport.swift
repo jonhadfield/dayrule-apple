@@ -12,9 +12,9 @@ enum ThingsImport {
         return raw["format"] as? String == format
     }
 
-    static func parseAndMap(_ text: String) throws -> Exchange.ExportData {
+    static func parseAndMap(_ text: String, today: LocalDate) throws -> Exchange.ExportData {
         do {
-            return try map(parse(text))
+            return try map(parse(text), today: today)
         } catch let err as Exchange.ImportError {
             throw err
         } catch {
@@ -74,7 +74,7 @@ enum ThingsImport {
 
     // MARK: - Map
 
-    private static func map(_ src: Document) throws -> Exchange.ExportData {
+    private static func map(_ src: Document, today: LocalDate) throws -> Exchange.ExportData {
         let stamp = src.exportedAt.isEmpty ? "1970-01-01T00:00:00.000Z" : src.exportedAt
         let tagOrder = try orderKeys(src.tags)
         let areaOrder = try orderKeys(src.areas)
@@ -134,7 +134,7 @@ enum ThingsImport {
                 areaId: areaId.flatMap { areaIds.contains($0) ? $0 : nil },
                 status: status(p["status"]),
                 start: projectStart(p["start"]),
-                startDate: localDate(p["startDate"]),
+                startDate: localDate(p["startDate"]).flatMap { $0 >= today ? $0 : nil },
                 tonight: false,
                 deadline: localDate(p["deadline"]),
                 tagIds: filterIds(p["tagIds"], keep: tagIds),
@@ -186,7 +186,7 @@ enum ThingsImport {
                 areaId: areaId,
                 status: status(t["status"]),
                 start: todoStart(t["start"]),
-                startDate: rule == nil ? localDate(t["startDate"]) : nil,
+                startDate: rule == nil ? localDate(t["startDate"]).flatMap { $0 >= today ? $0 : nil } : nil,
                 tonight: false,
                 deadline: localDate(t["deadline"]),
                 tagIds: filterIds(t["tagIds"], keep: tagIds),

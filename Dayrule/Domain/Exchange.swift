@@ -157,9 +157,9 @@ enum Exchange {
     // MARK: - Import parse
 
     /// Accepts `dayrule-export` and `dayrule-things-export` (web `parseImport`).
-    static func parseImport(_ text: String) throws -> ExportData {
+    static func parseImport(_ text: String, today: LocalDate = When.toLocalDate(Date())) throws -> ExportData {
         if ThingsImport.looksLike(text) {
-            return try ThingsImport.parseAndMap(text)
+            return try ThingsImport.parseAndMap(text, today: today)
         }
         guard let data = text.data(using: .utf8),
               let rawAny = try? JSONSerialization.jsonObject(with: data),

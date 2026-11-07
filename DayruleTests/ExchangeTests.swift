@@ -100,9 +100,15 @@ struct ExchangeTests {
     @Test("imports a Things intermediate export")
     func thingsImport() throws {
         let json = sampleThingsJSON()
-        let data = try Exchange.parseImport(json)
+        let today = "2026-11-07"
+        let data = try Exchange.parseImport(json, today: today)
         #expect(data.areas.count == 1)
         #expect(data.todos.count == 6)
+
+        // Past startDate (2020-01-01) must be dropped so the item lands in Backlog, not Today.
+        let sched = data.todos.first { $0.id == "todo-sched" }
+        #expect(sched?.startDate == nil)
+
         let daily = data.todos.first { $0.id == "todo-repeat" }?.repeat
         #expect(daily?.freq == .day)
         #expect(daily?.every == 1)
@@ -116,11 +122,14 @@ struct ExchangeTests {
 
         let target = store()
         let counts = try target.run("Import") { d, env in
-            Commands.importData(d, env, try Exchange.parseImport(json))
+            Commands.importData(d, env, try Exchange.parseImport(json, today: today))
         }
         #expect(counts.todos == 6)
         #expect(counts.checklistItems == 1)
         #expect(target.entities.todos.values.contains { $0.title == "Buy milk" && $0.start == .inbox })
+        // After import the scheduled chore should have no startDate and live in Backlog.
+        // (importData assigns new IDs, so match by title.)
+        #expect(target.entities.todos.values.contains { $0.title == "Scheduled chore" && $0.startDate == nil })
     }
 
     private func sampleThingsJSON() -> String {
