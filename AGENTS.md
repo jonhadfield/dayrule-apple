@@ -107,8 +107,9 @@ ship in a binary. TestFlight builds use the production host
   Amplitude / etc. without an explicit PLAN decision.
 - Network: TLS to `dayrule.app` only (plus HIBP range API for breached-
   password checks, same k-anonymity rules as web decision 31; plus the local
-  server in Debug builds only). Certificate pinning is a later hardening
-  decision (PLAN §18, open point 3), not a silent add.
+  server in Debug builds only). Certificate pinning is deferred until
+  Cloudflare (or equivalent) terminates TLS (PLAN decision 27); do not
+  silently add pins against Vercel-issued certs.
 - Reminders are local notifications only; the app never registers
   reminders with the server and has no APNs entitlement (PLAN §11).
 - Auth from the app uses the native session model in PLAN §9

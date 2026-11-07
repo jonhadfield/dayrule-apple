@@ -152,6 +152,9 @@ final class AppModel {
 
     #if os(iOS)
     /// BGAppRefresh: refresh the nearest 64 while stay-unlocked (PLAN §11).
+    /// Holds `gateBusy` for the silent device-wrap path so a concurrent
+    /// convenience unlock cannot finish during `await crypto.lock()` and leave
+    /// unlocked UI with a zeroed AK (audit run-2 post-phase-check TOCTOU).
     func handleBackgroundReminderRefresh() async {
         guard DeviceReminderPrefs.enabled, DeviceUnlockPrefs.stayUnlocked else { return }
         if phase == .unlocked {
@@ -159,9 +162,15 @@ final class AppModel {
             ReminderBackgroundRefresh.scheduleIfNeeded()
             return
         }
+        guard !gateBusy else {
+            ReminderBackgroundRefresh.scheduleIfNeeded()
+            return
+        }
         guard let cached = try? sessions.loadAccount(),
               let wrapped = cached.deviceWrappedAK
         else { return }
+        gateBusy = true
+        defer { gateBusy = false }
         do {
             try await crypto.unlockFromDeviceWrap(
                 userId: cached.userId,
@@ -172,7 +181,7 @@ final class AppModel {
                 let entities = try await cipherStore.load()
                 await ReminderScheduler.reschedule(entities: entities)
             }
-            // A convenience unlock may have finished during load/reschedule.
+            // Defense in depth: a path that bypassed gateBusy should not be torn down.
             if phase == .unlocked { return }
             cipherStore = nil
             syncEngine = nil
@@ -552,8 +561,10 @@ final class AppModel {
         if hasBearerSession() {
             signOut()
         } else {
-            lock()
-            Task { await api.setToken(nil) }
+            Task {
+                await lock()
+                await api.setToken(nil)
+            }
         }
     }
 
@@ -1005,8 +1016,15 @@ final class AppModel {
     }
 
     /// Lock the vault on this device. Keeps the Bearer session so sync works
-    /// after biometric / stay-unlocked reopen (unlike sign-out).
-    func lock() {
+    /// after biometric / stay-unlocked reopen (unlike sign-out). Awaits AK wipe
+    /// so callers that `await lock()` do not proceed while the key is still held.
+    func lock() async {
+        applyLockedUI()
+        await crypto.lock()
+    }
+
+    /// Clear unlocked UI synchronously (phase, store, sync). Does not wipe the AK.
+    private func applyLockedUI() {
         showFind = false
         clearPendingSecondStep()
         idleTask?.cancel()
@@ -1023,17 +1041,16 @@ final class AppModel {
         showSettings = false
         linger.clear()
         notices.clear()
-        // Lock first so noteEntitiesChanged does not clear pending notifications.
+        // Lock UI first so noteEntitiesChanged does not clear pending notifications.
         phase = .locked
         store.hydrate(.empty())
         entitiesEpoch += 1
-        Task { await crypto.lock() }
     }
 
     /// User chose Lock: drop any stale gate message (lock() keeps it for signOut / 401).
     func lockNow() {
         errorMessage = nil
-        lock()
+        Task { await lock() }
     }
 
     /// Revoke the server session and forget this device's account identity
@@ -1061,8 +1078,9 @@ final class AppModel {
         clearPendingSecondStep()
         gateResetEpoch += 1
 
-        lock()
+        applyLockedUI()
         Task {
+            await crypto.lock()
             if let userId {
                 try? await crypto.forgetDevice(userId: userId)
             }
@@ -1073,6 +1091,13 @@ final class AppModel {
             await api.setToken(nil)
         }
     }
+
+    #if DEBUG
+    /// Test hook: hold or release `gateBusy` without starting a gate action.
+    func testingSetGateBusy(_ busy: Bool) {
+        gateBusy = busy
+    }
+    #endif
 
     /// Delete the account on the server and wipe this device (PLAN §9.5).
     func deleteAccount(password: String) async -> Bool {
@@ -1148,7 +1173,7 @@ final class AppModel {
         idleTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(15 * 60))
             guard !Task.isCancelled else { return }
-            await MainActor.run { self?.lockNow() }
+            await self?.lock()
         }
     }
 
