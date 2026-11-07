@@ -90,8 +90,15 @@ struct ProjectDetailView: View {
                         .buttonStyle(.dayruleRow)
                         .listRowInsets(EdgeInsets())
                         .accessibilityAddTraits(.isHeader)
-                        .accessibilityHint("Rename, archive or delete heading")
+                        .accessibilityHint("Rename, convert, archive or delete heading")
                         .accessibilityIdentifier("project.heading.\(group.heading.id)")
+                        .contextMenu {
+                            Button {
+                                convertHeadingToProject(group.heading.id, title: group.heading.title)
+                            } label: {
+                                Label("Convert to Project", systemImage: "bookmark")
+                            }
+                        }
                     }
                 }
             } else {
@@ -184,7 +191,9 @@ struct ProjectDetailView: View {
         }
         #endif
         .sheet(item: $headingTarget) { target in
-            HeadingSheetView(model: model, headingId: target.id)
+            HeadingSheetView(model: model, headingId: target.id) { id in
+                onOpenProject?(id)
+            }
         }
         .sheet(item: $whenTarget) { target in
             WhenSheetView(model: model, ids: target.ids)
@@ -465,6 +474,19 @@ struct ProjectDetailView: View {
             }
             model.noteEntitiesChanged()
             model.undoNotice("Converted \(title) to a to-do")
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
+    }
+
+    private func convertHeadingToProject(_ id: ID, title: String) {
+        do {
+            let project = try model.store.run("Convert Heading to Project") { d, env in
+                try Commands.convertHeadingToProject(d, env, headingId: id)
+            }
+            model.noteEntitiesChanged()
+            model.undoNotice("Converted \(title) to a project")
+            onOpenProject?(project.id)
         } catch {
             model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }

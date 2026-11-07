@@ -136,6 +136,38 @@ struct StoreTests {
         #expect(store.entities.checklistItems.isEmpty)
     }
 
+    @Test func convertHeadingToProjectMovesTodos() throws {
+        let store = sequentialStore()
+        let area = try store.run("Area") { d, env in
+            try Commands.createArea(d, env, title: "Home")
+        }
+        let parent = try store.run("Project") { d, env in
+            try Commands.createProject(d, env, title: "Parent", areaId: area.id)
+        }
+        let heading = try store.run("Heading") { d, env in
+            try Commands.createHeading(d, env, projectId: parent.id, title: "Kitchen")
+        }
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(
+                d, env,
+                .init(
+                    title: "Clean",
+                    placement: .project(projectId: parent.id, headingId: heading.id)
+                )
+            )
+        }
+
+        let next = try store.run("Convert Heading to Project") { d, env in
+            try Commands.convertHeadingToProject(d, env, headingId: heading.id)
+        }
+
+        #expect(store.entities.headings[heading.id] == nil)
+        #expect(next.title == "Kitchen")
+        #expect(next.areaId == area.id)
+        #expect(store.entities.todos[todo.id]?.projectId == next.id)
+        #expect(store.entities.todos[todo.id]?.headingId == nil)
+    }
+
     @Test func convertProjectToTodoWithChecklistChildren() throws {
         let store = sequentialStore()
         let project = try store.run("Project") { d, env in

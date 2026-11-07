@@ -556,6 +556,53 @@ enum Commands {
         return result
     }
 
+    /// Turn a heading into a project (PLAN §8.2). Its to-dos move into the new
+    /// project (no heading); the heading is removed. The new project shares the
+    /// parent project's area (web `convertHeadingToProject`).
+    @discardableResult
+    static func convertHeadingToProject(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        headingId: ID
+    ) throws -> Project {
+        guard let h = d.getHeading(headingId) else {
+            throw CommandError(message: "heading not found")
+        }
+        let parent = d.getProject(h.projectId)
+        let areaId = parent?.areaId
+        let siblings = d.allProjects().filter { $0.areaId == areaId }
+        let ts = ISOStamp.format(env.now)
+        let project = Project(
+            id: env.newId(),
+            createdAt: ts,
+            updatedAt: ts,
+            clock: nil,
+            title: h.title,
+            notes: "",
+            areaId: areaId,
+            status: .open,
+            start: .ready,
+            startDate: nil,
+            tonight: false,
+            deadline: nil,
+            tagIds: [],
+            order: try Order.keyAfterLast(siblings.map(\.order)),
+            todayOrder: nil,
+            completedAt: nil,
+            trashedAt: nil
+        )
+        d.putProject(project)
+
+        let children = d.allTodos()
+            .filter { $0.headingId == headingId && $0.trashedAt == nil }
+            .sorted { Order.compareKeys($0.order, $1.order) < 0 }
+        for t in children {
+            try moveTodos(d, env, ids: [t.id], target: .project(projectId: project.id, headingId: nil))
+        }
+        d.remove(.headings, id: headingId)
+        return project
+    }
+
     struct ImportCounts: Equatable, Sendable {
         var areas: Int
         var projects: Int

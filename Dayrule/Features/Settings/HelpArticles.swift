@@ -222,7 +222,7 @@ struct HelpArticleView: View {
         )
         heading("Headings", colors)
         para(
-            "In a project, add headings to split it into stages. Move to-dos under the heading they belong to.",
+            "In a project, add headings to split it into stages. Move to-dos under the heading they belong to. Convert to Project on a heading turns it into its own project and takes its to-dos with it.",
             colors
         )
         heading("Finishing", colors)
@@ -231,7 +231,7 @@ struct HelpArticleView: View {
             colors
         )
         tip(
-            "Move a to-do into a project with Move… on the to-do. Or Convert to Project from the to-do menu — checklist steps become to-dos in the new project. A project’s ··· menu can Convert to To-Do the other way.",
+            "Move a to-do into a project with Move… on the to-do. Or Convert to Project from the to-do menu — checklist steps become to-dos in the new project. A heading’s sheet or menu can Convert to Project too. A project’s ··· menu can Convert to To-Do the other way.",
             colors
         )
     }

@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// Rename / archive / delete a project heading (M5).
+/// Rename / archive / convert / delete a project heading (M5).
 struct HeadingSheetView: View {
     @Bindable var model: AppModel
     let headingId: ID
+    /// Opens the project created by Convert to Project.
+    var onOpenProject: ((ID) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var title = ""
@@ -41,6 +43,13 @@ struct HeadingSheetView: View {
                 }
                 .dayruleSheetRow(colors: colors)
                 DayruleFormSection {
+                    Button(action: convertToProject) {
+                        Text("Convert to Project")
+                            .foregroundStyle(colors.text)
+                            .frame(minHeight: Tokens.minHit)
+                    }
+                    .buttonStyle(.dayruleRow)
+                    .accessibilityIdentifier("heading.convertToProject")
                     Button(action: archive) {
                         Text("Archive")
                             .foregroundStyle(colors.text)
@@ -49,7 +58,7 @@ struct HeadingSheetView: View {
                     .buttonStyle(.dayruleRow)
                     .accessibilityIdentifier("heading.archive")
                 } footer: {
-                    Text("Hides the heading; its to-dos stay in the project.")
+                    Text("Convert turns this heading into a project and moves its to-dos. Archive hides the heading; its to-dos stay in the project.")
                         .font(DayruleType.helper)
                         .foregroundStyle(colors.textSecondary)
                 }
@@ -93,6 +102,21 @@ struct HeadingSheetView: View {
         }
         model.noteEntitiesChanged()
         dismiss()
+    }
+
+    private func convertToProject() {
+        let label = trimmedTitle.isEmpty ? loadedTitle : trimmedTitle
+        do {
+            let project = try model.store.run("Convert Heading to Project") { d, env in
+                try Commands.convertHeadingToProject(d, env, headingId: headingId)
+            }
+            model.noteEntitiesChanged()
+            model.undoNotice("Converted \(label) to a project")
+            dismiss()
+            onOpenProject?(project.id)
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
     }
 
     private func archive() {
