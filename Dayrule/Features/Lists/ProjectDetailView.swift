@@ -130,6 +130,16 @@ struct ProjectDetailView: View {
                         Label("Edit", systemImage: "pencil")
                     }
                     .accessibilityIdentifier("project.edit")
+                    Button {
+                        toggleProjectComplete(title: title)
+                    } label: {
+                        if view?.project.status == .open {
+                            Label("Complete Project", systemImage: "checkmark.circle")
+                        } else {
+                            Label("Reopen Project", systemImage: "arrow.uturn.backward.circle")
+                        }
+                    }
+                    .accessibilityIdentifier("project.toggleComplete")
                     Divider()
                     Button { model.undoLast() } label: {
                         Label("Undo", systemImage: "arrow.uturn.backward")
@@ -142,6 +152,13 @@ struct ProjectDetailView: View {
                         Label("Redo", systemImage: "arrow.uturn.forward")
                     }
                     .disabled(!model.store.canRedo)
+                    Divider()
+                    Button(role: .destructive) {
+                        trashProject(title: title)
+                    } label: {
+                        Label("Move to Trash", systemImage: "trash")
+                    }
+                    .accessibilityIdentifier("project.trash")
                 } label: {
                     Label("Project actions", systemImage: "ellipsis")
                         .labelStyle(.iconOnly)
@@ -394,5 +411,26 @@ struct ProjectDetailView: View {
         }
         model.noteEntitiesChanged()
         model.undoNotice("Moved \(title) to Trash")
+    }
+
+    private func trashProject(title: String) {
+        model.store.run("Trash Project") { d, env in
+            Commands.trashItems(d, env, ids: [projectId])
+        }
+        model.noteEntitiesChanged()
+        model.undoNotice("Moved \(title) to Trash")
+        dismiss()
+    }
+
+    private func toggleProjectComplete(title: String) {
+        let open = model.entities.projects[projectId]?.status == .open
+        let status: Status = open ? .completed : .open
+        model.store.run(status == .completed ? "Complete Project" : "Reopen Project") { d, env in
+            Commands.setStatus(d, env, ids: [projectId], status: status)
+        }
+        model.noteEntitiesChanged()
+        if status == .completed {
+            model.undoNotice("Completed \(title)")
+        }
     }
 }
