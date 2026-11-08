@@ -589,6 +589,7 @@ final class AppModel {
             bumpHaptic(\.unlock)
             bumpIdle()
             startSyncPoll()
+            ingestShareInboxIfNeeded()
             return
         }
         cipherStore = nil
@@ -1150,6 +1151,11 @@ final class AppModel {
         gateBusy = busy
     }
 
+    /// Test hook: set Gate phase without running unlock / vault open.
+    func testingSetPhase(_ phase: Phase) {
+        self.phase = phase
+    }
+
     /// Invoked after the unlocked-phase check on the BG success path, before
     /// tearing down the silent device-wrap session (concurrency tests).
     var testingBeforeBackgroundEpilogueLock: (@MainActor () async -> Void)?
@@ -1238,12 +1244,39 @@ final class AppModel {
         }
     }
 
+    /// Drain the Share extension queue into Inbox (PLAN §1). No-op if empty or
+    /// the App Group is unavailable (e.g. macOS).
+    func ingestShareInboxIfNeeded() {
+        #if os(iOS)
+        guard phase == .unlocked else { return }
+        do {
+            let titles = try ShareInboxQueue.drainTitles()
+            guard !titles.isEmpty else { return }
+            for title in titles {
+                _ = try store.run("Share Add") { d, env in
+                    try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
+                }
+            }
+            noteEntitiesChanged()
+            bumpHaptic(\.add)
+            undoNotice(
+                titles.count == 1 ? "Added shared to-do" : "Added \(titles.count) shared to-dos"
+            )
+        } catch ShareInboxError.containerMissing {
+            // Simulator / missing App Group capability — ignore.
+        } catch {
+            notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
+        #endif
+    }
+
     func scenePhaseChanged(_ scene: ScenePhase) {
         sceneIsActive = scene == .active
         if scene == .active {
             bumpIdle()
             scheduleRemindersIfUnlocked()
             if phase == .unlocked {
+                ingestShareInboxIfNeeded()
                 // Pull peer writes when returning to the foreground (PLAN §10.3).
                 startSyncPoll()
                 Task { await runSync() }

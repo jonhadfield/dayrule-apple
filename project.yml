@@ -47,6 +47,9 @@ targets:
         product: Clibsodium
       - package: GRDB
         product: GRDB
+      - target: DayruleShare
+        embed: true
+        destinationFilters: [iOS]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule
@@ -72,6 +75,22 @@ targets:
       testTargets:
         - DayruleTests
         - DayruleUITests
+  DayruleShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: DayruleShare
+      - path: Dayrule/ShareInbox
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.share
+        DEVELOPMENT_TEAM: VBZY8FBYR5
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: DayruleShare/Info.plist
+        CODE_SIGN_ENTITLEMENTS: DayruleShare/DayruleShare.entitlements
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
   DayruleTests:
     type: bundle.unit-test
     supportedDestinations: [iOS, macOS]

@@ -3,7 +3,7 @@ import SwiftUI
 /// One transient in-app notice (error, info or Undo). In-app UI only: never routed to
 /// system notifications, so decrypted text never leaves the process.
 struct Notice: Identifiable, Equatable {
-    enum Kind {
+    enum Kind: Equatable {
         case error, info, undo
     }
 
