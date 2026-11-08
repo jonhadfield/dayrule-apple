@@ -68,6 +68,7 @@
 		5AB7B1A1573F2E7076748582 /* ShareInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB493133287A151825B301F3 /* ShareInboxTests.swift */; };
 		5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
+		61A3DD52D1351E333A1C0364 /* SyncChromeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88D09FDA8D23E4CBDDF36EC /* SyncChromeViews.swift */; };
 		61B5465FA18F398B4823248C /* ATSLocalNetworkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */; };
 		62C1B94F068C10E436E2B473 /* ClientPlatformTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */; };
 		6375E73DD850EBBB6BD873EE /* SyncEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 221A94E28BFCED6BCDAA75E5 /* SyncEngineTests.swift */; };
@@ -373,6 +374,7 @@
 		E6C5E5DFE698F51A1E8436AE /* SyncE2ETests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncE2ETests.swift; sourceTree = "<group>"; };
 		E760B37539EA8DA121BE562E /* SyncConvergenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncConvergenceTests.swift; sourceTree = "<group>"; };
 		E7E230BA135789962B607A3D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		E88D09FDA8D23E4CBDDF36EC /* SyncChromeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncChromeViews.swift; sourceTree = "<group>"; };
 		EAC88A10168259EFE3885170 /* PasskeyPRF.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeyPRF.swift; sourceTree = "<group>"; };
 		EB8C8968ECDB5433251704AB /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
 		ED491D92E219DF041A432C75 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -417,6 +419,7 @@
 				9971AB98E96CA0C19A947208 /* ReminderSheetView.swift */,
 				907B9E852AD5A3D3A0C2A467 /* RepeatSheetView.swift */,
 				ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */,
+				E88D09FDA8D23E4CBDDF36EC /* SyncChromeViews.swift */,
 				5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */,
 				A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */,
 			);
@@ -1009,6 +1012,7 @@
 				206B734E5F06C6F56ACCA849 /* ShareInboxSupport.swift in Sources */,
 				6F181483B46F66F73C2E7776 /* ShareSheet.swift in Sources */,
 				9BDD05ADC3C3EF90E71A0C5E /* Sheet.swift in Sources */,
+				61A3DD52D1351E333A1C0364 /* SyncChromeViews.swift in Sources */,
 				88DDAAD2A9D4C431A5762B6F /* SyncEngine.swift in Sources */,
 				C8182DA2B1A801B357F38156 /* SyncStatus.swift in Sources */,
 				E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */,

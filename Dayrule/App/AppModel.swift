@@ -523,7 +523,14 @@ final class AppModel {
         await api.setToken(token)
 
         syncInFlight = true
-        syncStatus = .syncing
+        // Quiet background polls: don't flip through `.syncing` (and rebuild
+        // list chrome) when we're already up to date. First sync and Sync now
+        // still show progress. Remote applies refresh UI via `persist`.
+        let quietPoll = hasCompletedInitialSync
+            && (syncStatus == .synced || syncStatus == .idle)
+        if !quietPoll {
+            setSyncStatus(.syncing)
+        }
         defer {
             syncInFlight = false
             let waiters = syncWaiters
@@ -539,45 +546,61 @@ final class AppModel {
         guard let syncEngine else { return }
         do {
             try await syncEngine.sync()
-            entitiesDidChange(animation: Motion.fade)
-            hasCompletedInitialSync = true
+            // Do not bump `entitiesEpoch` here — remote merges already call
+            // `entitiesDidChange` from `persist` (source `.sync`). Idle no-op
+            // polls must not fade/rebuild the lists every ~15s.
+            if !hasCompletedInitialSync {
+                hasCompletedInitialSync = true
+            }
             let pending = (try? await cipherStore?.pendingKeys()) ?? []
             if syncEngine.sawUnknownAlg {
-                syncStatus = .needsUpdate
+                setSyncStatus(.needsUpdate)
             } else if !pending.isEmpty {
                 // Push ran but rows remain — surface it instead of a false "Up to date".
                 let waiting = AttributedString(
                     localized: "Sync incomplete — ^[\(pending.count) change](inflect: true) still waiting."
                 )
-                syncStatus = .offline(String(waiting.characters))
+                setSyncStatus(.offline(String(waiting.characters)))
             } else {
-                syncStatus = .synced
+                setSyncStatus(.synced)
             }
             if case .needsUpdate = syncStatus {
-                errorMessage = syncStatus.label
+                setSyncError(syncStatus.label)
             } else if case .offline = syncStatus {
-                errorMessage = syncStatus.label
+                setSyncError(syncStatus.label)
             } else {
-                errorMessage = nil
+                setSyncError(nil)
             }
         } catch let err as SyncBlockedError {
-            syncStatus = .blocked(err.localizedDescription)
-            errorMessage = err.localizedDescription
+            setSyncStatus(.blocked(err.localizedDescription))
+            setSyncError(err.localizedDescription)
         } catch let APIError.http(status, code, _) where status == 401 || code == "unauthorized" {
             // Session expired/revoked (PLAN §9.2). Keep ciphertext; clear Bearer.
             // Server copy is "Sign in again." — drop the full stop for UI labels.
-            errorMessage = "Sign in again"
+            setSyncError("Sign in again")
             signOut()
         } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
             // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
-            syncStatus = .needsUpdate
-            errorMessage = message.isEmpty ? SyncStatus.needsUpdate.label : message
+            setSyncStatus(.needsUpdate)
+            setSyncError(message.isEmpty ? SyncStatus.needsUpdate.label : message)
         } catch APIError.offline {
-            syncStatus = .offline("Offline — changes stay on this device.")
+            setSyncStatus(.offline("Offline — changes stay on this device."))
+            setSyncError("Offline — changes stay on this device.")
         } catch {
-            syncStatus = .offline(error.localizedDescription)
-            errorMessage = error.localizedDescription
+            setSyncStatus(.offline(error.localizedDescription))
+            setSyncError(error.localizedDescription)
         }
+    }
+
+    /// Avoid no-op `@Observable` writes that invalidate list chrome every poll.
+    private func setSyncStatus(_ next: SyncStatus) {
+        guard syncStatus != next else { return }
+        syncStatus = next
+    }
+
+    private func setSyncError(_ message: String?) {
+        guard errorMessage != message else { return }
+        errorMessage = message
     }
 
     /// Load local ciphertext (or pull if empty + signed in), then enter the lists.

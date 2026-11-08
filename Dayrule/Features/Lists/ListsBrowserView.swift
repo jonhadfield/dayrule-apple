@@ -459,22 +459,18 @@ struct ListsBrowserView: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
-            .dayruleAnimation(Motion.standard, value: model.syncStatus == .needsUpdate)
+            .modifier(SyncNeedsUpdateAnimationModifier(model: model))
         } else {
             List(selection: $selection) {
                 sidebarRows(colors: colors)
             }
             .scrollContentBackground(.hidden)
             .background(colors.sidebar)
-            .dayruleAnimation(Motion.standard, value: model.syncStatus == .needsUpdate)
+            .modifier(SyncNeedsUpdateAnimationModifier(model: model))
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 VStack(alignment: .leading, spacing: Tokens.Space.s) {
                     newListMenu(colors: colors)
-                    SyncStatusView(
-                        status: model.syncStatus,
-                        needsServerSignIn: model.needsServerSignIn,
-                        compact: true
-                    )
+                    SyncStatusChrome(model: model, compact: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, Tokens.rowInset)
@@ -492,15 +488,6 @@ struct ListsBrowserView: View {
         PhoneTab.tab(for: name)?.systemImage ?? name.systemImage
     }
 
-    /// "Update needed" note (sync protocol too new for this build).
-    private func needsUpdateNote(colors: DayruleColors) -> some View {
-        Text("\(Image(systemName: "exclamationmark.circle.fill")) \(model.syncStatus.label)")
-            .font(DayruleType.meta)
-            .foregroundStyle(colors.deadline)
-            .padding(.vertical, 6)
-            .transition(.dayruleBanner)
-    }
-
     /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS / areas (PLAN §6.5).
     @ViewBuilder
     private func phoneBrowseRows(colors: DayruleColors) -> some View {
@@ -509,14 +496,10 @@ struct ListsBrowserView: View {
                 .listRowBackground(colors.bg)
                 .listRowSeparator(.hidden)
         } else {
-            SyncStatusView(status: model.syncStatus)
+            SyncStatusChrome(model: model)
                 .listRowBackground(colors.bg)
                 .listRowSeparator(.hidden)
-            if model.syncStatus == .needsUpdate {
-                needsUpdateNote(colors: colors)
-                    .listRowBackground(colors.bg)
-                    .listRowSeparator(.hidden)
-            }
+            SyncNeedsUpdateBanner(model: model, colors: colors, hideSeparator: true)
         }
         ForEach(PhoneTab.browseLists, id: \.self) { name in
             NavigationLink(value: PhoneRoute.list(name)) {
@@ -607,10 +590,7 @@ struct ListsBrowserView: View {
 
     @ViewBuilder
     private func sidebarRows(colors: DayruleColors) -> some View {
-        if model.syncStatus == .needsUpdate {
-            needsUpdateNote(colors: colors)
-                .listRowBackground(Color.clear)
-        }
+        SyncNeedsUpdateBanner(model: model, colors: colors, rowBackground: .clear)
         let names = ListName.allCases.filter { $0 != .notNow }
         ForEach(names, id: \.self) { name in
             HStack(spacing: 0) {
@@ -1137,15 +1117,12 @@ struct ListsBrowserView: View {
     /// why and offer the way back to sign-in.
     @ViewBuilder
     private func emptyRow(list: ListName) -> some View {
-        if !model.hasCompletedInitialSync, model.syncStatus == .syncing {
-            DayruleNoteRow(text: "Syncing…", showsProgress: true)
-        } else if model.vault == nil, model.errorMessage != nil {
+        ListEmptyPlaceholder(
+            model: model,
+            listTitle: list.title,
+            systemImage: listImage(list)
+        ) {
             vaultMissingRow
-        } else {
-            DayruleEmptyState(
-                systemImage: listImage(list),
-                accessibilityLabel: "Nothing in \(list.title)"
-            )
         }
     }
 
