@@ -47,6 +47,17 @@
 	<array>
 		<string>fetch</string>
 	</array>
+	<key>UIApplicationShortcutItems</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemType</key>
+			<string>uk.co.lessknown.dayrule.new-todo</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>New to-do</string>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>plus</string>
+		</dict>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations</key>

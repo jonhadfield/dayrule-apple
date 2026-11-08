@@ -47,6 +47,7 @@ struct DayruleApp: App {
             .onAppear {
                 #if os(iOS)
                 ReminderBackgroundRefresh.bind(model)
+                QuickActions.bind(model)
                 #endif
             }
             .onChange(of: scenePhase) { _, phase in

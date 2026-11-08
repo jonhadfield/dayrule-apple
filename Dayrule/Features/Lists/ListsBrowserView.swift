@@ -95,6 +95,7 @@ struct ListsBrowserView: View {
     @State private var selecting = false
     @State private var selectedIds: Set<ID> = []
     @State private var showNewList = false
+    @FocusState private var addFieldFocused: Bool
     @ScaledMetric(relativeTo: .body) private var tabIconSize: CGFloat = 18
     @ScaledMetric(relativeTo: .body) private var browseIconWidth: CGFloat = 22
 
@@ -178,6 +179,15 @@ struct ListsBrowserView: View {
             model.pendingMacChromeAction = nil
             handleMacChromeAction(action)
         }
+        .onChange(of: model.pendingFocusAdd) { _, pending in
+            if pending { consumeFocusAddIfReady() }
+        }
+        .onChange(of: model.phase) { _, phase in
+            if phase == .unlocked { consumeFocusAddIfReady() }
+        }
+        .onChange(of: model.vaultLoading) { _, loading in
+            if !loading { consumeFocusAddIfReady() }
+        }
     }
 
     private func handleMacChromeAction(_ action: AppModel.MacChromeAction) {
@@ -188,6 +198,23 @@ struct ListsBrowserView: View {
             addProject(areaId: areaIdForNewProject)
         case .newArea:
             addArea()
+        }
+    }
+
+    /// Home Screen "New to-do" / menu New To-Do: Inbox Add after unlock (PLAN §1).
+    private func consumeFocusAddIfReady() {
+        guard model.pendingFocusAdd, model.phase == .unlocked, !model.vaultLoading else { return }
+        model.pendingFocusAdd = false
+        model.showSettings = false
+        model.showFind = false
+        exitSelecting()
+        phonePath = []
+        orgPath = []
+        phoneTab = .inbox
+        selection = .inbox
+        // Wait a turn so the Inbox Add row is on screen before focusing.
+        Task { @MainActor in
+            addFieldFocused = true
         }
     }
 
@@ -977,7 +1004,8 @@ struct ListsBrowserView: View {
                 PaperAddRow(
                     title: draft,
                     canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                    keepFocusAfterSubmit: list != .scheduled
+                    keepFocusAfterSubmit: list != .scheduled,
+                    focus: $addFieldFocused
                 ) {
                     addTodo(to: list)
                 }

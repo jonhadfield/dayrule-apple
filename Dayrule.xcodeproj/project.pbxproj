@@ -140,6 +140,7 @@
 		DBD3269375DA6670E27A103A /* FoldLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843BD93B9F23BD03234E9047 /* FoldLayoutTests.swift */; };
 		E07D26082132443B3A2CF7A1 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E7E230BA135789962B607A3D /* PrivacyInfo.xcprivacy */; platformFilters = (ios, ); };
 		E223009C5C3E712A2664BA6A /* SelectionBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8FD3174662105B5C0F81F /* SelectionBarView.swift */; };
+		E2E9FF01C29CA990C8672635 /* QuickActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6729B508139CE2E6FA01DB82 /* QuickActions.swift */; };
 		E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */; };
 		E32B05E1B068E477361E9FF5 /* SyncTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 340184C820B58937291F1AB9 /* SyncTransport.swift */; };
 		E5A683A625CD7BE743935E5C /* Clibsodium in Frameworks */ = {isa = PBXBuildFile; productRef = 3C89D1DF494846980AFD6C74 /* Clibsodium */; };
@@ -244,6 +245,7 @@
 		5FE4B4B808A3D2A3329B4452 /* QuickFindView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickFindView.swift; sourceTree = "<group>"; };
 		60D1DD770A2B75C5501341ED /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		620BD0386281AA2BD1755C4F /* PaperAddRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaperAddRow.swift; sourceTree = "<group>"; };
+		6729B508139CE2E6FA01DB82 /* QuickActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActions.swift; sourceTree = "<group>"; };
 		67A6060A2F05BA56D06D4BFE /* DayruleTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DayruleTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6908E493CE43FEA346E9E4BE /* HelpArticles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpArticles.swift; sourceTree = "<group>"; };
 		6CE93B71E4258F313852B837 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
@@ -611,6 +613,7 @@
 				3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */,
 				510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */,
 				C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */,
+				6729B508139CE2E6FA01DB82 /* QuickActions.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -888,6 +891,7 @@
 				E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */,
 				65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */,
 				BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */,
+				E2E9FF01C29CA990C8672635 /* QuickActions.swift in Sources */,
 				A1B4EF1B5CB228859D0FC81B /* QuickFindView.swift in Sources */,
 				D2DE7A862DDF10E0C62E405F /* RecordCipher.swift in Sources */,
 				40AB380B30A3A2B431DD7A68 /* Recovery.swift in Sources */,

@@ -348,6 +348,7 @@ struct HelpArticleView: View {
             "Tap a to-do to open it. Save or Cancel to close it.",
             "Swipe right to choose When; swipe left to select. While selecting, tap more to-dos, then use the bar.",
             "Press and hold a to-do for the menu (When, Move, Complete, Trash, and more).",
+            "On the Home Screen, press and hold the Dayrule icon and choose New to-do — after unlock, Inbox Add is ready.",
         ], colors)
         heading("On a Mac", colors)
         para(

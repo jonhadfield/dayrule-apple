@@ -149,6 +149,14 @@ final class AppModel {
         pendingMacChromeAction = action
     }
 
+    /// Focus the Inbox Add field after unlock (Home Screen quick action / ⌘N).
+    /// Survives the lock screen — never creates content while locked.
+    var pendingFocusAdd = false
+
+    func requestFocusAdd() {
+        pendingFocusAdd = true
+    }
+
     /// Show `message` with an Undo action for the last store change. Undo only acts while
     /// that change is still the newest history entry.
     func undoNotice(_ message: String) {
@@ -1101,6 +1109,7 @@ final class AppModel {
         signupToken = nil
         pendingRecoveryWords = []
         pendingSignup = nil
+        pendingFocusAdd = false
         clearPendingSecondStep()
         gateResetEpoch += 1
 
