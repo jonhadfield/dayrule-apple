@@ -291,6 +291,7 @@ enum DesignCaptures {
                     menuRow("Settings…", shortcut: "⌘,", colors: colors)
                     menuRow("Lock", shortcut: "⇧⌘L", colors: colors)
                     Divider().background(colors.hairline)
+                    menuRow("New To-Do", shortcut: "⌘N", colors: colors)
                     menuRow("New Project", shortcut: "⌥⌘N", colors: colors)
                     menuRow("New Area", shortcut: "⌥⌘A", colors: colors)
                     Divider().background(colors.hairline)

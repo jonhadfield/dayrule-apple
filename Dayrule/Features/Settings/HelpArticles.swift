@@ -350,9 +350,9 @@ struct HelpArticleView: View {
             "Press and hold a to-do for the menu (When, Move, Complete, Trash, and more).",
             "On the Home Screen, press and hold the Dayrule icon and choose New to-do — after unlock, Inbox Add is ready.",
         ], colors)
-        heading("On a Mac", colors)
+        heading("On a Mac or iPad", colors)
         para(
-            "Click a to-do to open it. Right-click (or Control-click) for the same menu as a long-press on a phone. Select from the menu or swipe to select several, then use the selection bar. Right-click a project or area in the sidebar to Complete or Move to Trash without opening it.",
+            "Click a to-do to open it. Right-click (or Control-click) for the same menu as a long-press on a phone. Select from the menu or swipe to select several, then use the selection bar. Right-click a project or area in the sidebar to Complete or Move to Trash without opening it. On an iPad with a keyboard, hold ⌘ to see the same shortcuts.",
             colors
         )
         definitionList([
@@ -361,11 +361,12 @@ struct HelpArticleView: View {
             ("Find…", "⌘F"),
             ("Undo / Redo", "⌘Z / ⇧⌘Z"),
             ("Move to Trash", "⌫"),
+            ("New To-Do", "⌘N"),
             ("New Project", "⌥⌘N"),
             ("New Area", "⌥⌘A"),
         ], colors)
         tip(
-            "Select one or more to-dos first for Move to Trash. New Project opens under the area you’re viewing when you’re in one.",
+            "Select one or more to-dos first for Move to Trash. New Project opens under the area you’re viewing when you’re in one. New To-Do focuses Add on Inbox.",
             colors
         )
     }

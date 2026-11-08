@@ -67,6 +67,8 @@ struct DayruleApp: App {
         #if os(macOS)
         .defaultSize(width: 1280, height: 800)
         .windowResizability(.contentMinSize)
+        #endif
+        // Mac menu bar and iPad ⌘-hold list (PLAN §6.6 / decision 36).
         .commands {
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
@@ -83,6 +85,11 @@ struct DayruleApp: App {
                 .disabled(model.phase != .unlocked)
             }
             CommandGroup(replacing: .newItem) {
+                Button("New To-Do") {
+                    model.requestFocusAdd()
+                }
+                .keyboardShortcut("n", modifiers: .command)
+                .disabled(model.phase != .unlocked)
                 Button("New Project") {
                     model.requestMacChromeAction(.newProject)
                 }
@@ -119,7 +126,6 @@ struct DayruleApp: App {
                 .disabled(model.phase != .unlocked)
             }
         }
-        #endif
     }
 
     /// On Mac, `.inactive` is common while the window is still usable (e.g. another
