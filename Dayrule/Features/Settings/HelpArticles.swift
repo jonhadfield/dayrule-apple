@@ -127,7 +127,7 @@ struct HelpArticleView: View {
         )
         heading("Tags", colors)
         para(
-            "Give to-dos tags such as “Errand” or “Phone”. Open a to-do and choose Tags…",
+            "Give to-dos tags such as “Errand” or “Phone”. Open a to-do and choose Tags…. In that sheet, press and hold a tag to rename or delete it.",
             colors
         )
     }

@@ -496,6 +496,32 @@ struct StoreTests {
         #expect(Lists.isInDone(store.entities, .todo(store.entities.todos[todo.id]!), ctx))
     }
 
+    @Test func renameAndDeleteTagStripsChildren() throws {
+        let store = sequentialStore()
+        let work = try store.run("Tag") { d, env in
+            try Commands.createTag(d, env, title: "W")
+        }
+        let calls = try store.run("Tag") { d, env in
+            try Commands.createTag(d, env, title: "C", parentId: work.id)
+        }
+        let todo = try store.run("Add") { d, env in
+            try Commands.createTodo(d, env, .init(title: "Call", placement: .inbox))
+        }
+        store.run("Tags") { d, env in
+            Commands.setTags(d, env, ids: [todo.id], tagIds: [calls.id])
+        }
+        store.run("Rename Tag") { d, env in
+            Commands.renameTag(d, env, id: work.id, title: "Work")
+        }
+        #expect(store.entities.tags[work.id]?.title == "Work")
+
+        store.run("Delete Tag") { d, env in
+            Commands.deleteTag(d, env, id: work.id)
+        }
+        #expect(store.entities.tags.isEmpty)
+        #expect(store.entities.todos[todo.id]?.tagIds == [])
+    }
+
     @Test func setReminderPlainAndOnTemplate() throws {
         #expect(When.roundToQuarter("09:07") == "09:00")
         #expect(When.roundToQuarter("09:08") == "09:15")

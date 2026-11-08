@@ -386,6 +386,55 @@ enum Commands {
         return tag
     }
 
+    static func renameTag(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String) {
+        guard var t = d.getTag(id) else { return }
+        t.title = title
+        t.updatedAt = ISOStamp.format(env.now)
+        d.putTag(t)
+    }
+
+    /// Delete a tag and its children, stripping them from tagged items
+    /// (web `deleteTag`).
+    static func deleteTag(_ d: Draft, _ env: EntityStore.Env, id: ID) {
+        var doomed: Set<ID> = [id]
+        var grew = true
+        while grew {
+            grew = false
+            for t in d.allTags() {
+                if let parentId = t.parentId, doomed.contains(parentId), !doomed.contains(t.id) {
+                    doomed.insert(t.id)
+                    grew = true
+                }
+            }
+        }
+        let ts = ISOStamp.format(env.now)
+        func strip(_ tagIds: [ID]) -> [ID]? {
+            let next = tagIds.filter { !doomed.contains($0) }
+            return next.count == tagIds.count ? nil : next
+        }
+        for var t in d.allTodos() {
+            guard let next = strip(t.tagIds) else { continue }
+            t.tagIds = next
+            t.updatedAt = ts
+            d.putTodo(t)
+        }
+        for var p in d.allProjects() {
+            guard let next = strip(p.tagIds) else { continue }
+            p.tagIds = next
+            p.updatedAt = ts
+            d.putProject(p)
+        }
+        for var a in d.allAreas() {
+            guard let next = strip(a.tagIds) else { continue }
+            a.tagIds = next
+            a.updatedAt = ts
+            d.putArea(a)
+        }
+        for tid in doomed {
+            d.remove(.tags, id: tid)
+        }
+    }
+
     static func setTags(_ d: Draft, _ env: EntityStore.Env, ids: [ID], tagIds: [ID]) {
         let ts = ISOStamp.format(env.now)
         for id in ids {

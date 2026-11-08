@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Assign tags to to-dos/projects; create a tag if needed (M5). New tags are staged
-/// until Save, so Cancel leaves nothing behind.
+/// until Save, so Cancel leaves nothing behind. Existing tags can be renamed or
+/// deleted from the row menu (web `renameTag` / `deleteTag`).
 struct TagSheetView: View {
     @Bindable var model: AppModel
     let ids: [ID]
@@ -13,6 +14,19 @@ struct TagSheetView: View {
     @State private var pending: [String] = []
     @State private var newTitle = ""
     @State private var errorText: String?
+    @State private var renameTarget: RenameTarget?
+    @State private var renameDraft = ""
+    @State private var deleteTarget: DeleteTarget?
+
+    private struct RenameTarget: Identifiable {
+        var id: ID
+        var title: String
+    }
+
+    private struct DeleteTarget: Identifiable {
+        var id: ID
+        var title: String
+    }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -34,9 +48,25 @@ struct TagSheetView: View {
                             .dayruleSheetRow(colors: colors)
                     }
                     ForEach(tags, id: \.id) { tag in
-                        tagRow(tag.title, selected: selected.contains(tag.id)) {
+                        tagRow(
+                            displayTitle(for: tag, in: tags),
+                            selected: selected.contains(tag.id)
+                        ) {
                             if selected.contains(tag.id) { selected.remove(tag.id) }
                             else { selected.insert(tag.id) }
+                        }
+                        .contextMenu {
+                            Button {
+                                renameDraft = tag.title
+                                renameTarget = RenameTarget(id: tag.id, title: tag.title)
+                            } label: {
+                                Label("Rename", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                deleteTarget = DeleteTarget(id: tag.id, title: tag.title)
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                         .accessibilityIdentifier("tag.row.\(tag.id)")
                     }
@@ -79,11 +109,51 @@ struct TagSheetView: View {
             .dayruleAnimation(Motion.standard, value: pending)
             .onChange(of: newTitle) { errorText = nil }
             .onAppear(perform: load)
+            .alert(
+                "Rename tag",
+                isPresented: Binding(
+                    get: { renameTarget != nil },
+                    set: { if !$0 { renameTarget = nil } }
+                )
+            ) {
+                TextField("Title", text: $renameDraft)
+                Button("Save") { commitRename() }
+                Button("Cancel", role: .cancel) { renameTarget = nil }
+            } message: {
+                Text("Change the name for everyone who uses this tag.")
+            }
+            .confirmationDialog(
+                deleteDialogTitle,
+                isPresented: Binding(
+                    get: { deleteTarget != nil },
+                    set: { if !$0 { deleteTarget = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete Tag", role: .destructive, action: commitDelete)
+                Button("Cancel", role: .cancel) { deleteTarget = nil }
+            } message: {
+                Text("Removes it from every to-do, project and area. Child tags go too.")
+            }
         }
     }
 
     private var trimmedTitle: String {
         newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var deleteDialogTitle: String {
+        guard let title = deleteTarget?.title, !title.isEmpty else { return "Delete tag?" }
+        return "Delete “\(title)”?"
+    }
+
+    private func displayTitle(for tag: Tag, in tags: [Tag]) -> String {
+        if let parentId = tag.parentId,
+           let parent = tags.first(where: { $0.id == parentId }),
+           !parent.title.isEmpty {
+            return "\(parent.title) › \(tag.title)"
+        }
+        return tag.title
     }
 
     private func tagRow(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
@@ -127,6 +197,29 @@ struct TagSheetView: View {
             pending.append(title)
         }
         newTitle = ""
+    }
+
+    private func commitRename() {
+        guard let target = renameTarget else { return }
+        let title = renameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        renameTarget = nil
+        guard !title.isEmpty else { return }
+        model.store.run("Rename Tag") { d, env in
+            Commands.renameTag(d, env, id: target.id, title: title)
+        }
+        model.noteEntitiesChanged()
+    }
+
+    private func commitDelete() {
+        guard let target = deleteTarget else { return }
+        deleteTarget = nil
+        model.store.run("Delete Tag") { d, env in
+            Commands.deleteTag(d, env, id: target.id)
+        }
+        model.noteEntitiesChanged()
+        let still = Set(model.entities.tags.keys)
+        selected = selected.intersection(still)
+        initialSelected = initialSelected.intersection(still)
     }
 
     private func save() {
