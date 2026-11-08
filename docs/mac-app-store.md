@@ -24,7 +24,7 @@ TestFlight upload (after the iPhone critical path).
    keychain may only have Apple Development + Developer ID; Xcode re-signs
    for the Mac App Store on upload if the team can issue **Apple
    Distribution**. Keep iOS and Mac on the same `MARKETING_VERSION`
-   (`0.1.0`) and a `CURRENT_PROJECT_VERSION` ≥ the latest iPhone TestFlight.
+   (`0.1.1`) and a `CURRENT_PROJECT_VERSION` ≥ the latest iPhone TestFlight.
 2. **Screenshots** — capture with
    `CAPTURE=macos scripts/capture-app-store-screenshots.sh` (agent test
    account in local `agent-creds.txt` — not App Review `creds.txt`; see
