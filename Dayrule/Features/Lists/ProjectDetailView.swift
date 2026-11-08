@@ -404,6 +404,7 @@ struct ProjectDetailView: View {
             }
             draft.wrappedValue = ""
             model.noteEntitiesChanged()
+            model.bumpHaptic(\.add)
         } catch {
             model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
@@ -453,6 +454,7 @@ struct ProjectDetailView: View {
             Commands.trashItems(d, env, ids: [id])
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice("Moved \(title) to Trash")
     }
 
@@ -461,6 +463,7 @@ struct ProjectDetailView: View {
             Commands.trashItems(d, env, ids: [projectId])
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice("Moved \(title) to Trash")
         dismiss()
     }

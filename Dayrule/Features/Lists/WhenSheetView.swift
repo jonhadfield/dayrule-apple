@@ -173,10 +173,12 @@ struct WhenSheetView: View {
                 try Commands.setWhen(d, env, ids: ids, when: when)
             }
             model.noteEntitiesChanged()
+            model.bumpHaptic(\.chip)
             model.undoNotice(undoMessage(for: when))
             dismiss()
         } catch {
             parseError = error.localizedDescription
+            model.bumpHaptic(\.error)
         }
     }
 

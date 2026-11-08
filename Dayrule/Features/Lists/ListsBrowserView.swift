@@ -765,6 +765,7 @@ struct ListsBrowserView: View {
             Commands.trashItems(d, env, ids: [project.id])
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice("Moved \(title) to Trash")
         clearOrgNavigation(matching: .project(project.id))
     }
@@ -775,6 +776,7 @@ struct ListsBrowserView: View {
             Commands.trashItems(d, env, ids: [area.id])
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice("Moved \(title) to Trash")
         clearOrgNavigation(matching: .area(area.id))
     }
@@ -1719,6 +1721,7 @@ struct ListsBrowserView: View {
             }
             draftTitles[list] = ""
             model.noteEntitiesChanged()
+            model.bumpHaptic(\.add)
             // Scheduled defaults to tomorrow; open When so the date is choosable. Wait a
             // runloop so the Add field resigns before the sheet takes focus.
             if list == .scheduled {
@@ -1804,6 +1807,7 @@ struct ListsBrowserView: View {
             Commands.trashItems(d, env, ids: ids)
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice(ids.count == 1 ? "Moved 1 to-do to Trash" : "Moved \(ids.count) to-dos to Trash")
         exitSelecting()
     }
@@ -1842,6 +1846,7 @@ struct ListsBrowserView: View {
             Commands.trashItems(d, env, ids: [id])
         }
         model.noteEntitiesChanged()
+        model.bumpHaptic(\.trash)
         model.undoNotice("Moved \(title) to Trash")
     }
 

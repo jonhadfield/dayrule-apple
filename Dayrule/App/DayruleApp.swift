@@ -36,6 +36,14 @@ struct DayruleApp: App {
                     }
                 }
             }
+            #if os(iOS)
+            .sensoryFeedback(.impact(weight: .light), trigger: model.haptics.add)
+            .sensoryFeedback(.impact(weight: .medium), trigger: model.haptics.trash)
+            .sensoryFeedback(.success, trigger: model.haptics.unlock)
+            .sensoryFeedback(.selection, trigger: model.haptics.chip)
+            .sensoryFeedback(.error, trigger: model.haptics.error)
+            .sensoryFeedback(.error, trigger: model.notices.errorPulse)
+            #endif
             #if os(macOS)
             // ASC Mac screenshots start at 1280×800; keep a usable smaller minimum.
             .frame(minWidth: 800, minHeight: 500)

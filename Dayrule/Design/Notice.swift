@@ -39,11 +39,14 @@ struct Notice: Identifiable, Equatable {
 @MainActor
 final class NoticeCenter {
     private(set) var current: Notice?
+    /// Bumped on each error notice so iOS `.sensoryFeedback(.error)` can fire.
+    private(set) var errorPulse = 0
     @ObservationIgnored private var dismissTask: Task<Void, Never>?
 
     func post(_ n: Notice) {
         dismissTask?.cancel()
         current = n
+        if n.kind == .error { errorPulse += 1 }
         AccessibilityNotification.Announcement(n.message).post()
         let seconds: Double = n.kind == .undo ? 5 : 4
         let id = n.id

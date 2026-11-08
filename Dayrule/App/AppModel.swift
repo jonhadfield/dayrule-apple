@@ -157,6 +157,22 @@ final class AppModel {
         pendingFocusAdd = true
     }
 
+    /// iOS haptic pulses beyond completion / tab selection (PLAN §6.4 / decision 38).
+    /// Counters change so `.sensoryFeedback` can fire repeatedly for the same kind.
+    struct HapticTicks: Equatable {
+        var add = 0
+        var trash = 0
+        var unlock = 0
+        var chip = 0
+        var error = 0
+    }
+
+    var haptics = HapticTicks()
+
+    func bumpHaptic(_ keyPath: WritableKeyPath<HapticTicks, Int>) {
+        haptics[keyPath: keyPath] += 1
+    }
+
     /// Show `message` with an Undo action for the last store change. Undo only acts while
     /// that change is still the newest history entry.
     func undoNotice(_ message: String) {
@@ -570,6 +586,7 @@ final class AppModel {
         let ok = await refreshVault()
         if ok {
             phase = .unlocked
+            bumpHaptic(\.unlock)
             bumpIdle()
             startSyncPoll()
             return
