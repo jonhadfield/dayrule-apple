@@ -87,4 +87,6 @@ jobs:
           DAYRULE_WEB: ${{ github.workspace }}/dayrule-web
           E2E_DATABASE_URL: postgres://127.0.0.1/dayrule_e2e?sslmode=disable
           DAYRULE_API: http://127.0.0.1:8080
+          DAYRULE_E2E: "1"
+          DAYRULE_HIBP_STUB: "1"
         run: ./scripts/local-sync-e2e.sh

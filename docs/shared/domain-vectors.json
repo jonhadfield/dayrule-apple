@@ -393,6 +393,146 @@
       }
     ]
   },
+  "organisation": {
+    "today": "2026-10-04",
+    "seed": {
+      "tags": [
+        {
+          "id": "tag-area",
+          "title": "Home"
+        },
+        {
+          "id": "tag-project",
+          "title": "Build"
+        },
+        {
+          "id": "tag-todo",
+          "title": "Errand"
+        }
+      ],
+      "areas": [
+        {
+          "id": "area-org",
+          "title": "House",
+          "tagIds": [
+            "tag-area"
+          ],
+          "order": "a0"
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-org",
+          "title": "Kitchen",
+          "areaId": "area-org",
+          "tagIds": [
+            "tag-project"
+          ],
+          "order": "a0"
+        }
+      ],
+      "headings": [
+        {
+          "id": "head-prep",
+          "title": "Prep",
+          "projectId": "proj-org",
+          "archived": false,
+          "order": "a0"
+        },
+        {
+          "id": "head-old",
+          "title": "Old",
+          "projectId": "proj-org",
+          "archived": true,
+          "order": "a1"
+        }
+      ],
+      "todos": [
+        {
+          "id": "todo-under-heading",
+          "title": "Buy tiles",
+          "projectId": "proj-org",
+          "headingId": "head-prep",
+          "areaId": null,
+          "start": "ready",
+          "tagIds": [
+            "tag-todo"
+          ],
+          "order": "a0"
+        },
+        {
+          "id": "todo-project-loose",
+          "title": "Measure bench",
+          "projectId": "proj-org",
+          "headingId": null,
+          "areaId": null,
+          "start": "ready",
+          "tagIds": [],
+          "order": "a1"
+        },
+        {
+          "id": "todo-archived-heading",
+          "title": "Legacy note",
+          "projectId": "proj-org",
+          "headingId": "head-old",
+          "areaId": null,
+          "start": "ready",
+          "tagIds": [],
+          "order": "a2"
+        },
+        {
+          "id": "todo-inbox-tags",
+          "title": "Post letter",
+          "projectId": null,
+          "headingId": null,
+          "areaId": null,
+          "start": "inbox",
+          "tagIds": [
+            "tag-todo"
+          ],
+          "order": "a3"
+        }
+      ]
+    },
+    "projectView": {
+      "projectId": "proj-org",
+      "looseTodoIds": [
+        "todo-project-loose",
+        "todo-archived-heading"
+      ],
+      "headings": [
+        {
+          "headingId": "head-prep",
+          "todoIds": [
+            "todo-under-heading"
+          ]
+        }
+      ]
+    },
+    "effectiveTagIds": [
+      {
+        "todoId": "todo-under-heading",
+        "tagIds": [
+          "tag-area",
+          "tag-project",
+          "tag-todo"
+        ]
+      },
+      {
+        "todoId": "todo-project-loose",
+        "tagIds": [
+          "tag-area",
+          "tag-project"
+        ]
+      },
+      {
+        "todoId": "todo-inbox-tags",
+        "tagIds": [
+          "tag-todo"
+        ]
+      }
+    ]
+  },
   "find": {
     "today": "2026-10-04",
     "seed": {

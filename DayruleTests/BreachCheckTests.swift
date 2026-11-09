@@ -58,6 +58,23 @@ struct BreachCheckTests {
         #expect(await BreachCheck.isBreached(Self.samplePassword, session: session) == false)
     }
 
+    @Test func e2eStubSkipsNetwork() async {
+        let prev = ProcessInfo.processInfo.environment["DAYRULE_HIBP_STUB"]
+        setenv("DAYRULE_HIBP_STUB", "1", 1)
+        defer {
+            if let prev {
+                setenv("DAYRULE_HIBP_STUB", prev, 1)
+            } else {
+                unsetenv("DAYRULE_HIBP_STUB")
+            }
+        }
+        let session = MockURLProtocol.session(handler: { _ in
+            Issue.record("HIBP stub must not hit the network")
+            return (Data(), 200)
+        })
+        #expect(await BreachCheck.isBreached(Self.samplePassword, session: session) == false)
+    }
+
     @Test func passwordProblemAndBreachedMessage() async {
         #expect(
             PasswordValidation.passwordProblem(password: "short", confirm: "short")

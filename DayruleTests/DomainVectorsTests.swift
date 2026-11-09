@@ -14,7 +14,73 @@ struct DomainVectorsTests {
         var lists: ListsSection?
         var repeats: RepeatsSection?
         var find: FindSection?
+        var organisation: OrganisationSection?
         var generatedInstances: GeneratedInstancesSection?
+    }
+
+    private struct OrganisationSection: Decodable {
+        var today: String
+        var seed: OrganisationSeed
+        var projectView: OrganisationProjectView
+        var effectiveTagIds: [OrganisationTagCase]
+    }
+
+    private struct OrganisationSeed: Decodable {
+        var tags: [TagSeed]
+        var areas: [OrganisationAreaSeed]
+        var projects: [OrganisationProjectSeed]
+        var headings: [OrganisationHeadingSeed]
+        var todos: [OrganisationTodoSeed]
+    }
+
+    private struct OrganisationAreaSeed: Decodable {
+        var id: String
+        var title: String
+        var tagIds: [String]
+        var order: String
+    }
+
+    private struct OrganisationProjectSeed: Decodable {
+        var id: String
+        var title: String
+        var areaId: String?
+        var tagIds: [String]
+        var order: String
+    }
+
+    private struct OrganisationHeadingSeed: Decodable {
+        var id: String
+        var title: String
+        var projectId: String
+        var archived: Bool
+        var order: String
+    }
+
+    private struct OrganisationTodoSeed: Decodable {
+        var id: String
+        var title: String
+        var projectId: String?
+        var headingId: String?
+        var areaId: String?
+        var start: String
+        var tagIds: [String]
+        var order: String
+    }
+
+    private struct OrganisationProjectView: Decodable {
+        var projectId: String
+        var looseTodoIds: [String]
+        var headings: [OrganisationHeadingGroup]
+    }
+
+    private struct OrganisationHeadingGroup: Decodable {
+        var headingId: String
+        var todoIds: [String]
+    }
+
+    private struct OrganisationTagCase: Decodable {
+        var todoId: String
+        var tagIds: [String]
     }
 
     private struct GeneratedInstancesSection: Decodable {
@@ -747,6 +813,118 @@ struct DomainVectorsTests {
             let todo = try #require(e.todos[c.todoId])
             #expect(Self.webPath(entities: e, todo: todo, ctx: ctx) == c.path)
         }
+    }
+
+    @Test("projectView headings and effectiveTagIds match shared vectors")
+    func organisationVectors() throws {
+        let file = try load()
+        let org = try #require(file.organisation)
+        let e = try organisationEntities(from: org.seed)
+        let ctx = Lists.Context(today: org.today, keepVisible: nil)
+        let view = try #require(Lists.projectView(e, org.projectView.projectId, ctx))
+        #expect(view.todos.map(\.id) == org.projectView.looseTodoIds)
+        #expect(view.headings.map(\.heading.id) == org.projectView.headings.map(\.headingId))
+        for (group, expect) in zip(view.headings, org.projectView.headings) {
+            #expect(group.todos.map(\.id) == expect.todoIds, "heading \(expect.headingId)")
+        }
+        for c in org.effectiveTagIds {
+            let todo = try #require(e.todos[c.todoId])
+            let got = Lists.effectiveTagIds(e, .todo(todo)).sorted()
+            #expect(got == c.tagIds.sorted(), "effectiveTagIds \(c.todoId)")
+        }
+    }
+
+    private func organisationEntities(from seed: OrganisationSeed) throws -> Entities {
+        let ts = "2026-10-01T09:00:00.000Z"
+        var e = Entities.empty()
+        for tag in seed.tags {
+            e.tags[tag.id] = Tag(
+                id: tag.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: tag.title,
+                parentId: nil,
+                order: "a0"
+            )
+        }
+        for a in seed.areas {
+            e.areas[a.id] = Area(
+                id: a.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: a.title,
+                order: a.order,
+                tagIds: a.tagIds,
+                trashedAt: nil
+            )
+        }
+        for p in seed.projects {
+            e.projects[p.id] = Project(
+                id: p.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: p.title,
+                notes: "",
+                areaId: p.areaId,
+                status: .open,
+                start: .ready,
+                startDate: nil,
+                tonight: false,
+                deadline: nil,
+                tagIds: p.tagIds,
+                order: p.order,
+                todayOrder: nil,
+                completedAt: nil,
+                trashedAt: nil
+            )
+        }
+        for h in seed.headings {
+            e.headings[h.id] = Heading(
+                id: h.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                projectId: h.projectId,
+                title: h.title,
+                order: h.order,
+                archived: h.archived
+            )
+        }
+        for t in seed.todos {
+            guard let start = StartBucket(rawValue: t.start) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad todo start \(t.start)")
+                )
+            }
+            e.todos[t.id] = Todo(
+                id: t.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: t.title,
+                notes: "",
+                projectId: t.projectId,
+                headingId: t.headingId,
+                areaId: t.areaId,
+                status: .open,
+                start: start,
+                startDate: nil,
+                tonight: false,
+                deadline: nil,
+                tagIds: t.tagIds,
+                order: t.order,
+                todayOrder: nil,
+                completedAt: nil,
+                trashedAt: nil,
+                reminderAt: nil,
+                repeat: nil,
+                repeatTemplateId: nil
+            )
+        }
+        return e
     }
 
     private func findEntities(from seed: FindSeed) throws -> Entities {

@@ -421,6 +421,26 @@ enum Lists {
         )
     }
 
+    /// Tags on an item, including those inherited from its project and area
+    /// (web `effectiveTagIds`).
+    static func effectiveTagIds(_ e: Entities, _ item: ListItem) -> Set<ID> {
+        var ids = Set(item.tagIds)
+        let project: Project?
+        if let t = item.asTodo {
+            project = projectOf(e, t)
+        } else {
+            project = nil
+        }
+        if let project {
+            ids.formUnion(project.tagIds)
+        }
+        let areaId = item.areaId ?? project?.areaId
+        if let areaId, let area = e.areas[areaId] {
+            ids.formUnion(area.tagIds)
+        }
+        return ids
+    }
+
     struct AreaGroup: Equatable, Sendable, Identifiable {
         var area: Area
         var projects: [Project]

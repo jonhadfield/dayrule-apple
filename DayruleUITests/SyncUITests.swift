@@ -34,6 +34,9 @@ final class SyncUITests: XCTestCase {
         app.launchEnvironment["DAYRULE_API"] = api
         // Unsigned UITest hosts hit Keychain -34018; process-local store for e2e only.
         app.launchEnvironment["DAYRULE_MEMORY_KEYCHAIN"] = "1"
+        // Skip live HIBP range API during signup (PLAN decision 51).
+        app.launchEnvironment["DAYRULE_HIBP_STUB"] = "1"
+        app.launchEnvironment["DAYRULE_E2E"] = "1"
         app.launch()
 
         XCTAssertTrue(app.buttons["gate.createAccount"].waitForExistence(timeout: 10))

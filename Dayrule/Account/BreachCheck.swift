@@ -13,6 +13,13 @@ enum BreachCheck {
         timeoutMs: Int = defaultTimeoutMs,
         session: URLSession = .shared
     ) async -> Bool {
+        #if DEBUG
+        // Local sync e2e must not depend on api.pwnedpasswords.com (PLAN decision 51).
+        let env = ProcessInfo.processInfo.environment
+        if env["DAYRULE_HIBP_STUB"] == "1" || env["DAYRULE_E2E"] == "1" {
+            return false
+        }
+        #endif
         do {
             let hash = sha1Hex(password)
             let prefix = String(hash.prefix(5))

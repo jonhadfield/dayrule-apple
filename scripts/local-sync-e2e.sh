@@ -20,6 +20,7 @@ export DAYRULE_API="${DAYRULE_API:-http://127.0.0.1:8080}"
 export DAYRULE_WEB="$WEB_ROOT"
 export DAYRULE_E2E_OUT="${DAYRULE_E2E_OUT:-$WEB_ROOT/web/e2e/.out}"
 export DAYRULE_E2E=1
+export DAYRULE_HIBP_STUB=1
 mkdir -p "$DAYRULE_E2E_OUT"
 
 API_PID=""
