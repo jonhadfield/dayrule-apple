@@ -160,5 +160,6 @@ third-party media or credentials beyond the user’s own account.
 - Agent / automation test account (separate mailbox + `agent-creds.txt`):
   `docs/agent-test-account.md`. Do not reuse this App Review account there.
 - Privacy nutrition label and export-compliance / encryption declaration:
-  still open on `docs/security-checklist.md`.
-- `MIN_IOS_BUILD` / HTTP 426: separate server gate before broad TestFlight.
+  done for the shipped store apps (`docs/security-checklist.md`); revisit
+  only when submitting a new version.
+- `MIN_IOS_BUILD` / HTTP 426: separate server gate when cutting old builds.

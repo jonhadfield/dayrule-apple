@@ -11,7 +11,85 @@ struct DomainVectorsTests {
         var order: OrderSection
         var hlc: HlcSection
         var merge: MergeSection?
+        var lists: ListsSection?
         var repeats: RepeatsSection?
+    }
+
+    private struct ListsSection: Decodable {
+        var today: String
+        var seed: ListsSeed
+        var expect: ListsExpect
+    }
+
+    private struct ListsSeed: Decodable {
+        var areas: [AreaSeed]
+        var projects: [ProjectSeed]
+        var todos: [TodoSeed]
+    }
+
+    private struct AreaSeed: Decodable {
+        var id: String
+        var title: String
+        var order: String
+    }
+
+    private struct ProjectSeed: Decodable {
+        var id: String
+        var title: String
+        var areaId: String?
+        var start: String
+        var startDate: String?
+        var order: String
+    }
+
+    private struct TodoSeed: Decodable {
+        var id: String
+        var title: String
+        var start: String
+        var startDate: String?
+        var deadline: String?
+        var tonight: Bool
+        var status: String
+        var projectId: String?
+        var areaId: String?
+        var order: String
+        var todayOrder: String?
+        var trashedAt: String?
+    }
+
+    private struct ListsExpect: Decodable {
+        var inbox: [String]
+        var today: [String]
+        var scheduled: ScheduledExpect
+        var notNow: NotNowExpect
+        var sidebarCounts: SidebarCountsExpect
+    }
+
+    private struct ScheduledExpect: Decodable {
+        var days: [DayExpect]
+        var months: [MonthExpect]
+        var waiting: [String]
+    }
+
+    private struct DayExpect: Decodable {
+        var date: String
+        var ids: [String]
+    }
+
+    private struct MonthExpect: Decodable {
+        var month: String
+        var ids: [String]
+    }
+
+    private struct NotNowExpect: Decodable {
+        var projects: [String]
+        var todos: [String]
+    }
+
+    private struct SidebarCountsExpect: Decodable {
+        var inbox: Int
+        var today: Int
+        var overdue: Int
     }
 
     private struct RepeatsSection: Decodable {
@@ -290,6 +368,113 @@ struct DomainVectorsTests {
             let clock = t.entity.dictionary?["clock"] as? FieldClock
             #expect(Merge.latestStamp(clock) == t.result)
         }
+    }
+
+    private func entities(from seed: ListsSeed) throws -> Entities {
+        let ts = "2026-10-01T09:00:00.000Z"
+        var e = Entities.empty()
+        for a in seed.areas {
+            e.areas[a.id] = Area(
+                id: a.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: a.title,
+                order: a.order,
+                tagIds: [],
+                trashedAt: nil
+            )
+        }
+        for p in seed.projects {
+            guard let start = StartBucket(rawValue: p.start) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad project start \(p.start)")
+                )
+            }
+            e.projects[p.id] = Project(
+                id: p.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: p.title,
+                notes: "",
+                areaId: p.areaId,
+                status: .open,
+                start: start,
+                startDate: p.startDate,
+                tonight: false,
+                deadline: nil,
+                tagIds: [],
+                order: p.order,
+                todayOrder: nil,
+                completedAt: nil,
+                trashedAt: nil
+            )
+        }
+        for t in seed.todos {
+            guard let start = StartBucket(rawValue: t.start) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad todo start \(t.start)")
+                )
+            }
+            guard let status = Status(rawValue: t.status) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad todo status \(t.status)")
+                )
+            }
+            e.todos[t.id] = Todo(
+                id: t.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: t.title,
+                notes: "",
+                projectId: t.projectId,
+                headingId: nil,
+                areaId: t.areaId,
+                status: status,
+                start: start,
+                startDate: t.startDate,
+                tonight: t.tonight,
+                deadline: t.deadline,
+                tagIds: [],
+                order: t.order,
+                todayOrder: t.todayOrder,
+                completedAt: nil,
+                trashedAt: t.trashedAt,
+                reminderAt: nil,
+                repeat: nil,
+                repeatTemplateId: nil
+            )
+        }
+        return e
+    }
+
+    @Test("list selectors match shared vectors")
+    func listSelectorVectors() throws {
+        let file = try load()
+        let lists = try #require(file.lists)
+        let e = try entities(from: lists.seed)
+        let ctx = Lists.Context(today: lists.today, keepVisible: nil)
+        #expect(Lists.inbox(e, ctx).map(\.id) == lists.expect.inbox)
+        #expect(Lists.today(e, ctx).map(\.id) == lists.expect.today)
+        let sched = Lists.scheduled(e, ctx)
+        #expect(sched.days.map(\.date) == lists.expect.scheduled.days.map(\.date))
+        for (got, want) in zip(sched.days, lists.expect.scheduled.days) {
+            #expect(got.items.map(\.id) == want.ids, "scheduled day \(want.date)")
+        }
+        #expect(sched.months.map(\.month) == lists.expect.scheduled.months.map(\.month))
+        for (got, want) in zip(sched.months, lists.expect.scheduled.months) {
+            #expect(got.items.map(\.id) == want.ids, "scheduled month \(want.month)")
+        }
+        #expect(sched.waiting.map(\.id) == lists.expect.scheduled.waiting)
+        let later = Lists.notNow(e, ctx)
+        #expect(later.projects.map(\.id) == lists.expect.notNow.projects)
+        #expect(later.todos.map(\.id) == lists.expect.notNow.todos)
+        let counts = Lists.sidebarCounts(e, ctx)
+        #expect(counts.inbox == lists.expect.sidebarCounts.inbox)
+        #expect(counts.today == lists.expect.sidebarCounts.today)
+        #expect(counts.overdue == lists.expect.sidebarCounts.overdue)
     }
 
     @Test("repeat sequences and instanceId match shared vectors")

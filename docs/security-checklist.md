@@ -51,10 +51,10 @@ in code or by a named manual step — not by assumption.
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
-- [ ] App Review demo account — runbook `docs/app-review-demo.md` (create account, no second step, seed sample to-dos, credentials only in App Store Connect)
-- [ ] Privacy nutrition label (App Store Connect)
-- [ ] Confirm French encryption declaration / export-compliance rules before public store
-- [ ] Mac App Store packaging — `docs/mac-app-store.md` (Mac 0.1.0 (16) pkg uploaded 2026-10-24; Kitchen screenshots recaptured unique 2026-10-24; iOS+Mac **0.1.1 (19)** uploaded to TestFlight 2026-11-08; demo account + Add for Review still open)
+- [x] App Review demo account — runbook `docs/app-review-demo.md` (no second step; credentials only in App Store Connect; maintained for resubmits)
+- [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
+- [x] French encryption declaration / export-compliance — answered for the shipped store submissions
+- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac reviewed, approved, and released; TestFlight **0.1.1 (19)** also uploaded 2026-11-08)
 - [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops:** leave env unset until deliberately cutting old builds; then set floors ≥ oldest supported `CFBundleVersion`.
 
-**Signed off (code items above):** M7 branch review — remaining unchecked items are release ops / server config, not app code.
+**Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.
