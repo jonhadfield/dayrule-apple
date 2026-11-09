@@ -5,22 +5,36 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+# Drop superseded runs so a hung macOS job does not keep billing after the
+# next push (web CI does the same). macOS runners are the expensive part.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Shared setup is duplicated across jobs so Build macOS and Test iOS overlap
 # (wall-clock). Each job stays self-contained — no DerivedData artifacts.
+# Keep job budgets tight: hung simctl/xcodebuild has burned hour-long macOS
+# minutes before (decision 33, 45).
 jobs:
   build-macos:
     runs-on: macos-15
-    timeout-minutes: 30
+    # Healthy runs finish in ~2–3m wall-clock; keep a little brew/cold-cache headroom.
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Select Xcode
+        timeout-minutes: 1
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Show Xcode version
         run: xcodebuild -version
 
       - name: Verify shared fixture lock
+        timeout-minutes: 1
         run: |
           set -euo pipefail
           while read -r line; do
@@ -36,12 +50,15 @@ jobs:
           done < docs/shared/SHARED.lock
 
       - name: Generate project
+        timeout-minutes: 3
         run: brew install xcodegen && xcodegen generate
 
       - name: Resolve packages
+        timeout-minutes: 3
         run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
       - name: Build macOS
+        timeout-minutes: 4
         run: |
           xcodebuild build \
             -project Dayrule.xcodeproj \
@@ -51,17 +68,19 @@ jobs:
 
   test-ios:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Select Xcode
+        timeout-minutes: 1
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Show Xcode version
         run: xcodebuild -version
 
       - name: Verify shared fixture lock
+        timeout-minutes: 1
         run: |
           set -euo pipefail
           while read -r line; do
@@ -77,16 +96,17 @@ jobs:
           done < docs/shared/SHARED.lock
 
       - name: Generate project
+        timeout-minutes: 3
         run: brew install xcodegen && xcodegen generate
 
       - name: Resolve packages
+        timeout-minutes: 3
         run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
-      # Hung simctl/xcodebuild has burned the job timeout on several PRs
-      # (empty-commit retries). Reset + boot the chosen device, and fail this
-      # step well under the 45m job budget if it stalls.
+      # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
+      # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
-        timeout-minutes: 20
+        timeout-minutes: 7
         run: |
           set -euo pipefail
           UDID=$(xcrun simctl list devices available -j | python3 -c "
@@ -112,7 +132,8 @@ jobs:
           xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
           xcrun simctl erase "$UDID"
           xcrun simctl boot "$UDID"
-          xcrun simctl bootstatus "$UDID" -b
+          # Fail fast if the sim never becomes ready (otherwise xcodebuild stalls).
+          perl -e 'alarm shift; exec @ARGV' 120 xcrun simctl bootstatus "$UDID" -b
           xcodebuild test \
             -project Dayrule.xcodeproj \
             -scheme Dayrule \
