@@ -54,26 +54,17 @@ struct SettingsView: View {
             size: .reading
         ) {
             List {
-                appearanceSection(colors: colors)
-                syncSection(colors: colors)
-                doneSection(colors: colors)
-                biometricSection(colors: colors)
-                passkeySection(colors: colors)
+                // Fewer chapters, shorter footers (decision 42) — keep row
+                // accessibilityIdentifiers stable for UI tests.
+                generalChapter(colors: colors)
+                syncUnlockChapter(colors: colors)
                 remindersSection(colors: colors)
                 dataSection(colors: colors)
                 if let email = model.accountEmail {
-                    accountSection(email: email, colors: colors)
-                    deleteSection(colors: colors)
+                    accountChapter(email: email, colors: colors)
+                } else {
+                    helpRow(colors: colors)
                 }
-                Section {
-                    NavigationLink {
-                        HelpView(embedded: true)
-                    } label: {
-                        Text("Help")
-                    }
-                    .accessibilityIdentifier("settings.help")
-                }
-                .dayruleSheetRow(colors: colors)
             }
             .listStyle(.plain)
             // Keep Toggle / segmented Picker terracotta, not system blue, on paper.
@@ -112,9 +103,9 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Chapters
 
-    private func appearanceSection(colors: DayruleColors) -> some View {
+    private func generalChapter(colors: DayruleColors) -> some View {
         DayruleFormSection {
             Picker(selection: appearanceBinding) {
                 ForEach(AppearancePreference.allCases) { pref in
@@ -125,15 +116,33 @@ struct SettingsView: View {
             }
             .pickerStyle(.segmented)
             .accessibilityIdentifier("settings.appearance")
+            Picker(selection: doneModeBinding) {
+                Text("Immediately").tag(DoneMode.immediately)
+                Text("Daily").tag(DoneMode.daily)
+                Text("Manually").tag(DoneMode.manually)
+            } label: {
+                Text("Move to Done").foregroundStyle(colors.text)
+            }
+            .accessibilityIdentifier("settings.doneMode")
+            if model.entities.settings.moveToDone == .manually {
+                Button("Move to Done now") {
+                    model.store.run("Move to Done") { d, env in
+                        Commands.moveToDoneNow(d, env)
+                    }
+                    model.noteEntitiesChanged()
+                }
+                .buttonStyle(.dayruleLink)
+                .accessibilityIdentifier("settings.logCompleted")
+            }
         } header: {
-            DayruleSectionHeader(title: "Appearance")
+            DayruleSectionHeader(title: "General")
         } footer: {
-            footerText("Light keeps the paper palette. System follows the device. This preference stays on this device only.", colors: colors)
+            footerText("Appearance stays on this device. Light keeps the paper palette.", colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
 
-    private func syncSection(colors: DayruleColors) -> some View {
+    private func syncUnlockChapter(colors: DayruleColors) -> some View {
         DayruleFormSection {
             LabeledContent {
                 SyncStatusView(status: model.syncStatus, needsServerSignIn: model.needsServerSignIn)
@@ -155,65 +164,6 @@ struct SettingsView: View {
             .buttonStyle(.dayruleLink)
             .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
             .accessibilityIdentifier("settings.syncNow")
-        } header: {
-            DayruleSectionHeader(title: "Sync")
-        } footer: {
-            syncFooter(colors: colors)
-        }
-        .dayruleSheetRow(colors: colors)
-    }
-
-    @ViewBuilder
-    private func syncFooter(colors: DayruleColors) -> some View {
-        let status = model.syncStatus
-        let showLabel = status.label != status.shortLabel
-        if showLabel || model.needsServerSignIn {
-            FooterStack {
-                if showLabel {
-                    Text(status.label)
-                        .font(DayruleType.helper)
-                        .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .contentTransition(.opacity)
-                }
-                if model.needsServerSignIn {
-                    footerText(
-                        "Unlocked offline — edits stay on this device. \(model.biometryLabel) does not create a server session.",
-                        colors: colors
-                    )
-                }
-            }
-        }
-    }
-
-    private func doneSection(colors: DayruleColors) -> some View {
-        Section {
-            Picker(selection: doneModeBinding) {
-                Text("Immediately").tag(DoneMode.immediately)
-                Text("Daily").tag(DoneMode.daily)
-                Text("Manually").tag(DoneMode.manually)
-            } label: {
-                Text("Move to Done").foregroundStyle(colors.text)
-            }
-            .accessibilityIdentifier("settings.doneMode")
-            if model.entities.settings.moveToDone == .manually {
-                Button("Move to Done now") {
-                    model.store.run("Move to Done") { d, env in
-                        Commands.moveToDoneNow(d, env)
-                    }
-                    model.noteEntitiesChanged()
-                }
-                .buttonStyle(.dayruleLink)
-                .accessibilityIdentifier("settings.logCompleted")
-            }
-        } header: {
-            DayruleSectionHeader(title: "Done")
-        }
-        .dayruleSheetRow(colors: colors)
-    }
-
-    private func biometricSection(colors: DayruleColors) -> some View {
-        DayruleFormSection {
             unlockToggle(
                 .biometric,
                 title: "Unlock with \(model.biometryLabel)",
@@ -221,16 +171,6 @@ struct SettingsView: View {
                 identifier: "settings.biometric",
                 colors: colors
             )
-        } header: {
-            DayruleSectionHeader(title: "Biometrics")
-        } footer: {
-            footerText("Uses this device’s biometrics to open the Keychain item that unwraps your account key. Password and recovery stay authoritative.", colors: colors)
-        }
-        .dayruleSheetRow(colors: colors)
-    }
-
-    private func passkeySection(colors: DayruleColors) -> some View {
-        DayruleFormSection {
             unlockToggle(
                 .passkey,
                 title: "Unlock with passkey",
@@ -239,14 +179,36 @@ struct SettingsView: View {
                 colors: colors
             )
         } header: {
-            DayruleSectionHeader(title: "Passkey")
+            DayruleSectionHeader(title: "Sync & unlock")
         } footer: {
-            FooterStack {
-                footerText("Creates a passkey on this device that derives a wrap key (PRF). Separate from a sign-in passkey on the account (second step after password). Password stays the fallback.", colors: colors)
-                footerText("Stay unlocked is chosen when you sign in. It keeps a device wrap key without biometrics — anyone who can unlock this device can open Dayrule.", colors: colors)
-            }
+            syncUnlockFooter(colors: colors)
         }
         .dayruleSheetRow(colors: colors)
+    }
+
+    @ViewBuilder
+    private func syncUnlockFooter(colors: DayruleColors) -> some View {
+        let status = model.syncStatus
+        let showLabel = status.label != status.shortLabel
+        FooterStack {
+            if showLabel {
+                Text(status.label)
+                    .font(DayruleType.helper)
+                    .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
+            }
+            if model.needsServerSignIn {
+                footerText(
+                    "Unlocked offline — edits stay here. \(model.biometryLabel) does not create a server session.",
+                    colors: colors
+                )
+            }
+            footerText(
+                "Biometrics and passkey (PRF) unwrap the account key on this device. Password and recovery stay authoritative. Stay unlocked (at sign-in) keeps a wrap key without biometrics.",
+                colors: colors
+            )
+        }
     }
 
     @ViewBuilder
@@ -301,9 +263,9 @@ struct SettingsView: View {
         } footer: {
             FooterStack {
                 if remindersOn {
-                    footerText("Titles are stored by the OS on this device. Leave off to keep only the time.", colors: colors)
+                    footerText("Titles are stored by the OS. Leave off to keep only the time.", colors: colors)
                 }
-                footerText("Reminders stay on this device. The account reminder channel on the web still drives email / browser push only.", colors: colors)
+                footerText("Local to this device — not email or browser push.", colors: colors)
             }
         }
         .dayruleSheetRow(colors: colors)
@@ -338,17 +300,17 @@ struct SettingsView: View {
         } header: {
             DayruleSectionHeader(title: "Your data")
         } footer: {
-            FooterStack {
-                footerText("Exports are made on this device and are not encrypted. Keep the files safe. Import accepts a Dayrule export or a Things 3 file from things-export.", colors: colors)
-                footerText("Device backups may include your encrypted vault. Unlock keys stay on this device only, so a backup alone can’t open Dayrule on another phone or Mac.", colors: colors)
-                    .accessibilityIdentifier("settings.backupNote")
-            }
+            footerText(
+                "Exports aren’t encrypted. Import accepts Dayrule or Things 3 (things-export). Backups hold ciphertext; unlock keys stay on this device.",
+                colors: colors
+            )
+            .accessibilityIdentifier("settings.backupNote")
         }
         .dayruleSheetRow(colors: colors)
     }
 
-    private func accountSection(email: String, colors: DayruleColors) -> some View {
-        Section {
+    private func accountChapter(email: String, colors: DayruleColors) -> some View {
+        DayruleFormSection {
             Text(email)
                 .foregroundStyle(colors.textSecondary)
             Button("Sign out", role: .destructive) {
@@ -359,14 +321,6 @@ struct SettingsView: View {
             }
             .buttonStyle(.dayruleDestructive)
             .accessibilityIdentifier("settings.signOut")
-        } header: {
-            DayruleSectionHeader(title: "Account")
-        }
-        .dayruleSheetRow(colors: colors)
-    }
-
-    private func deleteSection(colors: DayruleColors) -> some View {
-        DayruleFormSection {
             SecureField(
                 "Password",
                 text: $deletePassword,
@@ -401,10 +355,28 @@ struct SettingsView: View {
                     || deleteConfirm != "DELETE"
             )
             .accessibilityIdentifier("settings.delete")
+            NavigationLink {
+                HelpView(embedded: true)
+            } label: {
+                Text("Help")
+            }
+            .accessibilityIdentifier("settings.help")
         } header: {
-            DayruleSectionHeader(title: "Delete account")
+            DayruleSectionHeader(title: "Account")
         } footer: {
-            footerText("Deletes your account and all your to-dos on our servers and on this device. This can’t be undone.", colors: colors)
+            footerText("Delete removes your account and to-dos on the server and this device. It can’t be undone.", colors: colors)
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func helpRow(colors: DayruleColors) -> some View {
+        Section {
+            NavigationLink {
+                HelpView(embedded: true)
+            } label: {
+                Text("Help")
+            }
+            .accessibilityIdentifier("settings.help")
         }
         .dayruleSheetRow(colors: colors)
     }
