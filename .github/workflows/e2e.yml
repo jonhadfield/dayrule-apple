@@ -6,10 +6,13 @@ name: Local sync e2e
 # Requires repo secret DAYRULE_WEB_TOKEN: a fine-grained PAT (or classic) with
 # Contents: Read on the private jonhadfield/dayrule repo. The default
 # GITHUB_TOKEN cannot clone that repo.
+# Not on every main push: intermittent sim/xcodebuild hangs billed macOS
+# minutes (decision 45/46). Run weekly, manually before TestFlight, or locally.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
+  schedule:
+    # Mondays 06:00 UTC — cheap recurring check without merge-time hangs.
+    - cron: '0 6 * * 1'
 
 permissions:
   contents: read
