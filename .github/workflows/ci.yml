@@ -21,12 +21,13 @@ concurrency:
 jobs:
   build-macos:
     runs-on: macos-15
-    timeout-minutes: 15
+    # Healthy runs finish in ~2–3m wall-clock; keep a little brew/cold-cache headroom.
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Select Xcode
-        timeout-minutes: 2
+        timeout-minutes: 1
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Show Xcode version
@@ -49,15 +50,15 @@ jobs:
           done < docs/shared/SHARED.lock
 
       - name: Generate project
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: brew install xcodegen && xcodegen generate
 
       - name: Resolve packages
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
       - name: Build macOS
-        timeout-minutes: 8
+        timeout-minutes: 4
         run: |
           xcodebuild build \
             -project Dayrule.xcodeproj \
@@ -67,12 +68,12 @@ jobs:
 
   test-ios:
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Select Xcode
-        timeout-minutes: 2
+        timeout-minutes: 1
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Show Xcode version
@@ -95,17 +96,17 @@ jobs:
           done < docs/shared/SHARED.lock
 
       - name: Generate project
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: brew install xcodegen && xcodegen generate
 
       - name: Resolve packages
-        timeout-minutes: 5
+        timeout-minutes: 3
         run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
       # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
-        timeout-minutes: 18
+        timeout-minutes: 7
         run: |
           set -euo pipefail
           UDID=$(xcrun simctl list devices available -j | python3 -c "
