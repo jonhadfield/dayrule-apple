@@ -46,7 +46,7 @@ struct AreaDetailView: View {
                                 .frame(width: Tokens.rowLeadingSlot)
                                 .accessibilityHidden(true)
                             Text(project.title.isEmpty ? "New Project" : project.title)
-                                .font(DayruleType.sectionSerif)
+                                .font(DayruleType.rowTitle)
                                 .foregroundStyle(colors.text)
                             Spacer(minLength: 0)
                         }
