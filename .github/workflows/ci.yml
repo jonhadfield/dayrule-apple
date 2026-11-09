@@ -39,7 +39,14 @@ jobs:
           set -euo pipefail
           while read -r line; do
             case "$line" in
-              web_commit=*) ;;
+              web_commit=*)
+                sha="${line#web_commit=}"
+                # Abbreviated pins break actions/checkout in Local sync e2e.
+                [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
+                  echo "SHARED.lock web_commit must be a full 40-char SHA, got: $sha" >&2
+                  exit 1
+                }
+                ;;
               *)
                 hash="${line%%  *}"
                 file="${line#*  }"
@@ -85,7 +92,13 @@ jobs:
           set -euo pipefail
           while read -r line; do
             case "$line" in
-              web_commit=*) ;;
+              web_commit=*)
+                sha="${line#web_commit=}"
+                [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
+                  echo "SHARED.lock web_commit must be a full 40-char SHA, got: $sha" >&2
+                  exit 1
+                }
+                ;;
               *)
                 hash="${line%%  *}"
                 file="${line#*  }"

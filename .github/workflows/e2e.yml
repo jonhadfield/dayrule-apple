@@ -33,7 +33,15 @@ jobs:
       - name: Read SHARED.lock web commit
         timeout-minutes: 1
         id: lock
-        run: echo "sha=$(sed -n 's/^web_commit=//p' docs/shared/SHARED.lock)" >> "$GITHUB_OUTPUT"
+        run: |
+          set -euo pipefail
+          sha="$(sed -n 's/^web_commit=//p' docs/shared/SHARED.lock)"
+          # Full object name required — short SHAs are fetched as branch globs.
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "SHARED.lock web_commit must be a full 40-char SHA, got: $sha" >&2
+            exit 1
+          }
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
 
       # path must not be "dayrule": macos runners are case-insensitive, so that
       # would clobber the native Dayrule/ source tree.

@@ -3,7 +3,7 @@
 # Usage: scripts/sync-shared.sh <web-repo-sha> [path-to-dayrule-repo]
 set -euo pipefail
 
-SHA="${1:?web commit SHA required}"
+RAW_SHA="${1:?web commit SHA required}"
 WEB_REPO="${2:-$HOME/Repositories/dayrule}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DEST="$ROOT/docs/shared"
@@ -14,6 +14,10 @@ if [[ ! -d "$WEB_REPO/.git" ]]; then
   echo "dayrule repo not found at $WEB_REPO" >&2
   exit 1
 fi
+
+# actions/checkout cannot fetch abbreviated SHAs as refs (it tries
+# refs/heads/<short>*). Always pin the full object name in SHARED.lock.
+SHA="$(git -C "$WEB_REPO" rev-parse --verify "${RAW_SHA}^{commit}")"
 
 mkdir -p "$TMP/out"
 if git -C "$WEB_REPO" cat-file -e "$SHA:docs/shared" 2>/dev/null; then
