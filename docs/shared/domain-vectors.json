@@ -393,6 +393,259 @@
       }
     ]
   },
+  "lists": {
+    "today": "2026-10-04",
+    "seed": {
+      "areas": [
+        {
+          "id": "area-home",
+          "title": "Home",
+          "order": "a0"
+        }
+      ],
+      "projects": [
+        {
+          "id": "proj-loose",
+          "title": "Loose",
+          "areaId": null,
+          "start": "ready",
+          "startDate": null,
+          "order": "a0"
+        },
+        {
+          "id": "proj-kitchen",
+          "title": "Kitchen",
+          "areaId": "area-home",
+          "start": "ready",
+          "startDate": null,
+          "order": "a1"
+        },
+        {
+          "id": "proj-later",
+          "title": "Someday",
+          "areaId": null,
+          "start": "later",
+          "startDate": null,
+          "order": "a2"
+        }
+      ],
+      "todos": [
+        {
+          "id": "todo-inbox-a",
+          "title": "Milk",
+          "start": "inbox",
+          "startDate": null,
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a0",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-inbox-b",
+          "title": "Eggs",
+          "start": "inbox",
+          "startDate": null,
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a1",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-ready-undated",
+          "title": "Anytime",
+          "start": "ready",
+          "startDate": null,
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a2",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-today",
+          "title": "Today chore",
+          "start": "ready",
+          "startDate": "2026-10-04",
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a3",
+          "todayOrder": "a1",
+          "trashedAt": null
+        },
+        {
+          "id": "todo-overdue",
+          "title": "Overdue",
+          "start": "ready",
+          "startDate": null,
+          "deadline": "2026-09-30",
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a4",
+          "todayOrder": "a0",
+          "trashedAt": null
+        },
+        {
+          "id": "todo-tomorrow",
+          "title": "Tomorrow",
+          "start": "ready",
+          "startDate": "2026-10-05",
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a5",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-nov",
+          "title": "November",
+          "start": "ready",
+          "startDate": "2026-11-15",
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a6",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-in-project",
+          "title": "Paint",
+          "start": "ready",
+          "startDate": null,
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": "proj-kitchen",
+          "areaId": null,
+          "order": "a7",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-later",
+          "title": "Not now todo",
+          "start": "later",
+          "startDate": null,
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": null,
+          "areaId": null,
+          "order": "a8",
+          "todayOrder": null,
+          "trashedAt": null
+        },
+        {
+          "id": "todo-in-later-proj",
+          "title": "Hidden by later project",
+          "start": "ready",
+          "startDate": "2026-10-04",
+          "deadline": null,
+          "tonight": false,
+          "status": "open",
+          "projectId": "proj-later",
+          "areaId": null,
+          "order": "a9",
+          "todayOrder": null,
+          "trashedAt": null
+        }
+      ]
+    },
+    "expect": {
+      "inbox": [
+        "todo-inbox-a",
+        "todo-inbox-b"
+      ],
+      "today": [
+        "todo-overdue",
+        "todo-today"
+      ],
+      "scheduled": {
+        "days": [
+          {
+            "date": "2026-10-05",
+            "ids": [
+              "todo-tomorrow"
+            ]
+          },
+          {
+            "date": "2026-10-06",
+            "ids": []
+          },
+          {
+            "date": "2026-10-07",
+            "ids": []
+          },
+          {
+            "date": "2026-10-08",
+            "ids": []
+          },
+          {
+            "date": "2026-10-09",
+            "ids": []
+          },
+          {
+            "date": "2026-10-10",
+            "ids": []
+          },
+          {
+            "date": "2026-10-11",
+            "ids": []
+          }
+        ],
+        "months": [
+          {
+            "month": "2026-11",
+            "ids": [
+              "todo-nov"
+            ]
+          }
+        ],
+        "waiting": []
+      },
+      "notNow": {
+        "projects": [
+          "proj-later"
+        ],
+        "todos": [
+          "todo-later"
+        ]
+      },
+      "sidebarCounts": {
+        "inbox": 2,
+        "today": 2,
+        "overdue": 1
+      }
+    },
+    "anchors": {
+      "inboxA": "todo-inbox-a",
+      "inboxB": "todo-inbox-b",
+      "todayStarted": "todo-today",
+      "overdue": "todo-overdue",
+      "loose": "proj-loose"
+    }
+  },
   "repeats": {
     "instanceId": [
       {
