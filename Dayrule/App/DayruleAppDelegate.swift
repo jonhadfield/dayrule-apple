@@ -32,4 +32,15 @@ final class DayruleAppDelegate: NSObject, UIApplicationDelegate {
         extensionPointIdentifier != .keyboard
     }
 }
+#elseif os(macOS)
+import AppKit
+
+/// Mac chrome: quit when the last window closes. Multi-window stays deferred
+/// (PLAN §6.6 / decision 55), so the red traffic-light should not leave a
+/// menubar-only process behind.
+final class DayruleAppDelegate: NSObject, NSApplicationDelegate {
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+}
 #endif

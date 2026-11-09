@@ -7,6 +7,8 @@ import AppKit
 struct DayruleApp: App {
     #if os(iOS)
     @UIApplicationDelegateAdaptor(DayruleAppDelegate.self) private var appDelegate
+    #elseif os(macOS)
+    @NSApplicationDelegateAdaptor(DayruleAppDelegate.self) private var appDelegate
     #endif
     @State private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
