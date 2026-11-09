@@ -70,11 +70,12 @@ struct DayruleStepButtonStyle: ButtonStyle {
 struct DayruleLinkButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     func makeBody(configuration: Configuration) -> some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         configuration.label
-            .font(DayruleType.link)
+            .font(DayruleType.link(dense: denseLayout))
             .foregroundStyle(isEnabled ? colors.accent : colors.textSecondary)
             .frame(minHeight: Tokens.minHit)
             .contentShape(Rectangle())
@@ -87,11 +88,12 @@ struct DayruleLinkButtonStyle: ButtonStyle {
 struct DayruleDestructiveButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     func makeBody(configuration: Configuration) -> some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         configuration.label
-            .font(DayruleType.link)
+            .font(DayruleType.link(dense: denseLayout))
             .foregroundStyle(isEnabled ? colors.deadline : colors.textSecondary)
             .frame(minHeight: Tokens.minHit)
             .contentShape(Rectangle())

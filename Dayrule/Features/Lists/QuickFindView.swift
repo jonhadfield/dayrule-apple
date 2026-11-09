@@ -92,7 +92,7 @@ struct QuickFindView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                     Text(row.detail)
                         .font(DayruleType.meta)

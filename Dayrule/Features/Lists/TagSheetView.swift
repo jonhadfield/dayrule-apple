@@ -8,6 +8,7 @@ struct TagSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleDenseLayout) private var denseLayout
     @State private var selected: Set<ID> = []
     @State private var initialSelected: Set<ID> = []
     /// Titles of tags to create on Save (always assigned).
@@ -166,7 +167,7 @@ struct TagSheetView: View {
                     SelectionCheckmark()
                 }
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(selected ? .isSelected : [])

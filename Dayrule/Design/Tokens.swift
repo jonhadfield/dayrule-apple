@@ -54,11 +54,18 @@ enum Tokens {
     static let rowLeadingSlot: CGFloat = 28
     /// Web `--row-height` at 900px and up.
     static let rowHeightDesktop: CGFloat = 36
+    /// Prefer `rowMinHeight(dense:)` / `RuledRow` (reads `dayruleDenseLayout`).
+    /// Static default is phone on iOS so compact call sites stay correct.
     #if os(macOS)
     static let rowHeight: CGFloat = rowHeightDesktop
     #else
     static let rowHeight: CGFloat = rowHeightPhone
     #endif
+
+    /// Dense (Mac / iPad regular): 36. Phone compact: 46 minimum.
+    static func rowMinHeight(dense: Bool) -> CGFloat {
+        dense ? rowHeightDesktop : rowHeightPhone
+    }
     static let formMaxWidth: CGFloat = 420
     static let readingMaxWidth: CGFloat = 720
     static let minHit: CGFloat = 44

@@ -418,7 +418,7 @@ struct HelpArticleView: View {
 
     private func para(_ text: String, _ colors: DayruleColors) -> some View {
         Text(text)
-            .font(DayruleType.rowTitle)
+            .dayruleRowTitle()
             .foregroundStyle(colors.text)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -454,7 +454,7 @@ struct HelpArticleView: View {
                         .foregroundStyle(colors.textSecondary)
                         .frame(width: 20, alignment: .trailing)
                     Text(item)
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -466,7 +466,7 @@ struct HelpArticleView: View {
         VStack(alignment: .leading, spacing: Tokens.Space.s) {
             ForEach(Array(items.enumerated()), id: \.offset) { _, item in
                 (Text(item.0).fontWeight(.semibold) + Text(" — \(item.1)"))
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
                     .foregroundStyle(colors.text)
                     .fixedSize(horizontal: false, vertical: true)
             }

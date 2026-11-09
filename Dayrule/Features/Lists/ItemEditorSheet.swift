@@ -52,7 +52,7 @@ struct ItemEditorSheet: View {
                 prompt: Text("Title").foregroundStyle(colors.textSecondary),
                 axis: .vertical
             )
-            .font(DayruleType.rowTitle)
+            .dayruleRowTitle()
             .lineLimit(1...4)
             .dayruleBareField(colors: colors)
             .focused($focus, equals: .title)
@@ -70,7 +70,7 @@ struct ItemEditorSheet: View {
             }
 
             TextEditor(text: $notes)
-                .font(DayruleType.rowTitle)
+                .dayruleRowTitle()
                 .frame(minHeight: 120)
                 .scrollContentBackground(.hidden)
                 .foregroundStyle(colors.text)
@@ -78,7 +78,7 @@ struct ItemEditorSheet: View {
                 .overlay(alignment: .topLeading) {
                     if notes.isEmpty {
                         Text("Notes")
-                            .font(DayruleType.rowTitle)
+                            .dayruleRowTitle()
                             .foregroundStyle(colors.textSecondary)
                             .padding(.top, 8)
                             .padding(.leading, 5)

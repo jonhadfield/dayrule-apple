@@ -20,10 +20,10 @@ enum DesignCaptures {
 
                 VStack(alignment: .leading, spacing: Tokens.Space.m) {
                     Text("Paint the hallway")
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                     Text("Sample the terracotta swatches first.")
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.textSecondary)
                         .frame(minHeight: 120, alignment: .topLeading)
                 }
@@ -52,6 +52,7 @@ enum DesignCaptures {
             }
             .frame(width: 440, height: 520, alignment: .topLeading)
             .background(colors.bg)
+            .environment(\.dayruleDenseLayout, true)
         }
     }
 
@@ -82,7 +83,7 @@ enum DesignCaptures {
                             .foregroundStyle(selected ? colors.accent : colors.textSecondary)
                             .frame(width: 22)
                         Text(title)
-                            .font(DayruleType.rowTitle)
+                            .dayruleRowTitle()
                             .foregroundStyle(colors.text)
                         Spacer()
                     }
@@ -97,6 +98,7 @@ enum DesignCaptures {
             }
             .frame(width: 260, height: 320, alignment: .topLeading)
             .background(colors.sidebar)
+            .environment(\.dayruleDenseLayout, true)
         }
     }
 
@@ -135,7 +137,7 @@ enum DesignCaptures {
                                 .rotationEffect(.degrees(-90))
                         )
                     Text("Renovate")
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                     Spacer()
                 }
@@ -163,7 +165,7 @@ enum DesignCaptures {
                     .foregroundStyle(tint)
                     .frame(width: 20)
                 Text(title)
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
                     .foregroundStyle(colors.text)
                 Spacer()
                 if selected {
@@ -197,7 +199,7 @@ enum DesignCaptures {
                             .frame(width: checkboxDiameter, height: checkboxDiameter)
                             .frame(width: slot, height: slot)
                         Text("Existing to-do")
-                            .font(DayruleType.rowTitle)
+                            .dayruleRowTitle()
                             .foregroundStyle(colors.text)
                         Spacer()
                     }
@@ -211,7 +213,7 @@ enum DesignCaptures {
                             .background(colors.accent, in: Circle())
                             .frame(width: slot, height: slot)
                         Text("Add")
-                            .font(DayruleType.rowTitle)
+                            .dayruleRowTitle()
                             .foregroundStyle(colors.textSecondary)
                         Spacer()
                     }
@@ -256,7 +258,7 @@ enum DesignCaptures {
                                     .strokeBorder(colors.hairline, lineWidth: 1)
                             )
                         Text(name)
-                            .font(DayruleType.rowTitle)
+                            .dayruleRowTitle()
                             .foregroundStyle(colors.text)
                             .frame(width: 88, alignment: .leading)
                         Text(hex)
@@ -282,7 +284,7 @@ enum DesignCaptures {
                     Text("View")
                     Spacer()
                 }
-                .font(DayruleType.rowTitle)
+                .dayruleRowTitle()
                 .foregroundStyle(colors.text)
                 .padding(.horizontal, Tokens.Space.m)
                 .frame(height: 28)
@@ -318,7 +320,7 @@ enum DesignCaptures {
                 Spacer()
                 Text(shortcut).foregroundStyle(colors.textSecondary)
             }
-            .font(DayruleType.rowTitle)
+            .dayruleRowTitle()
         }
     }
 }

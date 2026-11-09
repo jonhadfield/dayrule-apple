@@ -6,6 +6,7 @@ struct MoveProjectSheetView: View {
     let projectId: ID
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -67,7 +68,7 @@ struct MoveProjectSheetView: View {
                     SelectionCheckmark()
                 }
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(selected ? .isSelected : [])

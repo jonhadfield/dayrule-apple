@@ -6,6 +6,7 @@ struct WhenSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleDenseLayout) private var denseLayout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var freeText = ""
     @State private var pickDate = Date()
@@ -138,7 +139,7 @@ struct WhenSheetView: View {
                     .rotationEffect(.degrees(showDatePicker ? 90 : 0))
                     .accessibilityHidden(true)
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -160,7 +161,7 @@ struct WhenSheetView: View {
                     SelectionCheckmark()
                 }
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(selected ? .isSelected : [])

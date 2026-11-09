@@ -108,6 +108,8 @@ struct ListsBrowserView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        // iPad / Duo regular: dense 15pt + 36pt rows (PLAN §6.2 / decision 48).
+        let dense = !isCompact
         Group {
             if isCompact {
                 phoneBrowser(colors: colors)
@@ -188,6 +190,8 @@ struct ListsBrowserView: View {
         .onChange(of: model.vaultLoading) { _, loading in
             if !loading { consumeFocusAddIfReady() }
         }
+        .environment(\.dayruleDenseLayout, dense)
+        .modifier(DayruleDenseBodyFont(dense: dense))
     }
 
     private func handleMacChromeAction(_ action: AppModel.MacChromeAction) {
@@ -519,7 +523,7 @@ struct ListsBrowserView: View {
                         DayruleCountBadge(count: count, style: .ring)
                     }
                 }
-                .frame(minHeight: Tokens.rowHeight)
+                .frame(minHeight: Tokens.rowMinHeight(dense: false))
             }
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .listRowBackground(colors.bg)
@@ -581,11 +585,11 @@ struct ListsBrowserView: View {
                 .frame(width: browseIconWidth)
                 .accessibilityHidden(true)
             Text(title)
-                .font(DayruleType.rowTitle)
+                .dayruleRowTitle()
                 .foregroundStyle(colors.text)
             Spacer(minLength: 0)
         }
-        .frame(minHeight: Tokens.rowHeight)
+        .frame(minHeight: Tokens.rowMinHeight(dense: !isCompact))
     }
 
     @ViewBuilder
@@ -601,7 +605,7 @@ struct ListsBrowserView: View {
                     .padding(.trailing, 8)
                 Label {
                     Text(name.title)
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                 } icon: {
                     Image(systemName: listImage(name))
@@ -791,7 +795,7 @@ struct ListsBrowserView: View {
                     .padding(.trailing, 8)
                 Label {
                     Text(title)
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.text)
                 } icon: {
                     Image(systemName: systemImage)
@@ -834,16 +838,16 @@ struct ListsBrowserView: View {
             case .browseRow:
                 HStack(spacing: 12) {
                     Image(systemName: "plus")
-                        .font(DayruleType.rowTitle)
+                        .dayruleRowTitle()
                         .foregroundStyle(colors.textSecondary)
                         .frame(width: browseIconWidth)
                         .accessibilityHidden(true)
                     Text("New List")
-                        .font(DayruleType.rowTitle.weight(.medium))
+                        .dayruleRowTitle(.medium)
                         .foregroundStyle(colors.textSecondary)
                     Spacer(minLength: 0)
                 }
-                .frame(minHeight: Tokens.rowHeight)
+                .frame(minHeight: Tokens.rowMinHeight(dense: !isCompact))
             case .sidebarFooter:
                 NewListFooterLabel(colors: colors)
             }
@@ -900,17 +904,21 @@ struct ListsBrowserView: View {
         } label: {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: systemImage)
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
                     .foregroundStyle(colors.textSecondary)
                     .frame(width: 18)
                     .accessibilityHidden(true)
                 Text(title)
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
                     .foregroundStyle(colors.text)
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, Tokens.Space.s)
-            .frame(maxWidth: .infinity, minHeight: Tokens.rowHeight, alignment: .leading)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: Tokens.rowMinHeight(dense: !isCompact),
+                alignment: .leading
+            )
         }
         .buttonStyle(.dayruleRow)
         .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
@@ -924,9 +932,9 @@ struct ListsBrowserView: View {
         var body: some View {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: "plus")
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
                 Text("New List")
-                    .font(DayruleType.rowTitle)
+                    .dayruleRowTitle()
             }
             .foregroundStyle(colors.textSecondary)
             .padding(.horizontal, Tokens.Space.s)

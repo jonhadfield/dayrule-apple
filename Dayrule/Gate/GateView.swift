@@ -545,7 +545,7 @@ struct GateView: View {
                 }
             }
             .buttonStyle(.plain)
-            .font(DayruleType.link)
+            .dayruleLink()
             .foregroundStyle(colors.textSecondary)
             .frame(minHeight: Tokens.minHit)
             .accessibilityIdentifier("\(identifier).advanced")

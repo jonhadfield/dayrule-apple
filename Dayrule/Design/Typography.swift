@@ -69,7 +69,26 @@ enum DayruleFont {
     }
 }
 
-/// Type roles (PLAN §6.2). Every role is Dynamic Type relative.
+/// Dense layout (PLAN §6.2 / §6.5): Mac always; iOS when `horizontalSizeClass`
+/// is regular (iPad / Duo open). Phone compact stays Dynamic Type body.
+private struct DayruleDenseLayoutKey: EnvironmentKey {
+    #if os(macOS)
+    static let defaultValue = true
+    #else
+    static let defaultValue = false
+    #endif
+}
+
+extension EnvironmentValues {
+    /// 15pt row type + 36pt row min-height (web desktop / Mac).
+    var dayruleDenseLayout: Bool {
+        get { self[DayruleDenseLayoutKey.self] }
+        set { self[DayruleDenseLayoutKey.self] = newValue }
+    }
+}
+
+/// Type roles (PLAN §6.2). Every role is Dynamic Type relative except dense
+/// row/link (fixed 15pt, matching web ≥900px).
 ///
 /// Glyphs inside meta text (bell, repeat, notes) use the same font as the text
 /// plus `.imageScale(.small)`, never a fixed point size.
@@ -80,7 +99,8 @@ enum DayruleType {
     static var sectionSerif: Font { DayruleFont.serif(.headline) }
 
     static let sectionHeader: Font = .footnote.weight(.semibold)
-    /// Phone: Dynamic Type body (17pt default). Mac: 15pt to match web desktop.
+    /// Prefer `View.dayruleRowTitle()` so iPad regular width picks dense 15pt.
+    /// Static value is the phone / non-dense default (Mac: always 15pt).
     #if os(macOS)
     static let rowTitle: Font = .system(size: 15)
     static let link: Font = .system(size: 15)
@@ -97,4 +117,60 @@ enum DayruleType {
 
     /// Tightened tracking for brand and page titles.
     static let titleTracking: CGFloat = -0.5
+
+    /// Phone compact: Dynamic Type body. Dense (Mac / iPad regular): 15pt.
+    static func rowTitle(dense: Bool) -> Font {
+        #if os(macOS)
+        _ = dense
+        return .system(size: 15)
+        #else
+        dense ? .system(size: 15) : .body
+        #endif
+    }
+
+    static func link(dense: Bool) -> Font {
+        rowTitle(dense: dense)
+    }
+}
+
+private struct DayruleRowTitleModifier: ViewModifier {
+    @Environment(\.dayruleDenseLayout) private var dense
+    var weight: Font.Weight?
+
+    func body(content: Content) -> some View {
+        let base = DayruleType.rowTitle(dense: dense)
+        content.font(weight.map { base.weight($0) } ?? base)
+    }
+}
+
+private struct DayruleLinkModifier: ViewModifier {
+    @Environment(\.dayruleDenseLayout) private var dense
+
+    func body(content: Content) -> some View {
+        content.font(DayruleType.link(dense: dense))
+    }
+}
+
+extension View {
+    /// Row title that follows `dayruleDenseLayout` (15pt dense / body phone).
+    func dayruleRowTitle(_ weight: Font.Weight? = nil) -> some View {
+        modifier(DayruleRowTitleModifier(weight: weight))
+    }
+
+    func dayruleLink() -> some View {
+        modifier(DayruleLinkModifier())
+    }
+}
+
+/// Default `Text` / control font for dense chrome (Mac DayruleApp parity).
+struct DayruleDenseBodyFont: ViewModifier {
+    var dense: Bool
+
+    func body(content: Content) -> some View {
+        if dense {
+            content.environment(\.font, Font.system(size: 15))
+        } else {
+            content
+        }
+    }
 }

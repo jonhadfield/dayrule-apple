@@ -7,6 +7,7 @@ struct AreaDetailView: View {
     var onOpenProject: (ID) -> Void
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dayruleDenseLayout) private var denseLayout
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -46,7 +47,7 @@ struct AreaDetailView: View {
                                 .frame(width: Tokens.rowLeadingSlot)
                                 .accessibilityHidden(true)
                             Text(project.title.isEmpty ? "New Project" : project.title)
-                                .font(DayruleType.rowTitle)
+                                .dayruleRowTitle()
                                 .foregroundStyle(colors.text)
                             Spacer(minLength: 0)
                         }
@@ -58,7 +59,7 @@ struct AreaDetailView: View {
                     )
                     .listRowSeparatorTint(colors.hairline)
                     .listRowBackground(colors.bg)
-                    .frame(minHeight: Tokens.rowHeight)
+                    .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
                 }
 
                 if !view.todos.isEmpty, !view.projects.isEmpty {

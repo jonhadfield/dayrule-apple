@@ -123,7 +123,7 @@ struct DayruleTodoRow: View {
             text = Text("\(text) \(Text(Image(systemName: glyph)).foregroundStyle(colors.textSecondary))")
         }
         return text
-            .font(DayruleType.rowTitle)
+            .dayruleRowTitle()
             .foregroundStyle(colors.text)
             .imageScale(.small)
             .lineLimit(3)

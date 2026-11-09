@@ -6,6 +6,7 @@ struct MoveSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -110,7 +111,7 @@ struct MoveSheetView: View {
                     SelectionCheckmark()
                 }
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(isSelected(.project(projectId: project.id)) ? .isSelected : [])
@@ -137,7 +138,7 @@ struct MoveSheetView: View {
                     SelectionCheckmark()
                 }
             }
-            .frame(minHeight: Tokens.rowHeight)
+            .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
         }
         .buttonStyle(.dayruleRow)
         .accessibilityAddTraits(selected ? .isSelected : [])

@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// Paper ruled row: hairline under content, fixed row height (46 phone/iPad, 36 Mac).
+/// Paper ruled row: hairline under content; min height 46 phone compact /
+/// 36 dense (Mac and iPad regular — PLAN §6.2).
 struct RuledRow<Content: View>: View {
     enum Style {
         /// Hairline under the row.
@@ -13,6 +14,7 @@ struct RuledRow<Content: View>: View {
     var content: () -> Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     init(style: Style = .ruled, @ViewBuilder content: @escaping () -> Content) {
         self.style = style
@@ -24,7 +26,11 @@ struct RuledRow<Content: View>: View {
         // Padding sits inside the min height, so a single-line row is exactly `rowHeight`.
         content()
             .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, minHeight: Tokens.rowHeight, alignment: .leading)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: Tokens.rowMinHeight(dense: denseLayout),
+                alignment: .leading
+            )
             .overlay(alignment: .bottom) {
                 if style == .ruled {
                     colors.hairline.frame(height: 1)
