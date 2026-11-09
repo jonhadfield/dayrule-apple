@@ -64,7 +64,7 @@ struct SyncStatusView: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        HStack(spacing: Tokens.Space.s) {
+        let chrome = HStack(spacing: Tokens.Space.s) {
             ZStack {
                 if showSpinner, status == .syncing {
                     ProgressView().controlSize(.mini)
@@ -90,6 +90,12 @@ struct SyncStatusView: View {
             try? await Task.sleep(for: .milliseconds(600))
             guard !Task.isCancelled else { return }
             showSpinner = true
+        }
+        // Compact Mac sidebar is colour-only; hover matches Lock/Find/Settings chrome.
+        if compact {
+            chrome.help(needsServerSignIn ? "On this device only" : status.shortLabel)
+        } else {
+            chrome
         }
     }
 
