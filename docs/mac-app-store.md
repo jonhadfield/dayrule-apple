@@ -18,13 +18,15 @@ TestFlight upload (after the iPhone critical path).
 
 ## Before Add for Review (Mac)
 
-1. **Archive + upload** a Mac build whose number is at least as new as the
-   iPhone build you care about (Help, privacy contact, Add Done, New List,
-   etc.). Organizer: **Distribute App → App Store Connect**. The local
-   keychain may only have Apple Development + Developer ID; Xcode re-signs
-   for the Mac App Store on upload if the team can issue **Apple
-   Distribution**. Keep iOS and Mac on the same `MARKETING_VERSION`
-   (`0.1.1`) and a `CURRENT_PROJECT_VERSION` ≥ the latest iPhone TestFlight.
+The 0.1.x Mac App Store release already cleared review. Use this list for
+the **next** Mac submission (keep iOS and Mac on the same
+`MARKETING_VERSION` / a `CURRENT_PROJECT_VERSION` at least as new as the
+iPhone build you care about).
+
+1. **Archive + upload** a Mac build. Organizer: **Distribute App → App
+   Store Connect**. The local keychain may only have Apple Development +
+   Developer ID; Xcode re-signs for the Mac App Store on upload if the
+   team can issue **Apple Distribution**.
 2. **Screenshots** — capture with
    `CAPTURE=macos scripts/capture-app-store-screenshots.sh` (agent test
    account in local `agent-creds.txt` — not App Review `creds.txt`; see
