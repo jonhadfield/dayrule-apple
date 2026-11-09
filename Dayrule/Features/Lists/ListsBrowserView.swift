@@ -581,7 +581,7 @@ struct ListsBrowserView: View {
                 .frame(width: browseIconWidth)
                 .accessibilityHidden(true)
             Text(title)
-                .font(DayruleType.sectionSerif)
+                .font(DayruleType.rowTitle)
                 .foregroundStyle(colors.text)
             Spacer(minLength: 0)
         }
@@ -791,7 +791,7 @@ struct ListsBrowserView: View {
                     .padding(.trailing, 8)
                 Label {
                     Text(title)
-                        .font(DayruleType.sectionSerif)
+                        .font(DayruleType.rowTitle)
                         .foregroundStyle(colors.text)
                 } icon: {
                     Image(systemName: systemImage)

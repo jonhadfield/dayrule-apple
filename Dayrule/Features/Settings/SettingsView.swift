@@ -76,6 +76,8 @@ struct SettingsView: View {
                 .dayruleSheetRow(colors: colors)
             }
             .listStyle(.plain)
+            // Keep Toggle / segmented Picker terracotta, not system blue, on paper.
+            .tint(colors.accent)
             .dayruleAnimation(Motion.standard, value: model.entities.settings.moveToDone)
             .dayruleAnimation(Motion.standard, value: unlockError)
             .dayruleAnimation(Motion.standard, value: reminderError)
