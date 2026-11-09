@@ -71,6 +71,19 @@ targets:
       configs:
         Debug:
           INFOPLIST_OTHER_PREPROCESSOR_FLAGS: "-DDAYRULE_DEBUG_ATS"
+    postCompileScripts:
+      - name: Embed git commit
+        basedOnDependencyAnalysis: false
+        script: |
+          set -e
+          PLIST="${TARGET_BUILD_DIR}/${INFOPLIST_PATH}"
+          if [ ! -f "${PLIST}" ]; then
+            echo "note: Info.plist not at ${PLIST} yet; skipping git stamp"
+            exit 0
+          fi
+          COMMIT=$(git -C "${SRCROOT}" rev-parse --short=12 HEAD 2>/dev/null || echo unknown)
+          /usr/libexec/PlistBuddy -c "Set :DayruleGitCommit ${COMMIT}" "${PLIST}" \
+            || /usr/libexec/PlistBuddy -c "Add :DayruleGitCommit string ${COMMIT}" "${PLIST}"
     scheme:
       testTargets:
         - DayruleTests

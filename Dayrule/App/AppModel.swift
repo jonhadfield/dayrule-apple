@@ -44,6 +44,12 @@ final class AppModel {
     var showFind = false
     /// Offline Help sheet (Settings → Help, and Mac/iPad Help menu ⌘?).
     var showHelp = false
+    /// List shell has a local sheet open (When / editor / …). Mac close gate.
+    var macLocalSheetPresented = false
+    /// Multi-select has at least one row — enables Move to Trash (⌘⌫).
+    var hasMacListSelection = false
+    /// Bumped so `ListsBrowserView` clears local sheets before the window closes.
+    private(set) var dismissChromeEpoch = 0
     /// True when a biometric wrap is cached for this device.
     var biometricUnlockAvailable = false
     var biometryLabel = "Biometrics"
@@ -149,6 +155,20 @@ final class AppModel {
     func requestMacChromeAction(_ action: MacChromeAction) {
         guard phase == .unlocked else { return }
         pendingMacChromeAction = action
+    }
+
+    /// Dismiss Settings / Find / Help and local list sheets. Returns whether
+    /// anything was up — Mac close (⌘W / red traffic-light) should abort.
+    @discardableResult
+    func dismissPresentedChrome() -> Bool {
+        let had = showSettings || showFind || showHelp || macLocalSheetPresented
+        showSettings = false
+        showFind = false
+        showHelp = false
+        if macLocalSheetPresented {
+            dismissChromeEpoch += 1
+        }
+        return had
     }
 
     /// Focus the Inbox Add field after unlock (Home Screen quick action / ⌘N).
@@ -1103,6 +1123,9 @@ final class AppModel {
     private func applyLockedUI() {
         showFind = false
         showHelp = false
+        showSettings = false
+        macLocalSheetPresented = false
+        hasMacListSelection = false
         pendingMacChromeAction = nil
         clearPendingSecondStep()
         idleTask?.cancel()
@@ -1116,7 +1139,6 @@ final class AppModel {
         syncEngine = nil
         syncStatus = .idle
         hasCompletedInitialSync = false
-        showSettings = false
         linger.clear()
         notices.clear()
         // Lock UI first so noteEntitiesChanged does not clear pending notifications.

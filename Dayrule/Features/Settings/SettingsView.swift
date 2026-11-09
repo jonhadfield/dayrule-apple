@@ -353,10 +353,11 @@ struct SettingsView: View {
     }
 
     private var aboutVersionLine: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = info?["CFBundleVersion"] as? String ?? "—"
-        return "Dayrule \(version) (\(build))"
+        var line = BuildInfo.aboutVersionLine
+        if BuildInfo.gitCommit != "unknown" {
+            line += " · \(BuildInfo.gitCommit)"
+        }
+        return line
     }
 
     // MARK: - Pieces

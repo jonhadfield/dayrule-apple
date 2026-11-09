@@ -190,8 +190,52 @@ struct ListsBrowserView: View {
         .onChange(of: model.vaultLoading) { _, loading in
             if !loading { consumeFocusAddIfReady() }
         }
+        .onChange(of: model.dismissChromeEpoch) { _, _ in
+            dismissLocalSheets()
+        }
+        .onChange(of: localSheetPresented) { _, presented in
+            model.macLocalSheetPresented = presented
+        }
+        .onChange(of: selectedIds) { _, ids in
+            model.hasMacListSelection = selecting && !ids.isEmpty
+        }
+        .onChange(of: selecting) { _, on in
+            model.hasMacListSelection = on && !selectedIds.isEmpty
+        }
+        .onAppear {
+            model.macLocalSheetPresented = localSheetPresented
+            model.hasMacListSelection = selecting && !selectedIds.isEmpty
+        }
+        .onDisappear {
+            model.macLocalSheetPresented = false
+            model.hasMacListSelection = false
+        }
         .environment(\.dayruleDenseLayout, dense)
         .modifier(DayruleDenseBodyFont(dense: dense))
+    }
+
+    /// Local list sheets (not Settings / Find / Help — those live on `AppModel`).
+    private var localSheetPresented: Bool {
+        whenTarget != nil
+            || deadlineTarget != nil
+            || tagTarget != nil
+            || moveTarget != nil
+            || repeatTarget != nil
+            || reminderTarget != nil
+            || editTarget != nil
+            || showNewList
+    }
+
+    private func dismissLocalSheets() {
+        whenTarget = nil
+        deadlineTarget = nil
+        tagTarget = nil
+        moveTarget = nil
+        repeatTarget = nil
+        reminderTarget = nil
+        editTarget = nil
+        showNewList = false
+        model.macLocalSheetPresented = false
     }
 
     private func handleMacChromeAction(_ action: AppModel.MacChromeAction) {
@@ -427,7 +471,7 @@ struct ListsBrowserView: View {
                 Label("Lock", systemImage: "lock")
                     .labelStyle(.iconOnly)
             }
-            .help("Lock")
+            .help("Lock (⇧⌘L)")
         }
         ToolbarItemGroup(placement: .primaryAction) {
             Button {
@@ -436,7 +480,7 @@ struct ListsBrowserView: View {
                 Label("Find", systemImage: "magnifyingglass")
                     .labelStyle(.iconOnly)
             }
-            .help("Find")
+            .help("Find (⌘F)")
             .accessibilityIdentifier("sidebar.find")
             Button {
                 model.showSettings = true
@@ -444,7 +488,7 @@ struct ListsBrowserView: View {
                 Label("Settings", systemImage: "gearshape")
                     .labelStyle(.iconOnly)
             }
-            .help("Settings")
+            .help("Settings (⌘,)")
         }
     }
 

@@ -13,6 +13,11 @@ struct DayruleApp: App {
     @State private var model = AppModel()
     @Environment(\.scenePhase) private var scenePhase
     @State private var showPrivacyCover = false
+    #if os(macOS)
+    /// AppKit active state — Mission Control / other apps resign active without
+    /// using scenePhase `.inactive` (that also fires for in-app menus).
+    @State private var macAppActive = true
+    #endif
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
 
     init() {
@@ -59,18 +64,27 @@ struct DayruleApp: App {
                 ReminderBackgroundRefresh.bind(model)
                 QuickActions.bind(model)
                 #endif
+                #if os(macOS)
+                MacWindowCloseGate.model = model
+                #endif
             }
             .onChange(of: scenePhase) { _, phase in
                 model.scenePhaseChanged(phase)
-                setPrivacyCover(privacyCoverNeeded(scenePhase: phase, appPhase: model.phase))
+                refreshPrivacyCover()
             }
-            .onChange(of: model.phase) { _, appPhase in
+            .onChange(of: model.phase) { _, _ in
                 // Unlock can finish while the scene is already inactive (app switcher).
-                setPrivacyCover(privacyCoverNeeded(scenePhase: scenePhase, appPhase: appPhase))
+                refreshPrivacyCover()
             }
             #if os(macOS)
             .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                macAppActive = true
                 model.applicationBecameActive()
+                refreshPrivacyCover()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+                macAppActive = false
+                refreshPrivacyCover()
             }
             #endif
         }
@@ -80,6 +94,13 @@ struct DayruleApp: App {
         #endif
         // Mac menu bar and iPad ⌘-hold list (PLAN §6.6 / decision 36).
         .commands {
+            #if os(macOS)
+            CommandGroup(replacing: .appInfo) {
+                Button("About Dayrule") {
+                    showAboutPanel()
+                }
+            }
+            #endif
             CommandGroup(replacing: .appSettings) {
                 Button("Settings…") {
                     model.showSettings = true
@@ -132,8 +153,9 @@ struct DayruleApp: App {
                 Button("Move to Trash") {
                     model.requestMacChromeAction(.trashSelection)
                 }
-                .keyboardShortcut(.delete)
-                .disabled(model.phase != .unlocked)
+                // ⌘⌫ — Finder/Mail style; bare ⌫ fights text fields (decision 56).
+                .keyboardShortcut(.delete, modifiers: .command)
+                .disabled(model.phase != .unlocked || !model.hasMacListSelection)
             }
             // Replace Apple Help Viewer (no help book) with offline in-app Help
             // (PLAN decision 21 / 52). Available locked or unlocked — no vault needed.
@@ -146,19 +168,42 @@ struct DayruleApp: App {
         }
     }
 
-    /// On Mac, `.inactive` is common while the window is still usable (e.g. another
-    /// app’s menu), so only cover when backgrounded. On iOS cover whenever the scene
-    /// isn't active and the screen holds something sensitive: the lists, or the
-    /// recovery words shown or typed. The gate's sign-in and biometric prompt stay
-    /// uncovered so Face ID doesn't flash the cover.
-    private func privacyCoverNeeded(scenePhase: ScenePhase, appPhase: AppModel.Phase) -> Bool {
+    private func refreshPrivacyCover() {
         #if os(macOS)
-        return scenePhase == .background
+        setPrivacyCover(privacyCoverNeeded(macAppActive: macAppActive, appPhase: model.phase))
         #else
-        let sensitive: [AppModel.Phase] = [.unlocked, .confirmRecovery, .needsRecovery]
-        return sensitive.contains(appPhase) && scenePhase != .active
+        setPrivacyCover(privacyCoverNeeded(scenePhase: scenePhase, appPhase: model.phase))
         #endif
     }
+
+    #if os(macOS)
+    /// Cover when the app resigns active (Mission Control / another app). Do not
+    /// use scenePhase `.inactive` — that fires for ordinary menu use (§8.7).
+    private func privacyCoverNeeded(macAppActive: Bool, appPhase: AppModel.Phase) -> Bool {
+        let sensitive: [AppModel.Phase] = [.unlocked, .confirmRecovery, .needsRecovery]
+        return sensitive.contains(appPhase) && !macAppActive
+    }
+
+    private func showAboutPanel() {
+        var credits = "Build \(BuildInfo.build)"
+        if BuildInfo.gitCommit != "unknown" {
+            credits += " · Commit \(BuildInfo.gitCommit)"
+        }
+        let opts: [NSApplication.AboutPanelOptionKey: Any] = [
+            .applicationVersion: BuildInfo.shortVersion,
+            .version: credits,
+        ]
+        NSApplication.shared.orderFrontStandardAboutPanel(options: opts)
+    }
+    #else
+    /// Cover whenever the scene isn't active and the screen holds something
+    /// sensitive. The gate's sign-in and biometric prompt stay uncovered so
+    /// Face ID doesn't flash the cover.
+    private func privacyCoverNeeded(scenePhase: ScenePhase, appPhase: AppModel.Phase) -> Bool {
+        let sensitive: [AppModel.Phase] = [.unlocked, .confirmRecovery, .needsRecovery]
+        return sensitive.contains(appPhase) && scenePhase != .active
+    }
+    #endif
 
     /// The cover appears in the same frame (no fade) so the app-switcher snapshot
     /// never catches vault contents (PLAN §8.7); only the reveal fades.
