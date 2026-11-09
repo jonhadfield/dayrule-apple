@@ -409,7 +409,7 @@ struct HelpArticleView: View {
         )
         heading("Delete your account", colors)
         para(
-            "Settings → Delete account. It deletes everything we hold, straight away, and can’t be undone. Export first if you want a copy. This device is wiped too.",
+            "Settings → Account → Delete account…. It deletes everything we hold, straight away, and can’t be undone. Export first if you want a copy. This device is wiped too.",
             colors
         )
     }

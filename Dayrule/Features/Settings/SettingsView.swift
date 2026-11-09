@@ -24,10 +24,6 @@ struct SettingsView: View {
     @State private var confirmingSignOut = false
     @State private var signOutHasPending = false
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
-    @State private var deletePassword = ""
-    @State private var deleteConfirm = ""
-    @State private var deleteBusy = false
-    @State private var deleteError: String?
 
     private enum UnlockMethod: Equatable {
         case biometric, passkey
@@ -54,27 +50,25 @@ struct SettingsView: View {
             size: .reading
         ) {
             List {
-                // Fewer chapters, shorter footers (decision 42) — keep row
+                // Paper chrome + quieter chapters (decisions 42, 49) — keep row
                 // accessibilityIdentifiers stable for UI tests.
                 generalChapter(colors: colors)
                 syncUnlockChapter(colors: colors)
                 remindersSection(colors: colors)
                 dataSection(colors: colors)
+                helpChapter(colors: colors)
                 if let email = model.accountEmail {
                     accountChapter(email: email, colors: colors)
-                } else {
-                    helpRow(colors: colors)
                 }
             }
             .listStyle(.plain)
-            // Keep Toggle / segmented Picker terracotta, not system blue, on paper.
+            // Keep Toggle / Picker terracotta, not system blue, on paper.
             .tint(colors.accent)
             .dayruleAnimation(Motion.standard, value: model.entities.settings.moveToDone)
             .dayruleAnimation(Motion.standard, value: unlockError)
             .dayruleAnimation(Motion.standard, value: reminderError)
             .dayruleAnimation(Motion.standard, value: importSummary)
             .dayruleAnimation(Motion.standard, value: importError)
-            .dayruleAnimation(Motion.standard, value: deleteError)
             #if os(iOS)
             .sheet(isPresented: $showShare) {
                 if let shareURL {
@@ -107,15 +101,13 @@ struct SettingsView: View {
 
     private func generalChapter(colors: DayruleColors) -> some View {
         DayruleFormSection {
-            Picker(selection: appearanceBinding) {
-                ForEach(AppearancePreference.allCases) { pref in
-                    Text(pref.title).tag(pref)
-                }
-            } label: {
-                Text("Appearance").foregroundStyle(colors.text)
+            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                Text("Appearance")
+                    .foregroundStyle(colors.text)
+                AppearanceChips(selection: appearanceBinding, colors: colors)
+                    .accessibilityIdentifier("settings.appearance")
             }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("settings.appearance")
+            .accessibilityElement(children: .contain)
             Picker(selection: doneModeBinding) {
                 Text("Immediately").tag(DoneMode.immediately)
                 Text("Daily").tag(DoneMode.daily)
@@ -137,18 +129,20 @@ struct SettingsView: View {
         } header: {
             DayruleSectionHeader(title: "General")
         } footer: {
-            footerText("Appearance stays on this device. Light keeps the paper palette.", colors: colors)
+            footerText("Appearance stays on this device.", colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
 
     private func syncUnlockChapter(colors: DayruleColors) -> some View {
         DayruleFormSection {
-            LabeledContent {
+            HStack(spacing: Tokens.Space.s) {
+                Text("Sync")
+                    .foregroundStyle(colors.text)
+                Spacer(minLength: 0)
                 SyncStatusView(status: model.syncStatus, needsServerSignIn: model.needsServerSignIn)
-            } label: {
-                Text("Status").foregroundStyle(colors.text)
             }
+            .accessibilityElement(children: .combine)
             if model.needsServerSignIn {
                 Button("Sign in to sync") {
                     model.showSignInGate()
@@ -189,9 +183,9 @@ struct SettingsView: View {
     @ViewBuilder
     private func syncUnlockFooter(colors: DayruleColors) -> some View {
         let status = model.syncStatus
-        let showLabel = status.label != status.shortLabel
+        let showDetail = status.label != status.shortLabel
         FooterStack {
-            if showLabel {
+            if showDetail {
                 Text(status.label)
                     .font(DayruleType.helper)
                     .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
@@ -200,14 +194,12 @@ struct SettingsView: View {
             }
             if model.needsServerSignIn {
                 footerText(
-                    "Unlocked offline — edits stay here. \(model.biometryLabel) does not create a server session.",
+                    "Unlocked offline — edits stay here until you sign in.",
                     colors: colors
                 )
+            } else {
+                footerText("Unlock methods stay on this device.", colors: colors)
             }
-            footerText(
-                "Biometrics and passkey (PRF) unwrap the account key on this device. Password and recovery stay authoritative. Stay unlocked (at sign-in) keeps a wrap key without biometrics.",
-                colors: colors
-            )
         }
     }
 
@@ -261,12 +253,12 @@ struct SettingsView: View {
         } header: {
             DayruleSectionHeader(title: "Reminders")
         } footer: {
-            FooterStack {
-                if remindersOn {
-                    footerText("Titles are stored by the OS. Leave off to keep only the time.", colors: colors)
-                }
-                footerText("Local to this device — not email or browser push.", colors: colors)
-            }
+            footerText(
+                remindersOn
+                    ? "Local to this device. Titles in notifications are stored by the OS."
+                    : "Local to this device — not email or browser push.",
+                colors: colors
+            )
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -301,10 +293,30 @@ struct SettingsView: View {
             DayruleSectionHeader(title: "Your data")
         } footer: {
             footerText(
-                "Exports aren’t encrypted. Import accepts Dayrule or Things 3 (things-export). Backups hold ciphertext; unlock keys stay on this device.",
+                "Exports aren’t encrypted. Unlock keys stay on this device.",
                 colors: colors
             )
             .accessibilityIdentifier("settings.backupNote")
+        }
+        .dayruleSheetRow(colors: colors)
+    }
+
+    private func helpChapter(colors: DayruleColors) -> some View {
+        DayruleFormSection {
+            NavigationLink {
+                HelpView(embedded: true)
+            } label: {
+                Text("Help")
+            }
+            .accessibilityIdentifier("settings.help")
+            Text(aboutVersionLine)
+                .font(DayruleType.helper)
+                .foregroundStyle(colors.textSecondary)
+                .accessibilityIdentifier("settings.about")
+        } header: {
+            DayruleSectionHeader(title: "Help")
+        } footer: {
+            EmptyView()
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -321,64 +333,26 @@ struct SettingsView: View {
             }
             .buttonStyle(.dayruleDestructive)
             .accessibilityIdentifier("settings.signOut")
-            SecureField(
-                "Password",
-                text: $deletePassword,
-                prompt: Text("Password").foregroundStyle(colors.textSecondary)
-            )
-            .dayruleBareField(colors: colors)
-            .textContentType(.password)
-            .accessibilityIdentifier("settings.delete.password")
-            TextField(
-                "Type DELETE to confirm",
-                text: $deleteConfirm,
-                prompt: Text("Type DELETE to confirm").foregroundStyle(colors.textSecondary)
-            )
-            .dayruleBareField(colors: colors)
-            .autocorrectionDisabled()
-            #if os(iOS)
-            .textInputAutocapitalization(.never)
-            #endif
-            .accessibilityIdentifier("settings.delete.confirm")
-            if let deleteError {
-                inlineError(deleteError, colors: colors)
-            }
-            Button(role: .destructive) {
-                Task { await runDeleteAccount() }
-            } label: {
-                DayruleBusyLabel(title: "Delete account", busyTitle: "Deleting…", busy: deleteBusy)
-            }
-            .buttonStyle(.dayruleDestructive)
-            .disabled(
-                deleteBusy
-                    || deletePassword.isEmpty
-                    || deleteConfirm != "DELETE"
-            )
-            .accessibilityIdentifier("settings.delete")
             NavigationLink {
-                HelpView(embedded: true)
+                DeleteAccountView(model: model, onDeleted: { dismiss() })
             } label: {
-                Text("Help")
+                Text("Delete account…")
+                    .foregroundStyle(colors.deadline)
             }
-            .accessibilityIdentifier("settings.help")
+            .accessibilityIdentifier("settings.delete")
         } header: {
             DayruleSectionHeader(title: "Account")
         } footer: {
-            footerText("Delete removes your account and to-dos on the server and this device. It can’t be undone.", colors: colors)
+            footerText("Sign out keeps lists encrypted on this device.", colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
 
-    private func helpRow(colors: DayruleColors) -> some View {
-        Section {
-            NavigationLink {
-                HelpView(embedded: true)
-            } label: {
-                Text("Help")
-            }
-            .accessibilityIdentifier("settings.help")
-        }
-        .dayruleSheetRow(colors: colors)
+    private var aboutVersionLine: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info?["CFBundleVersion"] as? String ?? "—"
+        return "Dayrule \(version) (\(build))"
     }
 
     // MARK: - Pieces
@@ -410,24 +384,6 @@ struct SettingsView: View {
     }
 
     // MARK: - Actions
-
-    private func runDeleteAccount() async {
-        deleteError = nil
-        guard deleteConfirm == "DELETE" else {
-            deleteError = "Type DELETE to confirm."
-            return
-        }
-        deleteBusy = true
-        let ok = await model.deleteAccount(password: deletePassword)
-        deleteBusy = false
-        if ok {
-            deletePassword = ""
-            deleteConfirm = ""
-            dismiss()
-        } else {
-            deleteError = model.errorMessage ?? "Couldn’t delete the account."
-        }
-    }
 
     private func beginExport(json: Bool) {
         do {
@@ -579,5 +535,127 @@ private struct FooterStack<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Paper chips for System / Light / Dark (PLAN decision 49) — not a system
+/// segmented control.
+private struct AppearanceChips: View {
+    @Binding var selection: AppearancePreference
+    var colors: DayruleColors
+
+    var body: some View {
+        HStack(spacing: Tokens.Space.s) {
+            ForEach(AppearancePreference.allCases) { pref in
+                let selected = selection == pref
+                Button {
+                    selection = pref
+                } label: {
+                    Text(pref.title)
+                        .dayruleRowTitle(.medium)
+                        .foregroundStyle(selected ? colors.accent : colors.text)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Tokens.Space.s)
+                        .background(
+                            RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
+                                .fill(selected ? colors.selectedRow : colors.sidebar.opacity(0.6))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
+                                .strokeBorder(selected ? colors.accent.opacity(0.45) : colors.hairline, lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+                .accessibilityIdentifier("settings.appearance.\(pref.rawValue)")
+            }
+        }
+    }
+}
+
+/// Delete lives one step off Account so the chapter stays calm (decision 49).
+private struct DeleteAccountView: View {
+    @Bindable var model: AppModel
+    var onDeleted: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var password = ""
+    @State private var confirm = ""
+    @State private var busy = false
+    @State private var error: String?
+
+    var body: some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        List {
+            DayruleFormSection {
+                SecureField(
+                    "Password",
+                    text: $password,
+                    prompt: Text("Password").foregroundStyle(colors.textSecondary)
+                )
+                .dayruleBareField(colors: colors)
+                .textContentType(.password)
+                .accessibilityIdentifier("settings.delete.password")
+                TextField(
+                    "Type DELETE to confirm",
+                    text: $confirm,
+                    prompt: Text("Type DELETE to confirm").foregroundStyle(colors.textSecondary)
+                )
+                .dayruleBareField(colors: colors)
+                .autocorrectionDisabled()
+                #if os(iOS)
+                .textInputAutocapitalization(.never)
+                #endif
+                .accessibilityIdentifier("settings.delete.confirm")
+                if let error {
+                    Text(error)
+                        .font(DayruleType.error)
+                        .foregroundStyle(colors.deadline)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .transition(.dayruleInlineError)
+                }
+                Button(role: .destructive) {
+                    Task { await runDelete() }
+                } label: {
+                    DayruleBusyLabel(title: "Delete account", busyTitle: "Deleting…", busy: busy)
+                }
+                .buttonStyle(.dayruleDestructive)
+                .disabled(busy || password.isEmpty || confirm != "DELETE")
+                .accessibilityIdentifier("settings.delete.confirmButton")
+            } header: {
+                DayruleSectionHeader(title: "Delete account")
+            } footer: {
+                Text("Removes your account and to-dos on the server and this device. It can’t be undone.")
+                    .font(DayruleType.helper)
+                    .foregroundStyle(colors.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .dayruleSheetRow(colors: colors)
+        }
+        .listStyle(.plain)
+        .tint(colors.accent)
+        .navigationTitle("Delete account")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+        #endif
+        .background(colors.bg)
+    }
+
+    private func runDelete() async {
+        error = nil
+        guard confirm == "DELETE" else {
+            error = "Type DELETE to confirm."
+            return
+        }
+        busy = true
+        let ok = await model.deleteAccount(password: password)
+        busy = false
+        if ok {
+            password = ""
+            confirm = ""
+            onDeleted()
+        } else {
+            error = model.errorMessage ?? "Couldn’t delete the account."
+        }
     }
 }

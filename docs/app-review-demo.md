@@ -78,10 +78,10 @@ Record on a **physical iPhone** on the latest iOS. Start from a cold launch:
 3. **Account creation:** open Create account briefly and show that an
    **invite code** is required, then Cancel — reviewers must use the demo
    sign-in, not self-serve signup.
-4. **Account deletion:** Settings → scroll to **Delete account** → open the
-   confirmation. **Cancel** (do not confirm on the shared demo account).
-   State in Notes that confirming would destroy the review vault; the control
-   is live and completes deletion when confirmed.
+4. **Account deletion:** Settings → **Account** → **Delete account…** →
+   password + type DELETE. **Cancel / back out** (do not confirm on the shared
+   demo account). State in Notes that confirming would destroy the review
+   vault; the control is live and completes deletion when confirmed.
 5. No in-app purchases, subscriptions or paid unlocks.
 6. No public / social user-generated content: to-dos are private and
    end-to-end encrypted; other users cannot see them, so there is no
@@ -152,8 +152,8 @@ third-party media or credentials beyond the user’s own account.
   sign in once and confirm unlock + sync still work.
 - If the password must change, update App Store Connect in the same sitting.
 - Do not reuse this account as your personal Dayrule account.
-- Deleting the account (`Settings → Delete account`) destroys the demo; only
-  do that when retiring it, then create a fresh one with a new invite.
+- Deleting the account (`Settings → Account → Delete account…`) destroys the
+  demo; only do that when retiring it, then create a fresh one with a new invite.
 
 ## Related (not this doc)
 
