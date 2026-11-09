@@ -91,9 +91,14 @@ struct SyncStatusView: View {
             guard !Task.isCancelled else { return }
             showSpinner = true
         }
-        // Compact Mac sidebar is colour-only; hover matches Lock/Find/Settings chrome.
+        // Compact Mac sidebar is colour-only; hover matches Lock/Find/Settings.
+        // The 8pt dot alone is too small for AppKit tooltip hit-testing — expand
+        // the hover target without changing the drawn size.
         if compact {
-            chrome.help(needsServerSignIn ? "On this device only" : status.shortLabel)
+            chrome
+                .frame(minWidth: 24, minHeight: 24, alignment: .leading)
+                .contentShape(Rectangle())
+                .help(needsServerSignIn ? "On this device only" : status.label)
         } else {
             chrome
         }

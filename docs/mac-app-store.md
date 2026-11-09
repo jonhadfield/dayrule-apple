@@ -14,7 +14,7 @@ TestFlight upload (after the iPhone critical path).
 | Passkey Associated Domains | `webcredentials:dayrule.app` |
 | Productivity category | `LSApplicationCategoryType` in `Info.plist` |
 | Default window | 1280×800 (ASC minimum Mac screenshot size) |
-| Menus | Settings ⌘,, Lock ⇧⌘L, Find ⌘F (PLAN §6.6) |
+| Menus | Settings ⌘,, Lock ⇧⌘L, Find ⌘F, Undo/Redo ⌘Z/⇧⌘Z, New To-Do ⌘N, New Project ⌥⌘N, New Area ⌥⌘A, Move to Trash ⌫, Help ⌘? (PLAN §6.6 / decisions 29, 36, 52) |
 
 ## Before Add for Review (Mac)
 

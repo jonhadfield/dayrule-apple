@@ -133,6 +133,14 @@ struct DayruleApp: App {
                 .keyboardShortcut(.delete)
                 .disabled(model.phase != .unlocked)
             }
+            // Replace Apple Help Viewer (no help book) with offline in-app Help
+            // (PLAN decision 21 / 52). Available locked or unlocked — no vault needed.
+            CommandGroup(replacing: .help) {
+                Button("Dayrule Help") {
+                    model.showHelp = true
+                }
+                .keyboardShortcut("?", modifiers: .command)
+            }
         }
     }
 

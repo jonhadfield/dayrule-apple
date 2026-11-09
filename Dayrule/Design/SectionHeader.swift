@@ -96,6 +96,10 @@ struct DayruleSectionHeader: View {
 /// Form section whose footer always shows in full. Mac grouped forms under-measure
 /// multi-line footers, which then truncate or overlap the rows around them, so on
 /// macOS the footer becomes the section's last, unruled row.
+///
+/// System list/section separators stay hidden: `DayruleSectionHeader` already draws
+/// one hairline under the chapter title, and stacking both looked like double rules
+/// (PLAN decision 53).
 struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
     @ViewBuilder var content: Content
     @ViewBuilder var header: Header
@@ -110,6 +114,8 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
         } header: {
             header
         }
+        .listSectionSeparator(.hidden)
+        .listRowSeparator(.hidden)
         #else
         Section {
             content
@@ -118,6 +124,8 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
         } footer: {
             footer
         }
+        .listSectionSeparator(.hidden)
+        .listRowSeparator(.hidden)
         #endif
     }
 }

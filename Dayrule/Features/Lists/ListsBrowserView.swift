@@ -211,6 +211,7 @@ struct ListsBrowserView: View {
         model.pendingFocusAdd = false
         model.showSettings = false
         model.showFind = false
+        model.showHelp = false
         exitSelecting()
         phonePath = []
         orgPath = []

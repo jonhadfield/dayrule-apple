@@ -387,7 +387,7 @@ struct HelpArticleView: View {
         }
         heading("Done", colors)
         para(
-            "Completed to-dos move to Done. Choose when in Settings → Move completed items to Done: immediately, at the end of the day, or when you press Move to Done now in Done.",
+            "Completed to-dos move to Done. Choose when in Settings → Move to Done: immediately, at the end of the day, or when you press Move to Done now.",
             colors
         )
         heading("Deleting", colors)

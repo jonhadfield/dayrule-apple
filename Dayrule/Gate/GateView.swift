@@ -97,6 +97,11 @@ struct GateView: View {
         .onChange(of: model.gateResetEpoch) { _, _ in
             clearSensitiveGateFields()
         }
+        // Help menu / ⌘?: offline articles + Legal (PLAN decision 21 / 52).
+        // Hosted on Gate so it works before unlock as well as after.
+        .sheet(isPresented: $model.showHelp) {
+            HelpView()
+        }
     }
 
     private func clearSensitiveGateFields() {

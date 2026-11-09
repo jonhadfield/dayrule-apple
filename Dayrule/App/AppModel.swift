@@ -42,6 +42,8 @@ final class AppModel {
     var showSettings = false
     /// Quick Find overlay (toolbar, Mac menu ⌘F).
     var showFind = false
+    /// Offline Help sheet (Settings → Help, and Mac/iPad Help menu ⌘?).
+    var showHelp = false
     /// True when a biometric wrap is cached for this device.
     var biometricUnlockAvailable = false
     var biometryLabel = "Biometrics"
@@ -1100,6 +1102,7 @@ final class AppModel {
     /// Clear unlocked UI synchronously (phase, store, sync). Does not wipe the AK.
     private func applyLockedUI() {
         showFind = false
+        showHelp = false
         pendingMacChromeAction = nil
         clearPendingSecondStep()
         idleTask?.cancel()
@@ -1222,6 +1225,7 @@ final class AppModel {
             syncTask?.cancel()
             syncTask = nil
             showSettings = false
+            showHelp = false
             vault = nil
             cipherStore = nil
             syncEngine = nil
