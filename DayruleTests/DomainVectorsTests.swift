@@ -11,6 +11,70 @@ struct DomainVectorsTests {
         var order: OrderSection
         var hlc: HlcSection
         var merge: MergeSection?
+        var repeats: RepeatsSection?
+    }
+
+    private struct RepeatsSection: Decodable {
+        var instanceId: [InstanceIdCase]
+        var sequences: [SequenceCase]
+        var onOrAfter: [OnOrAfterCase]
+        var dueAfterCompletion: [DueAfterCase]
+    }
+
+    private struct InstanceIdCase: Decodable {
+        var templateId: String
+        var date: String
+        var result: String
+    }
+
+    private struct SequenceCase: Decodable {
+        var name: String
+        var rule: RepeatRuleDTO
+        var count: Int
+        var result: [String]
+    }
+
+    private struct OnOrAfterCase: Decodable {
+        var rule: RepeatRuleDTO
+        var from: String
+        var result: String
+    }
+
+    private struct DueAfterCase: Decodable {
+        var rule: RepeatRuleDTO
+        var done: String
+        var result: String
+    }
+
+    /// Shared-vector shape of a Repeat rule (no `next` / reminderTime required).
+    private struct RepeatRuleDTO: Decodable {
+        var freq: String
+        var every: Int
+        var weekdays: [Int]?
+        var mode: String
+        var anchor: String
+
+        func asRule() throws -> RepeatRule {
+            guard let freq = RepeatRule.Freq(rawValue: freq) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad freq \(freq)")
+                )
+            }
+            guard let mode = RepeatRule.Mode(rawValue: mode) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad mode \(mode)")
+                )
+            }
+            return RepeatRule(
+                freq: freq,
+                every: every,
+                weekdays: weekdays,
+                mode: mode,
+                anchor: anchor,
+                next: nil,
+                reminderTime: nil
+            )
+        }
     }
 
     private struct MergeSection: Decodable {
@@ -225,6 +289,31 @@ struct DomainVectorsTests {
         for t in merge.latestStamp {
             let clock = t.entity.dictionary?["clock"] as? FieldClock
             #expect(Merge.latestStamp(clock) == t.result)
+        }
+    }
+
+    @Test("repeat sequences and instanceId match shared vectors")
+    func repeatVectors() throws {
+        let file = try load()
+        let repeats = try #require(file.repeats)
+        for c in repeats.instanceId {
+            #expect(Repeats.instanceId(templateId: c.templateId, date: c.date) == c.result)
+        }
+        for c in repeats.sequences {
+            let rule = try c.rule.asRule()
+            var got: [LocalDate] = [RepeatMath.occurrenceOnOrAfter(rule, rule.anchor)]
+            while got.count < c.count {
+                got.append(RepeatMath.occurrenceAfter(rule, got[got.count - 1]))
+            }
+            #expect(got == c.result, "sequence \(c.name)")
+        }
+        for c in repeats.onOrAfter {
+            let rule = try c.rule.asRule()
+            #expect(RepeatMath.occurrenceOnOrAfter(rule, c.from) == c.result)
+        }
+        for c in repeats.dueAfterCompletion {
+            let rule = try c.rule.asRule()
+            #expect(RepeatMath.dueAfterCompletion(rule, c.done) == c.result)
         }
     }
 }
