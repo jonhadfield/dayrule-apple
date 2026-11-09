@@ -1012,5 +1012,70 @@
         "result": "2026-02-28"
       }
     ]
+  },
+  "generatedInstances": {
+    "template": {
+      "id": "tpl-vector-daily",
+      "title": "Water plants",
+      "notes": "kitchen",
+      "order": "a0",
+      "repeat": {
+        "freq": "day",
+        "every": 1,
+        "mode": "fixed",
+        "anchor": "2026-10-04",
+        "next": "2026-10-04"
+      }
+    },
+    "cases": [
+      {
+        "name": "daily-today-idempotent",
+        "today": "2026-10-04",
+        "expect": {
+          "instance": {
+            "id": "efab2ed0-45b3-581e-ab42-42e9ea2090cd",
+            "title": "Water plants",
+            "notes": "kitchen",
+            "status": "open",
+            "start": "ready",
+            "startDate": "2026-10-04",
+            "tonight": false,
+            "order": "a0",
+            "repeatTemplateId": "tpl-vector-daily",
+            "reminderAt": null,
+            "createdAt": "2026-10-04T00:00:00.000Z",
+            "updatedAt": "2026-10-04T00:00:00.000Z"
+          },
+          "templateNext": "2026-10-05",
+          "instanceDates": [
+            "2026-10-04"
+          ]
+        }
+      },
+      {
+        "name": "daily-catch-up-latest-only",
+        "today": "2026-10-11",
+        "expect": {
+          "instanceDates": [
+            "2026-10-11"
+          ],
+          "templateNext": "2026-10-12",
+          "latestInstance": {
+            "id": "67da9deb-c49e-578c-8982-fd46278ada60",
+            "title": "Water plants",
+            "notes": "kitchen",
+            "status": "open",
+            "start": "ready",
+            "startDate": "2026-10-11",
+            "tonight": false,
+            "order": "a0",
+            "repeatTemplateId": "tpl-vector-daily",
+            "reminderAt": null,
+            "createdAt": "2026-10-11T00:00:00.000Z",
+            "updatedAt": "2026-10-11T00:00:00.000Z"
+          }
+        }
+      }
+    ]
   }
 }

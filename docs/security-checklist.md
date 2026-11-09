@@ -47,14 +47,14 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.1 (19)** iOS+Mac uploaded 2026-11-08 (idle-sync UI fix; prior 18) — `0.1.0` train closed for new submissions)
+- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.1 (20)** iOS+Mac uploaded 2026-11-09 (sidebar/Settings polish; prior 19 idle-sync UI fix) — `0.1.0` train closed for new submissions)
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
 - [x] App Review demo account — runbook `docs/app-review-demo.md` (no second step; credentials only in App Store Connect; maintained for resubmits)
 - [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
 - [x] French encryption declaration / export-compliance — answered for the shipped store submissions
-- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac reviewed, approved, and released; TestFlight **0.1.1 (19)** also uploaded 2026-11-08)
+- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac reviewed, approved, and released; TestFlight **0.1.1 (20)** also uploaded 2026-11-09)
 - [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops:** leave env unset until deliberately cutting old builds; then set floors ≥ oldest supported `CFBundleVersion`.
 
 **Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.

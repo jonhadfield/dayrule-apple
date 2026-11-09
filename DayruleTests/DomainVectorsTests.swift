@@ -14,6 +14,56 @@ struct DomainVectorsTests {
         var lists: ListsSection?
         var repeats: RepeatsSection?
         var find: FindSection?
+        var generatedInstances: GeneratedInstancesSection?
+    }
+
+    private struct GeneratedInstancesSection: Decodable {
+        var template: GeneratedTemplate
+        var cases: [GeneratedCase]
+    }
+
+    private struct GeneratedTemplate: Decodable {
+        var id: String
+        var title: String
+        var notes: String
+        var order: String
+        var `repeat`: GeneratedRepeat
+    }
+
+    private struct GeneratedRepeat: Decodable {
+        var freq: String
+        var every: Int
+        var mode: String
+        var anchor: String
+        var next: String
+    }
+
+    private struct GeneratedCase: Decodable {
+        var name: String
+        var today: String
+        var expect: GeneratedExpect
+    }
+
+    private struct GeneratedExpect: Decodable {
+        var instance: GeneratedTodoSnap?
+        var latestInstance: GeneratedTodoSnap?
+        var templateNext: String
+        var instanceDates: [String]
+    }
+
+    private struct GeneratedTodoSnap: Decodable, Equatable {
+        var id: String
+        var title: String
+        var notes: String
+        var status: String
+        var start: String
+        var startDate: String?
+        var tonight: Bool
+        var order: String
+        var repeatTemplateId: String?
+        var reminderAt: String?
+        var createdAt: String
+        var updatedAt: String
     }
 
     private struct FindSection: Decodable {
@@ -572,6 +622,114 @@ struct DomainVectorsTests {
             let rule = try c.rule.asRule()
             #expect(RepeatMath.dueAfterCompletion(rule, c.done) == c.result)
         }
+    }
+
+    @Test("generateRepeats instances match shared vectors")
+    @MainActor
+    func generatedInstanceVectors() throws {
+        let file = try load()
+        let section = try #require(file.generatedInstances)
+        for c in section.cases {
+            let store = try makeGeneratedStore(template: section.template, today: c.today)
+            store.generate { d, env in Repeats.generateRepeats(d, env) }
+            // Idempotent on the same day.
+            store.generate { d, env in Repeats.generateRepeats(d, env) }
+            let dates = store.entities.todos.values
+                .filter { $0.repeatTemplateId == section.template.id }
+                .compactMap(\.startDate)
+                .sorted()
+            #expect(dates == c.expect.instanceDates, "\(c.name) dates")
+            #expect(
+                store.entities.todos[section.template.id]?.repeat?.next == c.expect.templateNext,
+                "\(c.name) template next"
+            )
+            if let want = c.expect.instance {
+                let got = try #require(store.entities.todos[want.id])
+                #expect(Self.snap(got) == want, "\(c.name) instance")
+            }
+            if let want = c.expect.latestInstance {
+                let got = try #require(store.entities.todos[want.id])
+                #expect(Self.snap(got) == want, "\(c.name) latest instance")
+            }
+        }
+    }
+
+    @MainActor
+    private func makeGeneratedStore(template: GeneratedTemplate, today: String) throws -> EntityStore {
+        guard let freq = RepeatRule.Freq(rawValue: template.repeat.freq),
+              let mode = RepeatRule.Mode(rawValue: template.repeat.mode)
+        else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: [], debugDescription: "bad generated template repeat")
+            )
+        }
+        final class MsBox: @unchecked Sendable {
+            var value: Double
+            init(_ value: Double) { self.value = value }
+        }
+        let box = MsBox(
+            ISO8601DateFormatter().date(from: "\(today)T09:00:00Z")!.timeIntervalSince1970 * 1000
+        )
+        let store = EntityStore(clock: StoreClock(
+            now: {
+                box.value += 1000
+                return Date(timeIntervalSince1970: box.value / 1000)
+            },
+            newId: { "unused" },
+            hlc: HLC(device: "vec") { Int(box.value) }
+        ))
+        var e = Entities.empty()
+        e.todos[template.id] = Todo(
+            id: template.id,
+            createdAt: "2026-10-04T09:00:00.000Z",
+            updatedAt: "2026-10-04T09:00:00.000Z",
+            clock: nil,
+            title: template.title,
+            notes: template.notes,
+            projectId: nil,
+            headingId: nil,
+            areaId: nil,
+            status: .open,
+            start: .ready,
+            startDate: nil,
+            tonight: false,
+            deadline: nil,
+            tagIds: [],
+            order: template.order,
+            todayOrder: nil,
+            completedAt: nil,
+            trashedAt: nil,
+            reminderAt: nil,
+            repeat: RepeatRule(
+                freq: freq,
+                every: template.repeat.every,
+                weekdays: nil,
+                mode: mode,
+                anchor: template.repeat.anchor,
+                next: template.repeat.next,
+                reminderTime: nil
+            ),
+            repeatTemplateId: nil
+        )
+        store.hydrate(e)
+        return store
+    }
+
+    private static func snap(_ t: Todo) -> GeneratedTodoSnap {
+        GeneratedTodoSnap(
+            id: t.id,
+            title: t.title,
+            notes: t.notes,
+            status: t.status.rawValue,
+            start: t.start.rawValue,
+            startDate: t.startDate,
+            tonight: t.tonight,
+            order: t.order,
+            repeatTemplateId: t.repeatTemplateId,
+            reminderAt: t.reminderAt,
+            createdAt: t.createdAt,
+            updatedAt: t.updatedAt
+        )
     }
 
     @Test("Quick Find search and homeOf match shared vectors")
