@@ -30,6 +30,11 @@
 	<false/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright © 2026 Jon Hadfield</string>
+	<!-- Stamped at build time by the Embed git commit phase; placeholder for clean checkouts. -->
+	<key>DayruleGitCommit</key>
+	<string>unknown</string>
 #ifdef DAYRULE_DEBUG_ATS
 	<key>NSAppTransportSecurity</key>
 	<dict>

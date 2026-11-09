@@ -50,8 +50,8 @@ struct SettingsView: View {
             size: .reading
         ) {
             List {
-                // Paper chrome + quieter chapters (decisions 42, 49) — keep row
-                // accessibilityIdentifiers stable for UI tests.
+                // Paper chrome + quieter chapters (decisions 42, 49, 53) — keep
+                // row accessibilityIdentifiers stable for UI tests.
                 generalChapter(colors: colors)
                 syncUnlockChapter(colors: colors)
                 remindersSection(colors: colors)
@@ -62,6 +62,10 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.plain)
+            #if os(iOS)
+            // Chapter breathing room once system double rules are gone (decision 53).
+            .listSectionSpacing(Tokens.Space.m)
+            #endif
             // Keep Toggle / Picker terracotta, not system blue, on paper.
             .tint(colors.accent)
             .dayruleAnimation(Motion.standard, value: model.entities.settings.moveToDone)
@@ -110,7 +114,7 @@ struct SettingsView: View {
             .accessibilityElement(children: .contain)
             Picker(selection: doneModeBinding) {
                 Text("Immediately").tag(DoneMode.immediately)
-                Text("Daily").tag(DoneMode.daily)
+                Text("End of day").tag(DoneMode.daily)
                 Text("Manually").tag(DoneMode.manually)
             } label: {
                 Text("Move to Done").foregroundStyle(colors.text)
@@ -129,7 +133,7 @@ struct SettingsView: View {
         } header: {
             DayruleSectionHeader(title: "General")
         } footer: {
-            footerText("Appearance stays on this device.", colors: colors)
+            footerText(doneModeFooter, colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -349,13 +353,26 @@ struct SettingsView: View {
     }
 
     private var aboutVersionLine: String {
-        let info = Bundle.main.infoDictionary
-        let version = info?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = info?["CFBundleVersion"] as? String ?? "—"
-        return "Dayrule \(version) (\(build))"
+        var line = BuildInfo.aboutVersionLine
+        if BuildInfo.gitCommit != "unknown" {
+            line += " · \(BuildInfo.gitCommit)"
+        }
+        return line
     }
 
     // MARK: - Pieces
+
+    private var doneModeFooter: String {
+        let done: String = switch model.entities.settings.moveToDone {
+        case .immediately:
+            "Completed items go to Done straight away."
+        case .daily:
+            "Completed items stay on open lists until the next day, then move to Done."
+        case .manually:
+            "Completed items stay on open lists until you press Move to Done now."
+        }
+        return "Appearance stays on this device. \(done)"
+    }
 
     private func footerText(_ text: String, colors: DayruleColors) -> some View {
         Text(text)
