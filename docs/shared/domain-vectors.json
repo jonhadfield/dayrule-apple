@@ -392,5 +392,149 @@
         "result": "5"
       }
     ]
+  },
+  "repeats": {
+    "instanceId": [
+      {
+        "templateId": "6b0f3c55-0000-4000-8000-000000000001",
+        "date": "2026-10-04",
+        "result": "629f9f89-934b-5e7f-b22e-a7156bbfb320"
+      }
+    ],
+    "sequences": [
+      {
+        "name": "every-3-days",
+        "rule": {
+          "freq": "day",
+          "every": 3,
+          "mode": "fixed",
+          "anchor": "2026-10-04"
+        },
+        "count": 3,
+        "result": [
+          "2026-10-04",
+          "2026-10-07",
+          "2026-10-10"
+        ]
+      },
+      {
+        "name": "weekly-mon-thu",
+        "rule": {
+          "freq": "week",
+          "every": 1,
+          "mode": "fixed",
+          "anchor": "2026-10-04",
+          "weekdays": [
+            0,
+            3
+          ]
+        },
+        "count": 4,
+        "result": [
+          "2026-10-05",
+          "2026-10-08",
+          "2026-10-12",
+          "2026-10-15"
+        ]
+      },
+      {
+        "name": "fortnightly-monday",
+        "rule": {
+          "freq": "week",
+          "every": 2,
+          "mode": "fixed",
+          "anchor": "2026-10-05",
+          "weekdays": [
+            0
+          ]
+        },
+        "count": 3,
+        "result": [
+          "2026-10-05",
+          "2026-10-19",
+          "2026-11-02"
+        ]
+      },
+      {
+        "name": "monthly-31st-clamp",
+        "rule": {
+          "freq": "month",
+          "every": 1,
+          "mode": "fixed",
+          "anchor": "2026-01-31"
+        },
+        "count": 4,
+        "result": [
+          "2026-01-31",
+          "2026-02-28",
+          "2026-03-31",
+          "2026-04-30"
+        ]
+      },
+      {
+        "name": "yearly-29-feb",
+        "rule": {
+          "freq": "year",
+          "every": 1,
+          "mode": "fixed",
+          "anchor": "2028-02-29"
+        },
+        "count": 3,
+        "result": [
+          "2028-02-29",
+          "2029-02-28",
+          "2030-02-28"
+        ]
+      },
+      {
+        "name": "daily-across-uk-dst",
+        "rule": {
+          "freq": "day",
+          "every": 1,
+          "mode": "fixed",
+          "anchor": "2026-10-24"
+        },
+        "count": 3,
+        "result": [
+          "2026-10-24",
+          "2026-10-25",
+          "2026-10-26"
+        ]
+      }
+    ],
+    "onOrAfter": [
+      {
+        "rule": {
+          "freq": "day",
+          "every": 3,
+          "mode": "fixed",
+          "anchor": "2026-10-04"
+        },
+        "from": "2026-10-05",
+        "result": "2026-10-07"
+      }
+    ],
+    "dueAfterCompletion": [
+      {
+        "rule": {
+          "freq": "day",
+          "every": 3,
+          "mode": "afterCompletion",
+          "anchor": "2026-10-04"
+        },
+        "done": "2026-10-04",
+        "result": "2026-10-07"
+      },
+      {
+        "rule": {
+          "freq": "month",
+          "every": 1,
+          "mode": "afterCompletion",
+          "anchor": "2026-10-04"
+        },
+        "done": "2026-01-31",
+        "result": "2026-02-28"
+      }
+    ]
   }
 }

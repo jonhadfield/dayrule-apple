@@ -2,9 +2,9 @@ import Foundation
 import Testing
 @testable import Dayrule
 
-/// Soft CI ceilings for hot paths deferred in PLAN §14.3 (unlock) and list
-/// render selectors. Ceilings are generous so Apple Silicon vs CI variance
-/// does not flake; tighten after a few green baseline runs.
+/// Soft CI ceilings for hot paths in PLAN §14.3 (unlock KDF, list selectors,
+/// cold vault decrypt after unlock). Ceilings are generous so Apple Silicon
+/// vs CI variance does not flake; tighten after a few green baseline runs.
 @Suite("Performance budgets")
 struct PerformanceBudgetTests {
     /// Default KDF is ops=3 / 64 MiB. Local Apple Silicon is typically well
@@ -13,6 +13,10 @@ struct PerformanceBudgetTests {
     private static let argon2Ceiling: Duration = .seconds(8)
     /// inbox + browseTree + scheduled over ~1k entities. Soft ceiling for CI.
     private static let listSelectorsCeiling: Duration = .milliseconds(100)
+    /// Decrypt ~200 sync-shaped records with a known AK (post-unlock hydrate).
+    /// Local Apple Silicon is usually well under 100ms; 2s covers CI variance.
+    private static let vaultDecryptCeiling: Duration = .seconds(2)
+    private static let vaultDecryptCount = 200
 
     @Test("Argon2id default KDF stays under unlock budget")
     func argon2DefaultKdfBudget() throws {
@@ -91,6 +95,82 @@ struct PerformanceBudgetTests {
         #expect(
             elapsed < Self.listSelectorsCeiling,
             "List selectors took \(elapsed); budget is \(Self.listSelectorsCeiling)"
+        )
+    }
+
+    /// Cold vault hydrate after unlock: decrypt many sync-shaped envelopes
+    /// with a known account key (Argon2 is budgeted separately above).
+    @Test("Cold vault decrypt of ~200 sync records stays under budget")
+    func coldVaultDecryptBudget() throws {
+        Primitives.ready()
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let url = root.appendingPathComponent("docs/shared/crypto-vectors.json")
+        let vectors = try JSONDecoder().decode(CryptoVectorsFile.self, from: Data(contentsOf: url))
+        let ak = try Hex.decode(vectors.input.accountKey)
+        let userId = vectors.input.userId
+        let baseNonce = try Hex.decode(vectors.input.recordNonce)
+        #expect(baseNonce.count >= 8)
+
+        var envelopes: [(meta: Primitives.RecordMeta, env: Primitives.Envelope)] = []
+        envelopes.reserveCapacity(Self.vaultDecryptCount)
+        for i in 0..<Self.vaultDecryptCount {
+            let recordId = "sync/budget-\(i)"
+            let meta = Primitives.RecordMeta(
+                userId: userId,
+                recordId: recordId,
+                schemaVersion: 1,
+                keyId: 1
+            )
+            var nonce = baseNonce
+            // Unique nonce per record without needing a CSPRNG in the timed path.
+            let tag = UInt32(i).bigEndian
+            withUnsafeBytes(of: tag) { bytes in
+                for (offset, byte) in bytes.enumerated() {
+                    nonce[nonce.count - 4 + offset] ^= byte
+                }
+            }
+            let payload: [String: Any] = [
+                "k": "todos/budget-\(i)",
+                "v": [
+                    "type": "todo",
+                    "title": "Budget \(i)",
+                    "notes": "",
+                    "tonight": false,
+                ] as [String: Any],
+            ]
+            let json = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
+            let env = try Primitives.encryptRecordJSON(
+                ak: ak,
+                meta: meta,
+                jsonUTF8: [UInt8](json),
+                nonce: nonce
+            )
+            envelopes.append((meta, env))
+        }
+
+        // Warm sodium / page-in once (same pattern as Argon2 budget).
+        _ = try Primitives.decryptRecordJSON(
+            ak: ak,
+            meta: envelopes[0].meta,
+            env: envelopes[0].env
+        )
+
+        let clock = ContinuousClock()
+        let started = clock.now
+        for item in envelopes {
+            let plain = try Primitives.decryptRecordJSON(
+                ak: ak,
+                meta: item.meta,
+                env: item.env
+            )
+            #expect(!plain.isEmpty)
+        }
+        let elapsed = clock.now - started
+        #expect(
+            elapsed < Self.vaultDecryptCeiling,
+            "Cold vault decrypt took \(elapsed); budget is \(Self.vaultDecryptCeiling)"
         )
     }
 }
