@@ -13,6 +13,78 @@ struct DomainVectorsTests {
         var merge: MergeSection?
         var lists: ListsSection?
         var repeats: RepeatsSection?
+        var find: FindSection?
+    }
+
+    private struct FindSection: Decodable {
+        var today: String
+        var seed: FindSeed
+        var search: [FindSearchCase]
+        var homeOf: [FindHomeCase]
+    }
+
+    private struct FindSeed: Decodable {
+        var tags: [TagSeed]
+        var areas: [FindAreaSeed]
+        var projects: [FindProjectSeed]
+        var todos: [FindTodoSeed]
+    }
+
+    private struct TagSeed: Decodable {
+        var id: String
+        var title: String
+    }
+
+    private struct FindAreaSeed: Decodable {
+        var id: String
+        var title: String
+        var order: String
+        var trashedAt: String?
+    }
+
+    private struct FindProjectSeed: Decodable {
+        var id: String
+        var title: String
+        var areaId: String?
+        var start: String
+        var startDate: String?
+        var order: String
+        var trashedAt: String?
+    }
+
+    private struct FindTodoSeed: Decodable {
+        var id: String
+        var title: String
+        var notes: String
+        var start: String
+        var startDate: String?
+        var deadline: String?
+        var tonight: Bool
+        var status: String
+        var projectId: String?
+        var areaId: String?
+        var tagIds: [String]
+        var order: String
+        var todayOrder: String?
+        var trashedAt: String?
+        var completedAt: String?
+    }
+
+    private struct FindSearchCase: Decodable {
+        var query: String
+        var top: FindHit?
+    }
+
+    private struct FindHit: Decodable, Equatable {
+        var kind: String
+        var path: String
+        var todoId: String?
+        var detail: String
+    }
+
+    private struct FindHomeCase: Decodable {
+        var todoId: String
+        var path: String
     }
 
     private struct ListsSection: Decodable {
@@ -499,6 +571,157 @@ struct DomainVectorsTests {
         for c in repeats.dueAfterCompletion {
             let rule = try c.rule.asRule()
             #expect(RepeatMath.dueAfterCompletion(rule, c.done) == c.result)
+        }
+    }
+
+    @Test("Quick Find search and homeOf match shared vectors")
+    func findVectors() throws {
+        let file = try load()
+        let find = try #require(file.find)
+        let e = try findEntities(from: find.seed)
+        let ctx = Lists.Context(today: find.today, keepVisible: nil)
+        let finder = Find.buildFinder(e, ctx)
+        for c in find.search {
+            let hit = finder.search(c.query).first
+            #expect(Self.findHit(hit, entities: e, ctx: ctx) == c.top, "find search \(c.query)")
+        }
+        for c in find.homeOf {
+            let todo = try #require(e.todos[c.todoId])
+            #expect(Self.webPath(entities: e, todo: todo, ctx: ctx) == c.path)
+        }
+    }
+
+    private func findEntities(from seed: FindSeed) throws -> Entities {
+        let ts = "2026-10-01T09:00:00.000Z"
+        var e = Entities.empty()
+        for tag in seed.tags {
+            e.tags[tag.id] = Tag(
+                id: tag.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: tag.title,
+                parentId: nil,
+                order: "a0"
+            )
+        }
+        for a in seed.areas {
+            e.areas[a.id] = Area(
+                id: a.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: a.title,
+                order: a.order,
+                tagIds: [],
+                trashedAt: a.trashedAt
+            )
+        }
+        for p in seed.projects {
+            guard let start = StartBucket(rawValue: p.start) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad project start \(p.start)")
+                )
+            }
+            e.projects[p.id] = Project(
+                id: p.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: p.title,
+                notes: "",
+                areaId: p.areaId,
+                status: .open,
+                start: start,
+                startDate: p.startDate,
+                tonight: false,
+                deadline: nil,
+                tagIds: [],
+                order: p.order,
+                todayOrder: nil,
+                completedAt: nil,
+                trashedAt: p.trashedAt
+            )
+        }
+        for t in seed.todos {
+            guard let start = StartBucket(rawValue: t.start) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad todo start \(t.start)")
+                )
+            }
+            guard let status = Status(rawValue: t.status) else {
+                throw DecodingError.dataCorrupted(
+                    .init(codingPath: [], debugDescription: "bad todo status \(t.status)")
+                )
+            }
+            e.todos[t.id] = Todo(
+                id: t.id,
+                createdAt: ts,
+                updatedAt: ts,
+                clock: nil,
+                title: t.title,
+                notes: t.notes,
+                projectId: t.projectId,
+                headingId: nil,
+                areaId: t.areaId,
+                status: status,
+                start: start,
+                startDate: t.startDate,
+                tonight: t.tonight,
+                deadline: t.deadline,
+                tagIds: t.tagIds,
+                order: t.order,
+                todayOrder: t.todayOrder,
+                completedAt: t.completedAt,
+                trashedAt: t.trashedAt,
+                reminderAt: nil,
+                repeat: nil,
+                repeatTemplateId: nil
+            )
+        }
+        return e
+    }
+
+    private static func findHit(
+        _ result: Find.Result?,
+        entities: Entities,
+        ctx: Lists.Context
+    ) -> FindHit? {
+        guard let result else { return nil }
+        let path: String
+        switch result.destination {
+        case .list(let name):
+            path = name == .notNow ? "/backlog" : "/\(name.rawValue)"
+        case .project(let id):
+            path = "/project/\(id)"
+        case .area(let id):
+            path = "/area/\(id)"
+        case .todo(let id, _):
+            guard let todo = entities.todos[id] else { return nil }
+            path = webPath(entities: entities, todo: todo, ctx: ctx)
+        }
+        return FindHit(
+            kind: result.kind.rawValue,
+            path: path,
+            todoId: result.todoId,
+            detail: result.detail
+        )
+    }
+
+    /// Mirror web `homeOf(...).path` for shared-vector asserts.
+    private static func webPath(entities: Entities, todo: Todo, ctx: Lists.Context) -> String {
+        if Lists.isTrashed(entities, .todo(todo)) { return "/trash" }
+        if todo.repeat != nil { return "/scheduled" }
+        if Lists.isInDone(entities, .todo(todo), ctx) { return "/done" }
+        if let project = Lists.projectOf(entities, todo) {
+            return "/project/\(project.id)"
+        }
+        if let areaId = todo.areaId, entities.areas[areaId] != nil {
+            return "/area/\(areaId)"
+        }
+        switch Find.homeOf(entities, todo, ctx).list {
+        case .notNow: return "/backlog"
+        default: return "/\(Find.homeOf(entities, todo, ctx).list.rawValue)"
         }
     }
 }
