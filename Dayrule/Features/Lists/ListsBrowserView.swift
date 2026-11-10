@@ -1029,9 +1029,17 @@ struct ListsBrowserView: View {
                     // and hides todos for the whole push/pull.
                     emptyRow(list: list)
                 } else {
+                    let peers = listRows.filter(\.isTodo).map(\.id)
+                    let onMoveOK = listRows.allSatisfy(\.isTodo)
+                        && ListReorder.allowsDrag(in: list)
+                        && !selecting
                     ForEach(listRows, id: \.id) { row in
-                        listRow(row, list: list, colors: colors)
+                        reorderableListRow(row, list: list, colors: colors, peers: peers)
                     }
+                    .onMove { source, destination in
+                        moveTodos(peers: peers, source: source, destination: destination, list: list)
+                    }
+                    .moveDisabled(!onMoveOK)
                 }
             }
             if !selecting, list == .inbox || list == .today || list == .backlog || list == .scheduled {
@@ -1294,14 +1302,29 @@ struct ListsBrowserView: View {
         if main.isEmpty, parked.isEmpty {
             emptyRow(list: .backlog)
         } else {
+            let mainPeers = main.filter(\.isTodo).map(\.id)
             ForEach(main, id: \.id) { row in
-                listRow(row, list: .backlog, colors: colors)
+                reorderableListRow(row, list: .backlog, colors: colors, peers: mainPeers)
             }
+            .onMove { source, destination in
+                moveTodos(peers: mainPeers, source: source, destination: destination, list: .backlog)
+            }
+            .moveDisabled(selecting)
             if !parked.isEmpty {
+                let parkedPeers = parked.filter(\.isTodo).map(\.id)
                 Section {
                     ForEach(parked, id: \.id) { row in
-                        listRow(row, list: .notNow, colors: colors)
+                        reorderableListRow(row, list: .notNow, colors: colors, peers: parkedPeers)
                     }
+                    .onMove { source, destination in
+                        moveTodos(
+                            peers: parkedPeers,
+                            source: source,
+                            destination: destination,
+                            list: .notNow
+                        )
+                    }
+                    .moveDisabled(selecting)
                 } header: {
                     DayruleSectionHeader(title: "Not now", tone: .later, style: .caps)
                 }
@@ -1372,6 +1395,35 @@ struct ListsBrowserView: View {
             openProject(row.id)
         } else {
             editTarget = EditTarget(id: row.id)
+        }
+    }
+
+    /// Drag / drop / onMove reorder for to-do rows (PLAN §6.5; web long-press then drag).
+    @ViewBuilder
+    private func reorderableListRow(
+        _ row: Row,
+        list: ListName,
+        colors: DayruleColors,
+        peers: [ID]
+    ) -> some View {
+        let canDrag = !selecting && row.isTodo && ListReorder.allowsDrag(in: list) && peers.contains(row.id)
+        if canDrag {
+            listRow(row, list: list, colors: colors)
+                .draggable(row.id) {
+                    Text(row.title.isEmpty ? "Untitled" : row.title)
+                        .font(DayruleType.rowTitle(dense: true))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .background(colors.bg)
+                        .overlay(Rectangle().strokeBorder(colors.hairline, lineWidth: 1))
+                }
+                .dropDestination(for: String.self) { items, _ in
+                    guard let from = items.first else { return false }
+                    return dropTodo(dragging: from, onto: row.id, peers: peers, list: list)
+                }
+        } else {
+            listRow(row, list: list, colors: colors)
+                .moveDisabled(true)
         }
     }
 
@@ -1769,20 +1821,57 @@ struct ListsBrowserView: View {
     private func moveTodo(_ id: ID, dir: Int, in list: ListName) {
         let visible = rows(for: list).filter(\.isTodo).map(\.id)
         guard let i = visible.firstIndex(of: id) else { return }
-        let rest = visible.filter { $0 != id }
-        let target = max(0, min(rest.count, i + dir))
-        guard target != i else { return }
-        let field: Commands.OrderField = list == .today ? .todayOrder : .order
-        let before: ID? = target > 0 ? rest[target - 1] : nil
-        let after: ID? = target < rest.count ? rest[target] : nil
+        // SwiftUI onMove `destination` is the pre-move insertion index.
+        let destination = i + dir + (dir > 0 ? 1 : 0)
+        guard destination >= 0, destination <= visible.count,
+              let neighbours = ListReorder.neighbours(
+                  peers: visible,
+                  source: IndexSet(integer: i),
+                  destination: destination
+              )
+        else { return }
+        applyTodoReorder(
+            id: neighbours.id,
+            before: neighbours.before,
+            after: neighbours.after,
+            list: list
+        )
+    }
+
+    private func moveTodos(peers: [ID], source: IndexSet, destination: Int, list: ListName) {
+        guard !selecting, ListReorder.allowsDrag(in: list),
+              let neighbours = ListReorder.neighbours(
+                  peers: peers,
+                  source: source,
+                  destination: destination
+              )
+        else { return }
+        applyTodoReorder(
+            id: neighbours.id,
+            before: neighbours.before,
+            after: neighbours.after,
+            list: list
+        )
+    }
+
+    @discardableResult
+    private func dropTodo(dragging: ID, onto: ID, peers: [ID], list: ListName) -> Bool {
+        guard !selecting, ListReorder.allowsDrag(in: list),
+              let neighbours = ListReorder.neighbours(peers: peers, dragging: dragging, onto: onto)
+        else { return false }
+        applyTodoReorder(id: dragging, before: neighbours.before, after: neighbours.after, list: list)
+        return true
+    }
+
+    private func applyTodoReorder(id: ID, before: ID?, after: ID?, list: ListName) {
         do {
-            try model.store.run("Move") { d, env in
+            try model.store.run("Reorder") { d, env in
                 try Commands.reorder(
                     d,
                     env,
                     collection: .todos,
                     id: id,
-                    field: field,
+                    field: ListReorder.orderField(for: list),
                     before: before,
                     after: after
                 )

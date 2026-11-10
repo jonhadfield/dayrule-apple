@@ -180,8 +180,7 @@ struct DayruleApp: App {
     /// Cover when the app resigns active (Mission Control / another app). Do not
     /// use scenePhase `.inactive` — that fires for ordinary menu use (§8.7).
     private func privacyCoverNeeded(macAppActive: Bool, appPhase: AppModel.Phase) -> Bool {
-        let sensitive: [AppModel.Phase] = [.unlocked, .confirmRecovery, .needsRecovery]
-        return sensitive.contains(appPhase) && !macAppActive
+        PrivacyCoverPolicy.needed(macAppActive: macAppActive, phase: appPhase)
     }
 
     private func showAboutPanel() {
@@ -200,8 +199,7 @@ struct DayruleApp: App {
     /// sensitive. The gate's sign-in and biometric prompt stay uncovered so
     /// Face ID doesn't flash the cover.
     private func privacyCoverNeeded(scenePhase: ScenePhase, appPhase: AppModel.Phase) -> Bool {
-        let sensitive: [AppModel.Phase] = [.unlocked, .confirmRecovery, .needsRecovery]
-        return sensitive.contains(appPhase) && scenePhase != .active
+        PrivacyCoverPolicy.needed(sceneActive: scenePhase == .active, phase: appPhase)
     }
     #endif
 

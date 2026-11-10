@@ -40,39 +40,20 @@ struct VaultPullTests {
     private func webShapedTodoRecord(
         crypto: CryptoActor,
         key: String,
-        title: String,
-        nonce: [UInt8]
+        title: String
     ) async throws -> WireRecord {
-        let id = try await crypto.syncId(for: key)
-        let userId = await crypto.currentUserId()!
-        let payload: [String: Any] = [
-            "k": key,
-            "v": [
-                "type": "todo",
-                "title": title,
-                "notes": "semi-skimmed",
-                "tonight": false,
-            ] as [String: Any],
+        let value: [String: JSONValue] = [
+            "type": .string("todo"),
+            "title": .string(title),
+            "notes": .string("semi-skimmed"),
+            "tonight": .bool(false),
         ]
-        let json = try JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys])
-        let meta = Primitives.RecordMeta(
-            userId: userId,
-            recordId: "sync/\(id)",
-            schemaVersion: 1,
-            keyId: 1
+        let (id, envB64) = try await crypto.encryptSyncPayload(
+            key: key,
+            value: value,
+            deleted: nil
         )
-        guard let ak = await crypto.accountKeyBytes() else {
-            Issue.record("expected unlocked account key")
-            return WireRecord(
-                id: id, seq: 0, alg: 0, keyId: 0, nonce: "", ciphertext: "", tombstone: nil
-            )
-        }
-        let env = try Primitives.encryptRecordJSON(
-            ak: ak,
-            meta: meta,
-            jsonUTF8: [UInt8](json),
-            nonce: nonce
-        )
+        let env = try envB64.envelope()
         return WireRecord(
             id: id,
             seq: 1,
@@ -88,13 +69,11 @@ struct VaultPullTests {
     func materializeWebShapedVault() async throws {
         let crypto = CryptoActor()
         let vectors = try await unlockFromVectors(crypto)
-        let nonce = try Hex.decode(vectors.input.recordNonce)
 
         let todo = try await webShapedTodoRecord(
             crypto: crypto,
             key: "todos/\(vectors.input.recordId)",
-            title: "Buy milk",
-            nonce: nonce
+            title: "Buy milk"
         )
         let unknownAlg = WireRecord(
             id: "00000000-0000-4000-8000-000000000099",

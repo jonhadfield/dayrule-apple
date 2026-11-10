@@ -8,7 +8,7 @@ in code or by a named manual step — not by assumption.
 
 - [x] 256-bit symmetric keys only; suite ALG = 1
 - [x] Shared crypto vectors pass in CI (`DayruleTests` / `docs/shared/`)
-- [x] Account key in `sodium_malloc`, zeroed on lock (`CryptoActor`)
+- [x] Account key in `sodium_malloc`, zeroed on lock (`CryptoActor`); encrypt/decrypt/wrap borrow via `SecureBuffer.withUnsafeBytes` (decision 60)
 - [x] Device wrap: random 256-bit Keychain key, `WhenUnlockedThisDeviceOnly` (no Secure Enclave)
 - [x] Biometric wrap: `WhenPasscodeSetThisDeviceOnly` + `.biometryCurrentSet`; gate is Keychain read
 - [x] Passkey PRF unlock is device-local wrap only (no server PRF material)
@@ -37,7 +37,7 @@ in code or by a named manual step — not by assumption.
 
 ## System surfaces (must stay content-free)
 
-- [x] Privacy cover on scene `.inactive`
+- [x] Privacy cover on scene `.inactive` (iOS) / app resign-active (macOS); `PrivacyCoverPolicy` + idle auto-lock unit tests (`docs/security-audit-2026-11-10.md`)
 - [x] iOS privacy cover shows only while the vault is unlocked (or recovery words are on screen), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal (`DayruleApp.privacyCoverNeeded` / `setPrivacyCover`)
 - [x] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity` / `bumpIdle`)
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code

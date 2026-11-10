@@ -37,19 +37,30 @@ synced vault.
 
 - **Unlocked device / malware** with the OS account — out of scope (same as
   an unlocked browser profile).
-- **Scene snapshots** — privacy cover on `.inactive` so app-switcher /
-  Mission Control snapshots never show content (PLAN §8.7).
+- **Scene snapshots** — privacy cover on `.inactive` (iOS) / app resign-active
+  (macOS) so app-switcher / Mission Control snapshots never show content
+  (PLAN §8.7). Cover only when the phase holds vault or recovery UI.
+- **Stay-unlocked BG silent unlock** — when stay-unlocked and reminders are
+  on, BGAppRefresh may device-wrap-unlock → reschedule → re-lock while the
+  UI stays locked (PLAN §11). That briefly expands AK/plaintext residency
+  in the process by design; it is not a silent regression.
 - **Local notification titles** — when the user opts in, the OS stores the
-  title in its notification store; default is content-free (PLAN §11).
+  title in its notification store as device-local plaintext (no server
+  `PUT /reminders`). Default bodies stay content-free (PLAN §11).
 - **No Secure Enclave wrap** — SE is P-256 only; wrapping the AK under it
   would be classical public-key crypto (decision 10). Device wrap stays
   symmetric in the Keychain.
 - **Swift `String` / `Data`** cannot be reliably zeroed after use; only
-  `sodium_malloc` key buffers are wiped.
+  `sodium_malloc` key buffers are wiped. Encrypt/decrypt/wrap paths borrow
+  the AK via `SecureBuffer.withUnsafeBytes` and must not copy it into a
+  long-lived `[UInt8]` heap buffer (decision 60). Transient arrays still
+  appear at unlock (unwrap → `hold`) and in SwiftUI `SecureField` copies.
 - **TLS pinning** — not used yet. System TLS to `dayrule.app` only.
   Pinning waits until Cloudflare (or equivalent) terminates client TLS
   with a key we control (PLAN decision 27); pinning Vercel-rotated
   leafs is intentionally avoided.
+- **Plaintext export** — Settings → Your data export is plaintext by design;
+  the UI warns. Not an at-rest store bypass.
 
 ## iOS-specific
 

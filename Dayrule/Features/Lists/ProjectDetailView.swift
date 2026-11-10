@@ -65,15 +65,23 @@ struct ProjectDetailView: View {
                     }
                 }
 
+                let loosePeers = view.todos.map(\.id)
                 ForEach(view.todos, id: \.id) { todo in
-                    todoRow(todo, ctx: ctx, colors: colors)
+                    reorderableTodoRow(todo, ctx: ctx, colors: colors, peers: loosePeers)
+                }
+                .onMove { source, destination in
+                    moveTodos(peers: loosePeers, source: source, destination: destination)
                 }
                 addRow(headingId: nil, draft: $draftTitle)
 
                 ForEach(view.headings, id: \.heading.id) { group in
+                    let peers = group.todos.map(\.id)
                     Section {
                         ForEach(group.todos, id: \.id) { todo in
-                            todoRow(todo, ctx: ctx, colors: colors)
+                            reorderableTodoRow(todo, ctx: ctx, colors: colors, peers: peers)
+                        }
+                        .onMove { source, destination in
+                            moveTodos(peers: peers, source: source, destination: destination)
                         }
                         addRow(
                             headingId: group.heading.id,
@@ -273,6 +281,28 @@ struct ProjectDetailView: View {
     // MARK: - Rows
 
     @ViewBuilder
+    private func reorderableTodoRow(
+        _ todo: Todo,
+        ctx: Lists.Context,
+        colors: DayruleColors,
+        peers: [ID]
+    ) -> some View {
+        todoRow(todo, ctx: ctx, colors: colors)
+            .draggable(todo.id) {
+                Text(todo.title.isEmpty ? "Untitled" : todo.title)
+                    .font(DayruleType.rowTitle(dense: true))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(colors.bg)
+                    .overlay(Rectangle().strokeBorder(colors.hairline, lineWidth: 1))
+            }
+            .dropDestination(for: String.self) { items, _ in
+                guard let from = items.first else { return false }
+                return dropTodo(dragging: from, onto: todo.id, peers: peers)
+            }
+    }
+
+    @ViewBuilder
     private func todoRow(_ todo: Todo, ctx: Lists.Context, colors: DayruleColors) -> some View {
         let title = todo.title.isEmpty ? "Untitled" : todo.title
         DayruleTodoRow(
@@ -287,6 +317,8 @@ struct ProjectDetailView: View {
                 RowAction(name: "Move…") { moveTarget = WhenTarget(ids: [todo.id]) },
                 RowAction(name: "Repeat…") { repeatTarget = EditTarget(id: todo.id) },
                 RowAction(name: "Reminder…") { reminderTarget = EditTarget(id: todo.id) },
+                RowAction(name: "Move up") { moveTodo(todo.id, dir: -1, peers: peersForTodo(todo.id)) },
+                RowAction(name: "Move down") { moveTodo(todo.id, dir: 1, peers: peersForTodo(todo.id)) },
                 RowAction(name: "Trash") { trash(todo.id, title: title) },
             ]
         )
@@ -387,6 +419,68 @@ struct ProjectDetailView: View {
             buttonIdentifier: headingId.map { "project.addButton.\($0)" } ?? "project.addButton"
         ) {
             addTodo(headingId: headingId, draft: draft)
+        }
+    }
+
+    // MARK: - Reorder
+
+    private func peersForTodo(_ id: ID) -> [ID] {
+        guard let view = Lists.projectView(model.entities, projectId, ctx) else { return [] }
+        if view.todos.contains(where: { $0.id == id }) {
+            return view.todos.map(\.id)
+        }
+        for group in view.headings where group.todos.contains(where: { $0.id == id }) {
+            return group.todos.map(\.id)
+        }
+        return []
+    }
+
+    private func moveTodo(_ id: ID, dir: Int, peers: [ID]) {
+        guard let i = peers.firstIndex(of: id) else { return }
+        let destination = i + dir + (dir > 0 ? 1 : 0)
+        guard destination >= 0, destination <= peers.count,
+              let neighbours = ListReorder.neighbours(
+                  peers: peers,
+                  source: IndexSet(integer: i),
+                  destination: destination
+              )
+        else { return }
+        applyTodoReorder(id: neighbours.id, before: neighbours.before, after: neighbours.after)
+    }
+
+    private func moveTodos(peers: [ID], source: IndexSet, destination: Int) {
+        guard let neighbours = ListReorder.neighbours(
+            peers: peers,
+            source: source,
+            destination: destination
+        ) else { return }
+        applyTodoReorder(id: neighbours.id, before: neighbours.before, after: neighbours.after)
+    }
+
+    @discardableResult
+    private func dropTodo(dragging: ID, onto: ID, peers: [ID]) -> Bool {
+        guard let neighbours = ListReorder.neighbours(peers: peers, dragging: dragging, onto: onto)
+        else { return false }
+        applyTodoReorder(id: dragging, before: neighbours.before, after: neighbours.after)
+        return true
+    }
+
+    private func applyTodoReorder(id: ID, before: ID?, after: ID?) {
+        do {
+            try model.store.run("Reorder") { d, env in
+                try Commands.reorder(
+                    d,
+                    env,
+                    collection: .todos,
+                    id: id,
+                    field: .order,
+                    before: before,
+                    after: after
+                )
+            }
+            model.noteEntitiesChanged()
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 

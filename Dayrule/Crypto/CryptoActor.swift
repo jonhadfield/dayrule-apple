@@ -16,8 +16,6 @@ actor CryptoActor {
 
     func currentUserId() -> String? { userId }
 
-    func accountKeyBytes() -> [UInt8]? { accountKey?.bytes }
-
     func lock() {
         accountKey?.clear()
         syncIdKey?.clear()
@@ -80,14 +78,16 @@ actor CryptoActor {
 
     /// Wrap the in-memory AK under a biometric Keychain key (PLAN §8.3).
     func enableBiometricWrap() throws -> Primitives.Sealed {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         let bioKey = try biometricStore.loadOrCreate(userId: userId)
-        return try Primitives.wrapKey(
-            kek: bioKey,
-            key: ak,
-            label: Labels.wrapDevice,
-            userId: userId
-        )
+        return try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.wrapKey(
+                kek: bioKey,
+                keyBytes: akBytes,
+                label: Labels.wrapDevice,
+                userId: userId
+            )
+        }
     }
 
     func unlockFromBiometricWrap(userId: String, wrapped: Primitives.Sealed) throws {
@@ -121,16 +121,18 @@ actor CryptoActor {
 
     /// Wrap AK under HKDF(PRF, `dayrule/prf-kek/v1`) (PLAN §8.4). Wipes `prf`.
     func wrapForPrf(prf: inout [UInt8]) throws -> Primitives.Sealed {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         defer { Primitives.wipe(&prf) }
         var kek = Primitives.hkdf(ikm: prf, label: Labels.prfKek)
         defer { Primitives.wipe(&kek) }
-        return try Primitives.wrapKey(
-            kek: kek,
-            key: ak,
-            label: Labels.wrapUnderPrf,
-            userId: userId
-        )
+        return try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.wrapKey(
+                kek: kek,
+                keyBytes: akBytes,
+                label: Labels.wrapUnderPrf,
+                userId: userId
+            )
+        }
     }
 
     /// Unlock with PRF output; wipes `prf` (PLAN §8.4).
@@ -194,12 +196,12 @@ actor CryptoActor {
     }
 
     func syncId(for key: String) throws -> String {
-        guard let syncKey = syncIdKey?.bytes else { throw CryptoError.notUnlocked }
+        guard let syncIdKey else { throw CryptoError.notUnlocked }
         var mac = [UInt8](repeating: 0, count: Int(crypto_auth_hmacsha256_bytes()))
         let msg = Array(key.utf8)
-        let status = mac.withUnsafeMutableBytes { macRaw in
-            msg.withUnsafeBytes { msgRaw in
-                syncKey.withUnsafeBytes { keyRaw in
+        let status = try syncIdKey.withUnsafeBytes { keyRaw -> Int32 in
+            mac.withUnsafeMutableBytes { macRaw in
+                msg.withUnsafeBytes { msgRaw in
                     crypto_auth_hmacsha256(
                         macRaw.bindMemory(to: UInt8.self).baseAddress!,
                         msgRaw.bindMemory(to: UInt8.self).baseAddress!,
@@ -221,26 +223,30 @@ actor CryptoActor {
 
     /// Local GRDB row AAD is the entity key (`todos/<id>`), not `sync/<id>`.
     func encryptLocal(recordId: String, jsonUTF8: [UInt8], keyId: Int = 1) throws -> EnvelopeB64 {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         let meta = Primitives.RecordMeta(
             userId: userId,
             recordId: recordId,
             schemaVersion: 1,
             keyId: keyId
         )
-        let env = try Primitives.encryptRecordJSON(ak: ak, meta: meta, jsonUTF8: jsonUTF8)
+        let env = try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.encryptRecordJSON(akBytes: akBytes, meta: meta, jsonUTF8: jsonUTF8)
+        }
         return EnvelopeB64(env)
     }
 
     func decryptLocal(recordId: String, envelope: EnvelopeB64) throws -> [UInt8] {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         let meta = Primitives.RecordMeta(
             userId: userId,
             recordId: recordId,
             schemaVersion: 1,
             keyId: envelope.keyId
         )
-        return try Primitives.decryptRecordJSON(ak: ak, meta: meta, env: try envelope.envelope())
+        return try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.decryptRecordJSON(akBytes: akBytes, meta: meta, env: try envelope.envelope())
+        }
     }
 
     /// Encrypt a sync wire payload `{k,v}` / `{k,d}` under AAD `sync/<wireId>`.
@@ -250,7 +256,7 @@ actor CryptoActor {
         deleted: String?,
         keyId: Int = 1
     ) throws -> (id: String, env: EnvelopeB64) {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         let id = try syncId(for: key)
         var payload: [String: Any] = ["k": key]
         if let deleted {
@@ -267,12 +273,14 @@ actor CryptoActor {
             schemaVersion: 1,
             keyId: keyId
         )
-        let env = try Primitives.encryptRecordJSON(ak: ak, meta: meta, jsonUTF8: [UInt8](json))
+        let env = try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.encryptRecordJSON(akBytes: akBytes, meta: meta, jsonUTF8: [UInt8](json))
+        }
         return (id, EnvelopeB64(env))
     }
 
     func decryptSyncPayload(_ rec: WireRecord) throws -> SyncPayload? {
-        guard let ak = accountKey?.bytes, let userId else { throw CryptoError.notUnlocked }
+        guard let accountKey, let userId else { throw CryptoError.notUnlocked }
         // Wire ids are lowercase UUID form (PLAN §8.5); normalize before AAD.
         let wireId = rec.id.lowercased()
         let meta = Primitives.RecordMeta(
@@ -287,7 +295,9 @@ actor CryptoActor {
             nonce: try Base64Std.decode(rec.nonce),
             ciphertext: try Base64Std.decode(rec.ciphertext)
         )
-        let plain = try Primitives.decryptRecordJSON(ak: ak, meta: meta, env: env)
+        let plain = try accountKey.withUnsafeBytes { akBytes in
+            try Primitives.decryptRecordJSON(akBytes: akBytes, meta: meta, env: env)
+        }
         let obj = try JSONSerialization.jsonObject(with: Data(plain)) as? [String: Any]
         guard let key = obj?["k"] as? String else { return nil }
         let expected = try syncId(for: key)
