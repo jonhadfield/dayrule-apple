@@ -77,6 +77,7 @@ struct RepeatSheetView: View {
                     stop()
                 }
             }
+            .dayruleMacFormStyle()
             .dayruleAnimation(Motion.standard, value: freq)
             .dayruleAnimation(Motion.standard, value: mode)
             .onAppear(perform: load)

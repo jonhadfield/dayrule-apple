@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 extension ListName {
     /// Stable SF Symbol per list (Browse rows, sidebar).
@@ -91,14 +94,22 @@ struct SyncStatusView: View {
             guard !Task.isCancelled else { return }
             showSpinner = true
         }
-        // Compact Mac sidebar is colour-only; hover matches Lock/Find/Settings.
-        // The 8pt dot alone is too small for AppKit tooltip hit-testing — expand
-        // the hover target without changing the drawn size.
+        // Compact Mac sidebar is colour-only. SwiftUI `.help` on a non-control in
+        // a `safeAreaInset` often never shows — use a plain Button (hover target)
+        // plus an AppKit `toolTip` backing view.
         if compact {
-            chrome
-                .frame(minWidth: 24, minHeight: 24, alignment: .leading)
-                .contentShape(Rectangle())
-                .help(needsServerSignIn ? "On this device only" : status.label)
+            let tip = needsServerSignIn ? "On this device only" : status.label
+            Button {} label: {
+                chrome
+                    .frame(width: 28, height: 28, alignment: .center)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(tip)
+            #if os(macOS)
+            .background(MacTooltipHost(text: tip))
+            #endif
+            .accessibilityLabel(tip)
         } else {
             chrome
         }
@@ -112,3 +123,20 @@ struct SyncStatusView: View {
         }
     }
 }
+
+#if os(macOS)
+/// AppKit tooltip host — reliable where SwiftUI `.help` on decorative views fails.
+private struct MacTooltipHost: NSViewRepresentable {
+    var text: String
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        view.toolTip = text
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        nsView.toolTip = text
+    }
+}
+#endif

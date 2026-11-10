@@ -52,6 +52,19 @@ struct DayruleSectionHeader: View {
     }
 
     private func pageChrome(_ row: some View, colors: DayruleColors) -> some View {
+        // Match `DayruleSheetHeader`’s 20pt horizontal inset. On macOS, Section
+        // headers already get a system leading inset — extra padding here made
+        // chapter titles (“Your data”, “Help”) sit further in than the rows.
+        #if os(macOS)
+        row
+            .padding(.top, 14)
+            .padding(.bottom, 6)
+            .overlay(alignment: .bottom) {
+                colors.hairline.frame(height: 1)
+            }
+            .background(colors.bg)
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        #else
         row
             .padding(.leading, Tokens.rowInset)
             .padding(.trailing, Tokens.rowInset)
@@ -62,6 +75,7 @@ struct DayruleSectionHeader: View {
             }
             .background(colors.bg)
             .listRowInsets(EdgeInsets())
+        #endif
     }
 
     @ViewBuilder
@@ -104,13 +118,29 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
     @ViewBuilder var content: Content
     @ViewBuilder var header: Header
     @ViewBuilder var footer: Footer
+    private let showsFooter: Bool
+
+    init(
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder header: () -> Header,
+        @ViewBuilder footer: () -> Footer
+    ) {
+        self.content = content()
+        self.header = header()
+        self.footer = footer()
+        self.showsFooter = true
+    }
 
     var body: some View {
         #if os(macOS)
         Section {
             content
-            footer
-                .listRowSeparator(.hidden)
+            if showsFooter {
+                footer
+                    .listRowSeparator(.hidden)
+                    // Helper copy, not a tappable row — match sheet title inset.
+                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 12, trailing: 20))
+            }
         } header: {
             header
         }
@@ -122,7 +152,7 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
         } header: {
             header
         } footer: {
-            footer
+            if showsFooter { footer }
         }
         .listSectionSeparator(.hidden)
         .listRowSeparator(.hidden)
@@ -133,5 +163,14 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
 extension DayruleFormSection where Header == EmptyView {
     init(@ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer) {
         self.init(content: content, header: { EmptyView() }, footer: footer)
+    }
+}
+
+extension DayruleFormSection where Footer == EmptyView {
+    init(@ViewBuilder content: () -> Content, @ViewBuilder header: () -> Header) {
+        self.content = content()
+        self.header = header()
+        self.footer = EmptyView()
+        self.showsFooter = false
     }
 }

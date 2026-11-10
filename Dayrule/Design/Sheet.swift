@@ -95,7 +95,6 @@ struct DayruleSheet<Content: View>: View {
                 .safeAreaInset(edge: .top, spacing: 0) {
                     DayruleSheetHeader(title: title)
                 }
-                .formStyle(.grouped)
                 #endif
                 .toolbar { toolbarContent }
                 .confirmationDialog(
@@ -209,6 +208,18 @@ extension View {
             .listRowSeparatorTint(colors.hairline)
             .listSectionSeparator(.hidden)
             .foregroundStyle(colors.text)
+    }
+
+    /// Mac Forms default to the multi-column layout in wide sheets; paper
+    /// Settings/pickers want a single column. Apply on `Form`, not on `List`
+    /// (a List under `.formStyle(.grouped)` picks up inset “grouped” chrome).
+    @ViewBuilder
+    func dayruleMacFormStyle() -> some View {
+        #if os(macOS)
+        formStyle(.grouped)
+        #else
+        self
+        #endif
     }
 }
 
