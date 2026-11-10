@@ -592,6 +592,7 @@ struct ListsBrowserView: View {
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .listRowBackground(colors.bg)
             .listRowSeparatorTint(colors.hairline)
+            .modifier(sidebarDropModifier(SidebarDrop.action(for: name, today: ctx.today)))
         }
         newListTrigger(colors: colors, style: .browseRow)
             .listRowBackground(colors.bg)
@@ -620,6 +621,7 @@ struct ListsBrowserView: View {
                 .contextMenu { areaContextMenu(group.area) }
                 .listRowBackground(colors.bg)
                 .listRowSeparatorTint(colors.hairline)
+                .modifier(sidebarDropModifier(SidebarDrop.action(areaId: group.area.id)))
                 ForEach(group.projects, id: \.id) { project in
                     phoneProjectLink(project, colors: colors)
                 }
@@ -639,6 +641,7 @@ struct ListsBrowserView: View {
         .contextMenu { projectContextMenu(project) }
         .listRowBackground(colors.bg)
         .listRowSeparatorTint(colors.hairline)
+        .modifier(sidebarDropModifier(SidebarDrop.action(projectId: project.id)))
     }
 
     private func phoneOrgLabel(title: String, systemImage: String, colors: DayruleColors) -> some View {
@@ -687,6 +690,7 @@ struct ListsBrowserView: View {
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .tag(Optional(name))
             .listRowBackground(selection == name ? colors.selectedRow : Color.clear)
+            .modifier(sidebarDropModifier(SidebarDrop.action(for: name, today: ctx.today)))
         }
         let tree = cachedBrowseTree
         if !tree.looseProjects.isEmpty {
@@ -710,6 +714,7 @@ struct ListsBrowserView: View {
                     orgPath = [.area(group.area.id)]
                 }
                 .contextMenu { areaContextMenu(group.area) }
+                .modifier(sidebarDropModifier(SidebarDrop.action(areaId: group.area.id)))
                 ForEach(group.projects, id: \.id) { project in
                     sidebarProjectRow(project, colors: colors)
                 }
@@ -728,6 +733,36 @@ struct ListsBrowserView: View {
             orgPath = [.project(project.id)]
         }
         .contextMenu { projectContextMenu(project) }
+        .modifier(sidebarDropModifier(SidebarDrop.action(projectId: project.id)))
+    }
+
+    private func sidebarDropModifier(_ action: SidebarDropAction) -> SidebarDropDestination {
+        SidebarDropDestination(action: action) { ids in
+            applySidebarDrop(ids: ids, action: action)
+        }
+    }
+
+    private func applySidebarDrop(ids: [ID], action: SidebarDropAction) {
+        let todoIds = ids.filter { model.entities.todos[$0] != nil }
+        guard !todoIds.isEmpty else { return }
+        do {
+            try model.store.run("Drop") { d, env in
+                switch action {
+                case let .move(target):
+                    try Commands.moveTodos(d, env, ids: todoIds, target: target)
+                case let .when(when):
+                    try Commands.setWhen(d, env, ids: todoIds, when: when)
+                case .complete:
+                    Commands.setStatus(d, env, ids: todoIds, status: .completed)
+                case .trash:
+                    Commands.trashItems(d, env, ids: todoIds)
+                }
+            }
+            model.noteEntitiesChanged()
+            exitSelecting()
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
+        }
     }
 
     @ViewBuilder

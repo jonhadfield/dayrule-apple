@@ -660,24 +660,20 @@ final class AppModel {
             } else {
                 setSyncError(nil)
             }
-        } catch let err as SyncBlockedError {
-            setSyncStatus(.blocked(err.localizedDescription))
-            setSyncError(err.localizedDescription)
-        } catch let APIError.http(status, code, _) where status == 401 || code == "unauthorized" {
-            // Session expired/revoked (PLAN §9.2). Keep ciphertext; clear Bearer.
-            // Server copy is "Sign in again." — drop the full stop for UI labels.
-            setSyncError("Sign in again")
-            signOut()
-        } catch let APIError.http(status, code, message) where status == 426 || code == "upgrade_required" {
-            // Server MIN_IOS_BUILD / MIN_MACOS_BUILD gate (PLAN §10.4).
-            setSyncStatus(.needsUpdate)
-            setSyncError(message.isEmpty ? SyncStatus.needsUpdate.label : message)
-        } catch APIError.offline {
-            setSyncStatus(.offline("Offline — changes stay on this device."))
-            setSyncError("Offline — changes stay on this device.")
         } catch {
-            setSyncStatus(.offline(error.localizedDescription))
-            setSyncError(error.localizedDescription)
+            applySyncFailure(error)
+        }
+    }
+
+    /// Apply a sync transport failure to status / gate (PLAN §9.2 / §10.4).
+    func applySyncFailure(_ error: Error) {
+        let effect = SyncFailureMapping.effect(for: error)
+        if let status = effect.status {
+            setSyncStatus(status)
+        }
+        setSyncError(effect.errorMessage)
+        if effect.signOut {
+            signOut()
         }
     }
 
