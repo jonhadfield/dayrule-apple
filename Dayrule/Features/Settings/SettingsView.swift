@@ -105,6 +105,8 @@ struct SettingsView: View {
     // MARK: - Chapters
 
     private func generalChapter(colors: DayruleColors) -> some View {
+        // Both helpers live in content rows (same insets). A Mac section footer
+        // was indented further than the Appearance helper under the chips.
         DayruleFormSection {
             VStack(alignment: .leading, spacing: Tokens.Space.s) {
                 Text("Appearance")
@@ -116,29 +118,31 @@ struct SettingsView: View {
                     .foregroundStyle(colors.textSecondary)
             }
             .accessibilityElement(children: .contain)
-            Picker(selection: doneModeBinding) {
-                Text("Immediately").tag(DoneMode.immediately)
-                Text("End of day").tag(DoneMode.daily)
-                Text("Manually").tag(DoneMode.manually)
-            } label: {
-                Text("Move to Done").foregroundStyle(colors.text)
-            }
-            .accessibilityIdentifier("settings.doneMode")
-            .dayruleAnimation(Motion.quick, value: model.entities.settings.moveToDone)
-            if model.entities.settings.moveToDone == .manually {
-                Button("Move to Done now") {
-                    model.store.run("Move to Done") { d, env in
-                        Commands.moveToDoneNow(d, env)
-                    }
-                    model.noteEntitiesChanged()
+            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                Picker(selection: doneModeBinding) {
+                    Text("Immediately").tag(DoneMode.immediately)
+                    Text("End of day").tag(DoneMode.daily)
+                    Text("Manually").tag(DoneMode.manually)
+                } label: {
+                    Text("Move to Done").foregroundStyle(colors.text)
                 }
-                .buttonStyle(.dayruleLink)
-                .accessibilityIdentifier("settings.logCompleted")
+                .accessibilityIdentifier("settings.doneMode")
+                footerText(doneModeFooter, colors: colors)
+                if model.entities.settings.moveToDone == .manually {
+                    Button("Move to Done now") {
+                        model.store.run("Move to Done") { d, env in
+                            Commands.moveToDoneNow(d, env)
+                        }
+                        // Pref change — don’t run the list Motion animation across
+                        // the whole browser (felt like a long pause in Settings).
+                        model.noteEntitiesChanged(animation: nil)
+                    }
+                    .buttonStyle(.dayruleLink)
+                    .accessibilityIdentifier("settings.logCompleted")
+                }
             }
         } header: {
             DayruleSectionHeader(title: "General")
-        } footer: {
-            footerText(doneModeFooter, colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -431,10 +435,12 @@ struct SettingsView: View {
         Binding(
             get: { model.entities.settings.moveToDone },
             set: { mode in
+                guard mode != model.entities.settings.moveToDone else { return }
                 model.store.run("Done mode") { d, _ in
                     Commands.setDoneMode(d, mode: mode)
                 }
-                model.noteEntitiesChanged()
+                // Settings pref only — skip Motion.list on the main browser.
+                model.noteEntitiesChanged(animation: nil)
             }
         )
     }

@@ -136,10 +136,12 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
         Section {
             content
             if showsFooter {
+                // No custom listRowInsets — match sibling content rows. Forcing a
+                // leading inset indented footers past in-row helpers.
                 footer
                     .listRowSeparator(.hidden)
-                    // Helper copy, not a tappable row — match sheet title inset.
-                    .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 12, trailing: 20))
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
             }
         } header: {
             header
