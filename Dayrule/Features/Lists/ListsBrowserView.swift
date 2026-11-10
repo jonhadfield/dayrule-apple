@@ -114,123 +114,138 @@ struct ListsBrowserView: View {
     private var isCompact: Bool { horizontalSizeClass == .compact }
 
     var body: some View {
+        // Split the modifier chain so the type checker can finish (CI Release).
+        browserWithMacChrome
+            .environment(\.dayruleDenseLayout, !isCompact)
+            .modifier(DayruleDenseBodyFont(dense: !isCompact))
+    }
+
+    /// Phone vs split shell only (PLAN §6.2 / decision 48 dense on regular width).
+    @ViewBuilder
+    private var browserRoot: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        // iPad / Duo regular: dense 15pt + 36pt rows (PLAN §6.2 / decision 48).
-        let dense = !isCompact
-        Group {
-            if isCompact {
-                phoneBrowser(colors: colors)
-            } else {
-                // Duo book pose: keep the split entirely on one side of an
-                // active fold (same FoldSafeContainer as Gate). Flat open is
-                // a no-op (no division → full container).
-                FoldSafeContainer {
-                    splitBrowser(colors: colors)
+        if isCompact {
+            phoneBrowser(colors: colors)
+        } else {
+            // Duo book pose: keep the split entirely on one side of an
+            // active fold (same FoldSafeContainer as Gate). Flat open is
+            // a no-op (no division → full container).
+            FoldSafeContainer {
+                splitBrowser(colors: colors)
+            }
+        }
+    }
+
+    private var browserWithSidebarLifecycle: some View {
+        browserRoot
+            .onAppear {
+                refreshSidebarCache()
+                applyDefaultDestinationIfNeeded()
+            }
+            .onChange(of: model.entitiesEpoch) { _, _ in
+                refreshSidebarCache()
+            }
+            .onChange(of: model.linger.ids) { _, _ in
+                refreshSidebarCache()
+            }
+            .onChange(of: model.vaultLoading) { _, loading in
+                if !loading { applyDefaultDestinationIfNeeded() }
+            }
+            .onChange(of: selection) { _, _ in
+                if !isCompact { orgPath = [] }
+                exitSelecting()
+            }
+            .onChange(of: phoneTab) { _, _ in
+                exitSelecting()
+            }
+            .onChange(of: phonePath) { _, path in
+                if let name = path.reversed().compactMap({ route -> ListName? in
+                    if case .list(let n) = route { return n }
+                    return nil
+                }).first {
+                    selection = name
                 }
             }
-        }
-        .onAppear {
-            refreshSidebarCache()
-            applyDefaultDestinationIfNeeded()
-        }
-        .onChange(of: model.entitiesEpoch) { _, _ in
-            refreshSidebarCache()
-        }
-        .onChange(of: model.linger.ids) { _, _ in
-            refreshSidebarCache()
-        }
-        .onChange(of: model.vaultLoading) { _, loading in
-            if !loading { applyDefaultDestinationIfNeeded() }
-        }
-        .onChange(of: selection) { _, _ in
-            if !isCompact { orgPath = [] }
-            exitSelecting()
-        }
-        .onChange(of: phoneTab) { _, _ in
-            exitSelecting()
-        }
-        .onChange(of: phonePath) { _, path in
-            if let name = path.reversed().compactMap({ route -> ListName? in
-                if case .list(let n) = route { return n }
-                return nil
-            }).first {
-                selection = name
+    }
+
+    private var browserWithSheets: some View {
+        browserWithSidebarLifecycle
+            .sheet(isPresented: $model.showSettings, onDismiss: {
+                model.endSettingsPresentation()
+            }) {
+                SettingsView(model: model)
+                    .onAppear { model.beginSettingsPresentation() }
             }
-        }
-        .sheet(isPresented: $model.showSettings, onDismiss: {
-            model.endSettingsPresentation()
-        }) {
-            SettingsView(model: model)
-                .onAppear { model.beginSettingsPresentation() }
-        }
-        .sheet(item: $whenTarget) { target in
-            WhenSheetView(model: model, ids: target.ids)
-        }
-        .sheet(item: $deadlineTarget) { target in
-            DeadlineSheetView(model: model, ids: target.ids)
-        }
-        .sheet(item: $tagTarget) { target in
-            TagSheetView(model: model, ids: target.ids)
-        }
-        .sheet(item: $moveTarget) { target in
-            MoveSheetView(model: model, ids: target.ids)
-        }
-        .sheet(item: $repeatTarget) { target in
-            RepeatSheetView(model: model, todoId: target.id)
-        }
-        .sheet(item: $reminderTarget) { target in
-            ReminderSheetView(model: model, todoId: target.id)
-        }
-        // PLAN §6.5: the editor is full screen on a phone, a sheet elsewhere.
-        .sheet(item: editorSheetTarget) { target in
-            ItemEditorSheet(model: model, id: target.id)
-        }
-        #if os(iOS)
-        .fullScreenCover(item: editorCoverTarget) { target in
-            ItemEditorSheet(model: model, id: target.id)
-        }
-        #endif
-        .sheet(isPresented: $model.showFind, onDismiss: applyPendingFind) {
-            QuickFindView(model: model) { result in
-                pendingFind = result
+            .sheet(item: $whenTarget) { target in
+                WhenSheetView(model: model, ids: target.ids)
             }
-        }
-        .onChange(of: model.pendingMacChromeAction) { _, action in
-            guard let action else { return }
-            model.pendingMacChromeAction = nil
-            handleMacChromeAction(action)
-        }
-        .onChange(of: model.pendingFocusAdd) { _, pending in
-            if pending { consumeFocusAddIfReady() }
-        }
-        .onChange(of: model.phase) { _, phase in
-            if phase == .unlocked { consumeFocusAddIfReady() }
-        }
-        .onChange(of: model.vaultLoading) { _, loading in
-            if !loading { consumeFocusAddIfReady() }
-        }
-        .onChange(of: model.dismissChromeEpoch) { _, _ in
-            dismissLocalSheets()
-        }
-        .onChange(of: localSheetPresented) { _, presented in
-            model.macLocalSheetPresented = presented
-        }
-        .onChange(of: selectedIds) { _, ids in
-            model.hasMacListSelection = selecting && !ids.isEmpty
-        }
-        .onChange(of: selecting) { _, on in
-            model.hasMacListSelection = on && !selectedIds.isEmpty
-        }
-        .onAppear {
-            model.macLocalSheetPresented = localSheetPresented
-            model.hasMacListSelection = selecting && !selectedIds.isEmpty
-        }
-        .onDisappear {
-            model.macLocalSheetPresented = false
-            model.hasMacListSelection = false
-        }
-        .environment(\.dayruleDenseLayout, dense)
-        .modifier(DayruleDenseBodyFont(dense: dense))
+            .sheet(item: $deadlineTarget) { target in
+                DeadlineSheetView(model: model, ids: target.ids)
+            }
+            .sheet(item: $tagTarget) { target in
+                TagSheetView(model: model, ids: target.ids)
+            }
+            .sheet(item: $moveTarget) { target in
+                MoveSheetView(model: model, ids: target.ids)
+            }
+            .sheet(item: $repeatTarget) { target in
+                RepeatSheetView(model: model, todoId: target.id)
+            }
+            .sheet(item: $reminderTarget) { target in
+                ReminderSheetView(model: model, todoId: target.id)
+            }
+            // PLAN §6.5: the editor is full screen on a phone, a sheet elsewhere.
+            .sheet(item: editorSheetTarget) { target in
+                ItemEditorSheet(model: model, id: target.id)
+            }
+            #if os(iOS)
+            .fullScreenCover(item: editorCoverTarget) { target in
+                ItemEditorSheet(model: model, id: target.id)
+            }
+            #endif
+            .sheet(isPresented: $model.showFind, onDismiss: applyPendingFind) {
+                QuickFindView(model: model) { result in
+                    pendingFind = result
+                }
+            }
+    }
+
+    private var browserWithMacChrome: some View {
+        browserWithSheets
+            .onChange(of: model.pendingMacChromeAction) { _, action in
+                guard let action else { return }
+                model.pendingMacChromeAction = nil
+                handleMacChromeAction(action)
+            }
+            .onChange(of: model.pendingFocusAdd) { _, pending in
+                if pending { consumeFocusAddIfReady() }
+            }
+            .onChange(of: model.phase) { _, phase in
+                if phase == .unlocked { consumeFocusAddIfReady() }
+            }
+            .onChange(of: model.vaultLoading) { _, loading in
+                if !loading { consumeFocusAddIfReady() }
+            }
+            .onChange(of: model.dismissChromeEpoch) { _, _ in
+                dismissLocalSheets()
+            }
+            .onChange(of: localSheetPresented) { _, presented in
+                model.macLocalSheetPresented = presented
+            }
+            .onChange(of: selectedIds) { _, ids in
+                model.hasMacListSelection = selecting && !ids.isEmpty
+            }
+            .onChange(of: selecting) { _, on in
+                model.hasMacListSelection = on && !selectedIds.isEmpty
+            }
+            .onAppear {
+                model.macLocalSheetPresented = localSheetPresented
+                model.hasMacListSelection = selecting && !selectedIds.isEmpty
+            }
+            .onDisappear {
+                model.macLocalSheetPresented = false
+                model.hasMacListSelection = false
+            }
     }
 
     /// Local list sheets (not Settings / Find / Help — those live on `AppModel`).
@@ -747,16 +762,7 @@ struct ListsBrowserView: View {
         guard !todoIds.isEmpty else { return }
         do {
             try model.store.run("Drop") { d, env in
-                switch action {
-                case let .move(target):
-                    try Commands.moveTodos(d, env, ids: todoIds, target: target)
-                case let .when(when):
-                    try Commands.setWhen(d, env, ids: todoIds, when: when)
-                case .complete:
-                    Commands.setStatus(d, env, ids: todoIds, status: .completed)
-                case .trash:
-                    Commands.trashItems(d, env, ids: todoIds)
-                }
+                try SidebarDrop.perform(action, draft: d, env: env, ids: todoIds)
             }
             model.noteEntitiesChanged()
             exitSelecting()

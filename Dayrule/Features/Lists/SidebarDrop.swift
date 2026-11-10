@@ -30,6 +30,25 @@ enum SidebarDrop {
     static func action(areaId: ID) -> SidebarDropAction {
         .move(.area(areaId: areaId))
     }
+
+    /// Apply a sidebar drop through the same Commands the web DragLayer uses.
+    static func perform(
+        _ action: SidebarDropAction,
+        draft: Draft,
+        env: EntityStore.Env,
+        ids: [ID]
+    ) throws {
+        switch action {
+        case let .move(target):
+            try Commands.moveTodos(draft, env, ids: ids, target: target)
+        case let .when(when):
+            try Commands.setWhen(draft, env, ids: ids, when: when)
+        case .complete:
+            Commands.setStatus(draft, env, ids: ids, status: .completed)
+        case .trash:
+            Commands.trashItems(draft, env, ids: ids)
+        }
+    }
 }
 
 /// Accepts dragged to-do ids (`String` / `ID`) onto a sidebar row.
