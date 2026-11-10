@@ -52,6 +52,7 @@
 		411FC4059DB401E59CD873E8 /* Fraunces-Variable.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D290020145AAD6D0ED81B565 /* Fraunces-Variable.ttf */; };
 		433E7ADBF179FCFB7D94DBD6 /* NavigationChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 881A2D3BBE5D545489661A97 /* NavigationChrome.swift */; };
 		4440BDF5F17EB0D5AA696C1C /* EnvelopeB64.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2926027C49B5BEDF339EC385 /* EnvelopeB64.swift */; };
+		45D1B97E2C06F645E32F6902 /* PrivacyCoverPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9E6D5CB3BC047F356F46481 /* PrivacyCoverPolicy.swift */; };
 		469EF88CBE833E8769F66FE2 /* ClientPlatform.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */; };
 		4B19474584B0F1C1D6ECC138 /* UuidV5Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABA59A162F972005C49AB993 /* UuidV5Tests.swift */; };
 		4C4E0A198B4141767C26545A /* ListsBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */; };
@@ -65,6 +66,7 @@
 		57558481677AC7CA638D4E91 /* GenerateRepeatsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A682BF4A644E1F5FE4FC2D05 /* GenerateRepeatsTests.swift */; };
 		57A85C81A96B3A38F42F98A2 /* APIConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 32906502C9D173EE92C7D3D5 /* APIConfigTests.swift */; };
 		581E7295BF175BDA84841426 /* UuidV5.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E1BF1D54C5D45D14D5AD42 /* UuidV5.swift */; };
+		58FEBDEEFFFDB69B54336A6E /* PrivacyCoverAndIdleTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D337586253A70A693AAB9D6 /* PrivacyCoverAndIdleTests.swift */; };
 		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
 		5AB7B1A1573F2E7076748582 /* ShareInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB493133287A151825B301F3 /* ShareInboxTests.swift */; };
 		5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */; };
@@ -289,6 +291,7 @@
 		6908E493CE43FEA346E9E4BE /* HelpArticles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpArticles.swift; sourceTree = "<group>"; };
 		6C2E91EF5C081EF755681B85 /* MacWindowCloseGate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacWindowCloseGate.swift; sourceTree = "<group>"; };
 		6CE93B71E4258F313852B837 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
+		6D337586253A70A693AAB9D6 /* PrivacyCoverAndIdleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCoverAndIdleTests.swift; sourceTree = "<group>"; };
 		6F60414FCD654000D6F6DF80 /* Change.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Change.swift; sourceTree = "<group>"; };
 		6FCEB0603F98391154252BCD /* PasskeySignIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeySignIn.swift; sourceTree = "<group>"; };
 		7002250834D980A75C6C5150 /* FieldStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldStyle.swift; sourceTree = "<group>"; };
@@ -365,6 +368,7 @@
 		D6DBC1EB24406A3D9144D9A4 /* EntityStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityStore.swift; sourceTree = "<group>"; };
 		D8952B8F3BECCB4CC3A31C74 /* DesignCaptureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignCaptureTests.swift; sourceTree = "<group>"; };
 		D917B1933E1E1DCDB240A5FD /* FindTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FindTests.swift; sourceTree = "<group>"; };
+		D9E6D5CB3BC047F356F46481 /* PrivacyCoverPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCoverPolicy.swift; sourceTree = "<group>"; };
 		DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasskeySignInTests.swift; sourceTree = "<group>"; };
 		DFBE1D22F608EE636247658F /* Repeat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Repeat.swift; sourceTree = "<group>"; };
 		E165E440BCF8CA5695C8C4EB /* DeadlineSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadlineSheetView.swift; sourceTree = "<group>"; };
@@ -599,6 +603,7 @@
 				9A0C453B4052F92FAAACA142 /* PerformanceBudgetTests.swift */,
 				F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */,
 				777DAD146F35C4D1E9355E55 /* PrfUnlockTests.swift */,
+				6D337586253A70A693AAB9D6 /* PrivacyCoverAndIdleTests.swift */,
 				178167B4508E5A7465C37E2E /* ReminderPlanTests.swift */,
 				39249F4D8A3C33FC891105E8 /* ReorderTests.swift */,
 				BDDCC05C77C56DAEBBE5D6C6 /* RepeatsStoreTests.swift */,
@@ -691,6 +696,7 @@
 				3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */,
 				510678DFA3FF537C8DEEF1B9 /* DeviceAppearancePrefs.swift */,
 				C942B430CC88069BEDE2588C /* DeviceUnlockPrefs.swift */,
+				D9E6D5CB3BC047F356F46481 /* PrivacyCoverPolicy.swift */,
 				6729B508139CE2E6FA01DB82 /* QuickActions.swift */,
 			);
 			path = App;
@@ -1017,6 +1023,7 @@
 				372B27D99B0DDB1039654C5F /* PasswordValidation.swift in Sources */,
 				E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */,
 				65B98D2879A096D46E81E645 /* PrivacyCover.swift in Sources */,
+				45D1B97E2C06F645E32F6902 /* PrivacyCoverPolicy.swift in Sources */,
 				BCE546F3A7561BF99E9344D9 /* ProjectDetailView.swift in Sources */,
 				E2E9FF01C29CA990C8672635 /* QuickActions.swift in Sources */,
 				A1B4EF1B5CB228859D0FC81B /* QuickFindView.swift in Sources */,
@@ -1117,6 +1124,7 @@
 				50661964BA28F97AE381D140 /* PerformanceBudgetTests.swift in Sources */,
 				E3033923BF69A26C5B893574 /* PlaintextOnDiskTests.swift in Sources */,
 				B21B2727BD5595AE8BE08DE8 /* PrfUnlockTests.swift in Sources */,
+				58FEBDEEFFFDB69B54336A6E /* PrivacyCoverAndIdleTests.swift in Sources */,
 				B45AC67AF22E7122D0F81365 /* ReminderPlanTests.swift in Sources */,
 				5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */,
 				DA2D93747CF62C0D970F27B8 /* RepeatTests.swift in Sources */,

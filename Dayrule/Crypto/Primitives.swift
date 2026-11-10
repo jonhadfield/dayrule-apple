@@ -78,34 +78,54 @@ enum Primitives {
         aad: [UInt8],
         nonce: [UInt8]? = nil
     ) throws -> Sealed {
-        guard key.count == CryptoConstants.keyBytes else { throw CryptoError.keyLength }
+        try key.withUnsafeBytes { keyBytes in
+            try seal(keyBytes: keyBytes, plaintext: plaintext, aad: aad, nonce: nonce)
+        }
+    }
+
+    /// AEAD seal with a borrowed key buffer (no `[UInt8]` AK copy).
+    static func seal(
+        keyBytes: UnsafeRawBufferPointer,
+        plaintext: [UInt8],
+        aad: [UInt8],
+        nonce: [UInt8]? = nil
+    ) throws -> Sealed {
+        try plaintext.withUnsafeBytes { plainBytes in
+            try seal(keyBytes: keyBytes, plaintextBytes: plainBytes, aad: aad, nonce: nonce)
+        }
+    }
+
+    /// AEAD seal with borrowed key and plaintext buffers.
+    static func seal(
+        keyBytes: UnsafeRawBufferPointer,
+        plaintextBytes: UnsafeRawBufferPointer,
+        aad: [UInt8],
+        nonce: [UInt8]? = nil
+    ) throws -> Sealed {
+        guard keyBytes.count == CryptoConstants.keyBytes else { throw CryptoError.keyLength }
         let n = nonce ?? randomBytes(CryptoConstants.nonceBytes)
         guard n.count == CryptoConstants.nonceBytes else { throw CryptoError.sealFailed }
 
         var ciphertext = [UInt8](
             repeating: 0,
-            count: plaintext.count + Int(crypto_aead_xchacha20poly1305_ietf_abytes())
+            count: plaintextBytes.count + Int(crypto_aead_xchacha20poly1305_ietf_abytes())
         )
         var cipherLen: UInt64 = 0
 
         let status: Int32 = ciphertext.withUnsafeMutableBytes { cRaw in
-            plaintext.withUnsafeBytes { pRaw in
-                aad.withUnsafeBytes { aRaw in
-                    n.withUnsafeBytes { nRaw in
-                        key.withUnsafeBytes { kRaw in
-                            crypto_aead_xchacha20poly1305_ietf_encrypt(
-                                cRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                &cipherLen,
-                                pRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                UInt64(plaintext.count),
-                                aRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                UInt64(aad.count),
-                                nil,
-                                nRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                kRaw.bindMemory(to: UInt8.self).baseAddress!
-                            )
-                        }
-                    }
+            aad.withUnsafeBytes { aRaw in
+                n.withUnsafeBytes { nRaw in
+                    crypto_aead_xchacha20poly1305_ietf_encrypt(
+                        cRaw.bindMemory(to: UInt8.self).baseAddress!,
+                        &cipherLen,
+                        plaintextBytes.bindMemory(to: UInt8.self).baseAddress!,
+                        UInt64(plaintextBytes.count),
+                        aRaw.bindMemory(to: UInt8.self).baseAddress!,
+                        UInt64(aad.count),
+                        nil,
+                        nRaw.bindMemory(to: UInt8.self).baseAddress!,
+                        keyBytes.bindMemory(to: UInt8.self).baseAddress!
+                    )
                 }
             }
         }
@@ -115,7 +135,18 @@ enum Primitives {
     }
 
     static func open(key: [UInt8], sealed: Sealed, aad: [UInt8]) throws -> [UInt8] {
-        guard key.count == CryptoConstants.keyBytes else { throw CryptoError.keyLength }
+        try key.withUnsafeBytes { keyBytes in
+            try open(keyBytes: keyBytes, sealed: sealed, aad: aad)
+        }
+    }
+
+    /// AEAD open with a borrowed key buffer (no `[UInt8]` AK copy).
+    static func open(
+        keyBytes: UnsafeRawBufferPointer,
+        sealed: Sealed,
+        aad: [UInt8]
+    ) throws -> [UInt8] {
+        guard keyBytes.count == CryptoConstants.keyBytes else { throw CryptoError.keyLength }
         guard sealed.nonce.count == CryptoConstants.nonceBytes else { throw CryptoError.openFailed }
         let tag = Int(crypto_aead_xchacha20poly1305_ietf_abytes())
         guard sealed.ciphertext.count >= tag else { throw CryptoError.openFailed }
@@ -127,19 +158,17 @@ enum Primitives {
             sealed.ciphertext.withUnsafeBytes { cRaw in
                 aad.withUnsafeBytes { aRaw in
                     sealed.nonce.withUnsafeBytes { nRaw in
-                        key.withUnsafeBytes { kRaw in
-                            crypto_aead_xchacha20poly1305_ietf_decrypt(
-                                mRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                &messageLen,
-                                nil,
-                                cRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                UInt64(sealed.ciphertext.count),
-                                aRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                UInt64(aad.count),
-                                nRaw.bindMemory(to: UInt8.self).baseAddress!,
-                                kRaw.bindMemory(to: UInt8.self).baseAddress!
-                            )
-                        }
+                        crypto_aead_xchacha20poly1305_ietf_decrypt(
+                            mRaw.bindMemory(to: UInt8.self).baseAddress!,
+                            &messageLen,
+                            nil,
+                            cRaw.bindMemory(to: UInt8.self).baseAddress!,
+                            UInt64(sealed.ciphertext.count),
+                            aRaw.bindMemory(to: UInt8.self).baseAddress!,
+                            UInt64(aad.count),
+                            nRaw.bindMemory(to: UInt8.self).baseAddress!,
+                            keyBytes.bindMemory(to: UInt8.self).baseAddress!
+                        )
                     }
                 }
             }
@@ -157,6 +186,24 @@ enum Primitives {
         nonce: [UInt8]? = nil
     ) throws -> Sealed {
         try seal(key: kek, plaintext: key, aad: Array("\(label)|\(userId)".utf8), nonce: nonce)
+    }
+
+    /// Wrap a borrowed key buffer under `kek` (AK stays in `sodium_malloc`).
+    static func wrapKey(
+        kek: [UInt8],
+        keyBytes: UnsafeRawBufferPointer,
+        label: String,
+        userId: String,
+        nonce: [UInt8]? = nil
+    ) throws -> Sealed {
+        try kek.withUnsafeBytes { kekBytes in
+            try seal(
+                keyBytes: kekBytes,
+                plaintextBytes: keyBytes,
+                aad: Array("\(label)|\(userId)".utf8),
+                nonce: nonce
+            )
+        }
     }
 
     static func unwrapKey(
@@ -216,13 +263,45 @@ enum Primitives {
         jsonUTF8: [UInt8],
         nonce: [UInt8]? = nil
     ) throws -> Envelope {
-        let sealed = try seal(key: ak, plaintext: pad(jsonUTF8), aad: recordAad(meta), nonce: nonce)
+        try ak.withUnsafeBytes { akBytes in
+            try encryptRecordJSON(akBytes: akBytes, meta: meta, jsonUTF8: jsonUTF8, nonce: nonce)
+        }
+    }
+
+    static func encryptRecordJSON(
+        akBytes: UnsafeRawBufferPointer,
+        meta: RecordMeta,
+        jsonUTF8: [UInt8],
+        nonce: [UInt8]? = nil
+    ) throws -> Envelope {
+        let sealed = try seal(
+            keyBytes: akBytes,
+            plaintext: pad(jsonUTF8),
+            aad: recordAad(meta),
+            nonce: nonce
+        )
         return Envelope(alg: CryptoConstants.alg, keyId: meta.keyId, nonce: sealed.nonce, ciphertext: sealed.ciphertext)
     }
 
     static func decryptRecordJSON(ak: [UInt8], meta: RecordMeta, env: Envelope) throws -> [UInt8] {
+        try ak.withUnsafeBytes { akBytes in
+            try decryptRecordJSON(akBytes: akBytes, meta: meta, env: env)
+        }
+    }
+
+    static func decryptRecordJSON(
+        akBytes: UnsafeRawBufferPointer,
+        meta: RecordMeta,
+        env: Envelope
+    ) throws -> [UInt8] {
         guard env.alg == CryptoConstants.alg else { throw CryptoError.unsupportedAlg(env.alg) }
         guard env.keyId == meta.keyId else { throw CryptoError.keyIdMismatch }
-        return try unpad(open(key: ak, sealed: Sealed(nonce: env.nonce, ciphertext: env.ciphertext), aad: recordAad(meta)))
+        return try unpad(
+            open(
+                keyBytes: akBytes,
+                sealed: Sealed(nonce: env.nonce, ciphertext: env.ciphertext),
+                aad: recordAad(meta)
+            )
+        )
     }
 }

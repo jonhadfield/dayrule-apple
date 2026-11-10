@@ -1195,6 +1195,20 @@ final class AppModel {
 
     #if DEBUG
     /// Test hook: hold or release `gateBusy` without starting a gate action.
+    /// True while an idle auto-lock sleep task is scheduled.
+    var testingIdleTaskActive: Bool { idleTask != nil }
+
+    func testingClearIdle() {
+        idleTask?.cancel()
+        idleTask = nil
+        lastIdleBump = nil
+    }
+
+    /// Sync/hydrate refresh without resetting idle (mirrors `persist` `.sync`).
+    func testingEntitiesDidChangeFromSync() {
+        entitiesDidChange(animation: nil)
+    }
+
     func testingSetGateBusy(_ busy: Bool) {
         gateBusy = busy
     }
