@@ -67,6 +67,7 @@ struct HeadingSheetView: View {
                     confirmingDelete = true
                 }
             }
+            .dayruleMacFormStyle()
             .confirmationDialog(
                 "Delete heading?",
                 isPresented: $confirmingDelete,

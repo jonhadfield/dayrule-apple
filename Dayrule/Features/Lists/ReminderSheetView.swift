@@ -85,6 +85,7 @@ struct ReminderSheetView: View {
                     clear()
                 }
             }
+            .dayruleMacFormStyle()
             .dayruleAnimation(Motion.standard, value: remindersOn)
             .onAppear(perform: load)
         }

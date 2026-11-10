@@ -84,6 +84,12 @@ final class AppModel {
     private var syncAgain = false
     private var sceneIsActive = true
     private var lastIdleBump: ContinuousClock.Instant?
+    /// Settings sheet is up — hold browser list rebuilds (Done mode refilters
+    /// Today/Done) until dismiss so the picker stays snappy (decision 59).
+    private var settingsHoldsListRefresh = false
+    private var listRefreshPending = false
+    /// Bumped on each Settings open so a deferred dismiss flush can’t run after reopen.
+    private var settingsSession = 0
 
     private struct PendingSignup {
         var email: String
@@ -116,14 +122,53 @@ final class AppModel {
         noteUserActivity()
     }
 
+    /// Call when the Settings sheet appears / disappears. While open, list
+    /// membership refreshes (e.g. Move to Done refiltering Today) are deferred
+    /// so the sheet doesn’t stall rebuilding the browser underneath.
+    func beginSettingsPresentation() {
+        settingsSession += 1
+        settingsHoldsListRefresh = true
+    }
+
+    func endSettingsPresentation() {
+        // Keep the hold through the dismiss animation, then flush — otherwise
+        // the epoch bump lands on the same frame as the sheet teardown and
+        // the next sidebar click feels stuck behind a full list rebuild.
+        let session = settingsSession
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(180))
+            guard session == settingsSession else { return }
+            settingsHoldsListRefresh = false
+            flushPendingListRefresh()
+        }
+    }
+
     /// Sync, persist and hydrate paths: refresh views without resetting the idle lock.
     private func entitiesDidChange(animation: Animation?) {
+        if settingsHoldsListRefresh {
+            listRefreshPending = true
+            return
+        }
+        applyEntitiesEpoch(animation: animation)
+        scheduleRemindersIfUnlocked()
+    }
+
+    private func flushPendingListRefresh() {
+        guard listRefreshPending else { return }
+        listRefreshPending = false
+        // No insert/remove animation — membership just catches up after Settings.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { entitiesEpoch += 1 }
+        scheduleRemindersIfUnlocked()
+    }
+
+    private func applyEntitiesEpoch(animation: Animation?) {
         if let animation {
             withAnimation(Motion.system(animation)) { entitiesEpoch += 1 }
         } else {
             entitiesEpoch += 1
         }
-        scheduleRemindersIfUnlocked()
     }
 
     /// Real user activity keeps the vault open; throttled so typing doesn't churn tasks.
@@ -459,14 +504,36 @@ final class AppModel {
         guard let cipherStore else { return }
         do {
             switch source {
-            case .local: try await cipherStore.applyLocal(changes)
-            case .sync: try await cipherStore.applyRemote(changes)
+            case .local:
+                try await cipherStore.applyLocal(changes)
+                // Local UI already refreshed via `noteEntitiesChanged` (or Settings
+                // hold). Bumping again here rebuilt every list twice per edit.
+                scheduleSync()
+            case .sync:
+                try await cipherStore.applyRemote(changes)
+                entitiesDidChange(animation: Motion.fade)
             }
-            entitiesDidChange(animation: source == .sync ? Motion.fade : nil)
-            if source == .local { scheduleSync() }
         } catch {
             notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
+    }
+
+    /// Settings → Move to Done. Persists the pref; list membership refresh is
+    /// held while Settings is open (decision 59).
+    func setMoveToDone(_ mode: DoneMode) {
+        guard mode != store.entities.settings.moveToDone else { return }
+        store.run("Done mode") { d, _ in
+            Commands.setDoneMode(d, mode: mode)
+        }
+        noteEntitiesChanged(animation: nil)
+    }
+
+    /// Move completed items to Done (manual mode) — Settings or Done list.
+    func moveToDoneNow() {
+        store.run("Move to Done") { d, env in
+            Commands.moveToDoneNow(d, env)
+        }
+        noteEntitiesChanged(animation: nil)
     }
 
     private func openPersistence(userId: String) throws {
@@ -1124,6 +1191,9 @@ final class AppModel {
         showFind = false
         showHelp = false
         showSettings = false
+        settingsSession += 1 // cancel any deferred Settings flush
+        settingsHoldsListRefresh = false
+        listRefreshPending = false
         macLocalSheetPresented = false
         hasMacListSelection = false
         pendingMacChromeAction = nil

@@ -23,6 +23,9 @@ struct SettingsView: View {
     @State private var unlockError: UnlockError?
     @State private var confirmingSignOut = false
     @State private var signOutHasPending = false
+    /// Local so the picker/footer update without waiting on a browser-wide
+    /// `entitiesEpoch` bump (held while Settings is open — decision 59).
+    @State private var doneMode: DoneMode = .immediately
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
 
     private enum UnlockMethod: Equatable {
@@ -56,7 +59,7 @@ struct SettingsView: View {
                 syncUnlockChapter(colors: colors)
                 remindersSection(colors: colors)
                 dataSection(colors: colors)
-                helpChapter(colors: colors)
+                aboutChapter(colors: colors)
                 if let email = model.accountEmail {
                     accountChapter(email: email, colors: colors)
                 }
@@ -68,11 +71,12 @@ struct SettingsView: View {
             #endif
             // Keep Toggle / Picker terracotta, not system blue, on paper.
             .tint(colors.accent)
-            .dayruleAnimation(Motion.standard, value: model.entities.settings.moveToDone)
-            .dayruleAnimation(Motion.standard, value: unlockError)
-            .dayruleAnimation(Motion.standard, value: reminderError)
-            .dayruleAnimation(Motion.standard, value: importSummary)
-            .dayruleAnimation(Motion.standard, value: importError)
+            // Animate only inline feedback — not Done-mode / sync ticks on open,
+            // which made the Mac sheet feel like it paused before appearing.
+            .dayruleAnimation(Motion.quick, value: unlockError)
+            .dayruleAnimation(Motion.quick, value: reminderError)
+            .dayruleAnimation(Motion.quick, value: importSummary)
+            .dayruleAnimation(Motion.quick, value: importError)
             #if os(iOS)
             .sheet(isPresented: $showShare) {
                 if let shareURL {
@@ -98,42 +102,48 @@ struct SettingsView: View {
             } message: {
                 Text(signOutMessage)
             }
+            .onAppear {
+                doneMode = model.store.entities.settings.moveToDone
+            }
         }
     }
 
     // MARK: - Chapters
 
     private func generalChapter(colors: DayruleColors) -> some View {
+        // Both helpers live in content rows (same insets). A Mac section footer
+        // was indented further than the Appearance helper under the chips.
         DayruleFormSection {
             VStack(alignment: .leading, spacing: Tokens.Space.s) {
                 Text("Appearance")
                     .foregroundStyle(colors.text)
                 AppearanceChips(selection: appearanceBinding, colors: colors)
                     .accessibilityIdentifier("settings.appearance")
+                Text("Stays on this device.")
+                    .font(DayruleType.helper)
+                    .foregroundStyle(colors.textSecondary)
             }
             .accessibilityElement(children: .contain)
-            Picker(selection: doneModeBinding) {
-                Text("Immediately").tag(DoneMode.immediately)
-                Text("End of day").tag(DoneMode.daily)
-                Text("Manually").tag(DoneMode.manually)
-            } label: {
-                Text("Move to Done").foregroundStyle(colors.text)
-            }
-            .accessibilityIdentifier("settings.doneMode")
-            if model.entities.settings.moveToDone == .manually {
-                Button("Move to Done now") {
-                    model.store.run("Move to Done") { d, env in
-                        Commands.moveToDoneNow(d, env)
-                    }
-                    model.noteEntitiesChanged()
+            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                Picker(selection: doneModeBinding) {
+                    Text("Immediately").tag(DoneMode.immediately)
+                    Text("End of day").tag(DoneMode.daily)
+                    Text("Manually").tag(DoneMode.manually)
+                } label: {
+                    Text("Move to Done").foregroundStyle(colors.text)
                 }
-                .buttonStyle(.dayruleLink)
-                .accessibilityIdentifier("settings.logCompleted")
+                .accessibilityIdentifier("settings.doneMode")
+                footerText(doneModeFooter, colors: colors)
+                if doneMode == .manually {
+                    Button("Move to Done now") {
+                        model.moveToDoneNow()
+                    }
+                    .buttonStyle(.dayruleLink)
+                    .accessibilityIdentifier("settings.logCompleted")
+                }
             }
         } header: {
             DayruleSectionHeader(title: "General")
-        } footer: {
-            footerText(doneModeFooter, colors: colors)
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -144,24 +154,11 @@ struct SettingsView: View {
                 Text("Sync")
                     .foregroundStyle(colors.text)
                 Spacer(minLength: 0)
-                SyncStatusView(status: model.syncStatus, needsServerSignIn: model.needsServerSignIn)
+                // Isolated Observation so quiet sync polls don't rebuild Settings.
+                SyncStatusChrome(model: model)
             }
             .accessibilityElement(children: .combine)
-            if model.needsServerSignIn {
-                Button("Sign in to sync") {
-                    model.showSignInGate()
-                }
-                .buttonStyle(.dayruleLink)
-                .accessibilityIdentifier("settings.signInToSync")
-            }
-            Button {
-                Task { await model.syncNow() }
-            } label: {
-                DayruleBusyLabel(title: "Sync now", busyTitle: "Syncing…", busy: model.syncStatus == .syncing)
-            }
-            .buttonStyle(.dayruleLink)
-            .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
-            .accessibilityIdentifier("settings.syncNow")
+            SettingsSyncActions(model: model)
             unlockToggle(
                 .biometric,
                 title: "Unlock with \(model.biometryLabel)",
@@ -179,32 +176,9 @@ struct SettingsView: View {
         } header: {
             DayruleSectionHeader(title: "Sync & unlock")
         } footer: {
-            syncUnlockFooter(colors: colors)
+            SettingsSyncUnlockFooter(model: model, colors: colors)
         }
         .dayruleSheetRow(colors: colors)
-    }
-
-    @ViewBuilder
-    private func syncUnlockFooter(colors: DayruleColors) -> some View {
-        let status = model.syncStatus
-        let showDetail = status.label != status.shortLabel
-        FooterStack {
-            if showDetail {
-                Text(status.label)
-                    .font(DayruleType.helper)
-                    .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .contentTransition(.opacity)
-            }
-            if model.needsServerSignIn {
-                footerText(
-                    "Unlocked offline — edits stay here until you sign in.",
-                    colors: colors
-                )
-            } else {
-                footerText("Unlock methods stay on this device.", colors: colors)
-            }
-        }
     }
 
     @ViewBuilder
@@ -305,7 +279,8 @@ struct SettingsView: View {
         .dayruleSheetRow(colors: colors)
     }
 
-    private func helpChapter(colors: DayruleColors) -> some View {
+    private func aboutChapter(colors: DayruleColors) -> some View {
+        // Chapter “About” + row “Help” — avoid “Help” above “Help” (decision 58).
         DayruleFormSection {
             NavigationLink {
                 HelpView(embedded: true)
@@ -318,9 +293,7 @@ struct SettingsView: View {
                 .foregroundStyle(colors.textSecondary)
                 .accessibilityIdentifier("settings.about")
         } header: {
-            DayruleSectionHeader(title: "Help")
-        } footer: {
-            EmptyView()
+            DayruleSectionHeader(title: "About")
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -363,15 +336,16 @@ struct SettingsView: View {
     // MARK: - Pieces
 
     private var doneModeFooter: String {
-        let done: String = switch model.entities.settings.moveToDone {
+        // Membership only — completedAt stays; Today/Done selectors refilter
+        // (web `lists.isInDone`). Refresh applies when Settings closes.
+        switch doneMode {
         case .immediately:
-            "Completed items go to Done straight away."
+            "Completed items leave Today and other open lists straight away."
         case .daily:
             "Completed items stay on open lists until the next day, then move to Done."
         case .manually:
             "Completed items stay on open lists until you press Move to Done now."
         }
-        return "Appearance stays on this device. \(done)"
     }
 
     private func footerText(_ text: String, colors: DayruleColors) -> some View {
@@ -462,12 +436,11 @@ struct SettingsView: View {
 
     private var doneModeBinding: Binding<DoneMode> {
         Binding(
-            get: { model.entities.settings.moveToDone },
+            get: { doneMode },
             set: { mode in
-                model.store.run("Done mode") { d, _ in
-                    Commands.setDoneMode(d, mode: mode)
-                }
-                model.noteEntitiesChanged()
+                guard mode != doneMode else { return }
+                doneMode = mode
+                model.setMoveToDone(mode)
             }
         )
     }
@@ -552,6 +525,60 @@ private struct FooterStack<Content: View>: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Sync now / sign-in actions — owns Observation of sync flags so the rest of
+/// Settings doesn’t rebuild on every quiet poll.
+private struct SettingsSyncActions: View {
+    @Bindable var model: AppModel
+
+    var body: some View {
+        if model.needsServerSignIn {
+            Button("Sign in to sync") {
+                model.showSignInGate()
+            }
+            .buttonStyle(.dayruleLink)
+            .accessibilityIdentifier("settings.signInToSync")
+        }
+        Button {
+            Task { await model.syncNow() }
+        } label: {
+            DayruleBusyLabel(title: "Sync now", busyTitle: "Syncing…", busy: model.syncStatus == .syncing)
+        }
+        .buttonStyle(.dayruleLink)
+        .disabled(model.syncStatus == .syncing || model.needsServerSignIn)
+        .accessibilityIdentifier("settings.syncNow")
+    }
+}
+
+private struct SettingsSyncUnlockFooter: View {
+    @Bindable var model: AppModel
+    var colors: DayruleColors
+
+    var body: some View {
+        let status = model.syncStatus
+        let showDetail = status.label != status.shortLabel
+        FooterStack {
+            if showDetail {
+                Text(status.label)
+                    .font(DayruleType.helper)
+                    .foregroundStyle(status.tone == .deadline ? colors.deadline : colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .contentTransition(.opacity)
+            }
+            Text(
+                model.needsServerSignIn
+                    ? "Unlocked offline — edits stay here until you sign in."
+                    : "Unlock methods stay on this device."
+            )
+            .font(DayruleType.helper)
+            .foregroundStyle(colors.textSecondary)
+            .lineLimit(nil)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

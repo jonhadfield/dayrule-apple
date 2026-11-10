@@ -95,6 +95,13 @@ struct ListsBrowserView: View {
     @State private var selecting = false
     @State private var selectedIds: Set<ID> = []
     @State private var showNewList = false
+    /// Sidebar badges / org tree — refreshed on entity/linger changes only, so a
+    /// sidebar click doesn’t re-walk every to-do just to flip the selection bar.
+    @State private var cachedSidebarCounts = Lists.SidebarCounts(inbox: 0, today: 0, overdue: 0)
+    @State private var cachedBrowseTree = Lists.BrowseTree(looseProjects: [], areaGroups: [])
+    @State private var cachedTrashCount = 0
+    @State private var cachedBacklogCount = 0
+    @State private var cachedDoneCount = 0
     @FocusState private var addFieldFocused: Bool
     @ScaledMetric(relativeTo: .body) private var tabIconSize: CGFloat = 18
     @ScaledMetric(relativeTo: .body) private var browseIconWidth: CGFloat = 22
@@ -122,7 +129,16 @@ struct ListsBrowserView: View {
                 }
             }
         }
-        .onAppear { applyDefaultDestinationIfNeeded() }
+        .onAppear {
+            refreshSidebarCache()
+            applyDefaultDestinationIfNeeded()
+        }
+        .onChange(of: model.entitiesEpoch) { _, _ in
+            refreshSidebarCache()
+        }
+        .onChange(of: model.linger.ids) { _, _ in
+            refreshSidebarCache()
+        }
         .onChange(of: model.vaultLoading) { _, loading in
             if !loading { applyDefaultDestinationIfNeeded() }
         }
@@ -141,8 +157,11 @@ struct ListsBrowserView: View {
                 selection = name
             }
         }
-        .sheet(isPresented: $model.showSettings) {
+        .sheet(isPresented: $model.showSettings, onDismiss: {
+            model.endSettingsPresentation()
+        }) {
             SettingsView(model: model)
+                .onAppear { model.beginSettingsPresentation() }
         }
         .sheet(item: $whenTarget) { target in
             WhenSheetView(model: model, ids: target.ids)
@@ -578,7 +597,7 @@ struct ListsBrowserView: View {
             .listRowBackground(colors.bg)
             .listRowSeparatorTint(colors.hairline)
 
-        let tree = Lists.browseTree(model.entities)
+        let tree = cachedBrowseTree
         if !tree.looseProjects.isEmpty {
             Section {
                 ForEach(tree.looseProjects, id: \.id) { project in
@@ -669,7 +688,7 @@ struct ListsBrowserView: View {
             .tag(Optional(name))
             .listRowBackground(selection == name ? colors.selectedRow : Color.clear)
         }
-        let tree = Lists.browseTree(model.entities)
+        let tree = cachedBrowseTree
         if !tree.looseProjects.isEmpty {
             Section {
                 ForEach(tree.looseProjects, id: \.id) { project in
@@ -995,17 +1014,10 @@ struct ListsBrowserView: View {
 
     private func browseCount(for name: ListName) -> Int? {
         switch name {
-        case .backlog:
-            let main = Lists.backlog(model.entities, ctx).reduce(0) { $0 + $1.todos.count }
-            let parked = Lists.notNow(model.entities, ctx)
-            return main + parked.todos.count + parked.projects.count
-        case .done:
-            return Lists.doneList(model.entities, ctx).reduce(0) { $0 + $1.items.count }
-        case .trash:
-            let t = Lists.trash(model.entities)
-            return t.areas.count + t.items.count
-        default:
-            return nil
+        case .backlog: cachedBacklogCount
+        case .done: cachedDoneCount
+        case .trash: cachedTrashCount
+        default: nil
         }
     }
 
@@ -1644,13 +1656,21 @@ struct ListsBrowserView: View {
         Lists.Context(today: When.toLocalDate(Date()), keepVisible: model.linger.keepVisible)
     }
 
-    private var counts: Lists.SidebarCounts {
-        Lists.sidebarCounts(model.entities, ctx)
-    }
+    private var counts: Lists.SidebarCounts { cachedSidebarCounts }
 
-    private var trashCount: Int {
-        let t = Lists.trash(model.entities)
-        return t.areas.count + t.items.count
+    private var trashCount: Int { cachedTrashCount }
+
+    private func refreshSidebarCache() {
+        let e = model.entities
+        let context = ctx
+        cachedSidebarCounts = Lists.sidebarCounts(e, context)
+        cachedBrowseTree = Lists.browseTree(e)
+        let trash = Lists.trash(e)
+        cachedTrashCount = trash.areas.count + trash.items.count
+        let backlogMain = Lists.backlog(e, context).reduce(0) { $0 + $1.todos.count }
+        let parked = Lists.notNow(e, context)
+        cachedBacklogCount = backlogMain + parked.todos.count + parked.projects.count
+        cachedDoneCount = Lists.doneList(e, context).reduce(0) { $0 + $1.items.count }
     }
 
     private func badge(for name: ListName) -> Int? {
@@ -1985,10 +2005,7 @@ struct ListsBrowserView: View {
     }
 
     private func logCompleted() {
-        model.store.run("Move to Done") { d, env in
-            Commands.moveToDoneNow(d, env)
-        }
-        model.noteEntitiesChanged()
+        model.moveToDoneNow()
         model.undoNotice("Moved completed to-dos to Done")
     }
 
