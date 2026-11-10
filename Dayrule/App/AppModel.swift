@@ -88,6 +88,8 @@ final class AppModel {
     /// Today/Done) until dismiss so the picker stays snappy (decision 59).
     private var settingsHoldsListRefresh = false
     private var listRefreshPending = false
+    /// Bumped on each Settings open so a deferred dismiss flush can’t run after reopen.
+    private var settingsSession = 0
 
     private struct PendingSignup {
         var email: String
@@ -124,12 +126,21 @@ final class AppModel {
     /// membership refreshes (e.g. Move to Done refiltering Today) are deferred
     /// so the sheet doesn’t stall rebuilding the browser underneath.
     func beginSettingsPresentation() {
+        settingsSession += 1
         settingsHoldsListRefresh = true
     }
 
     func endSettingsPresentation() {
-        settingsHoldsListRefresh = false
-        flushPendingListRefresh()
+        // Keep the hold through the dismiss animation, then flush — otherwise
+        // the epoch bump lands on the same frame as the sheet teardown and
+        // the next sidebar click feels stuck behind a full list rebuild.
+        let session = settingsSession
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(180))
+            guard session == settingsSession else { return }
+            settingsHoldsListRefresh = false
+            flushPendingListRefresh()
+        }
     }
 
     /// Sync, persist and hydrate paths: refresh views without resetting the idle lock.
@@ -1180,6 +1191,7 @@ final class AppModel {
         showFind = false
         showHelp = false
         showSettings = false
+        settingsSession += 1 // cancel any deferred Settings flush
         settingsHoldsListRefresh = false
         listRefreshPending = false
         macLocalSheetPresented = false
