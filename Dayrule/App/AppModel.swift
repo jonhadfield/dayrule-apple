@@ -493,14 +493,36 @@ final class AppModel {
         guard let cipherStore else { return }
         do {
             switch source {
-            case .local: try await cipherStore.applyLocal(changes)
-            case .sync: try await cipherStore.applyRemote(changes)
+            case .local:
+                try await cipherStore.applyLocal(changes)
+                // Local UI already refreshed via `noteEntitiesChanged` (or Settings
+                // hold). Bumping again here rebuilt every list twice per edit.
+                scheduleSync()
+            case .sync:
+                try await cipherStore.applyRemote(changes)
+                entitiesDidChange(animation: Motion.fade)
             }
-            entitiesDidChange(animation: source == .sync ? Motion.fade : nil)
-            if source == .local { scheduleSync() }
         } catch {
             notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
+    }
+
+    /// Settings → Move to Done. Persists the pref; list membership refresh is
+    /// held while Settings is open (decision 59).
+    func setMoveToDone(_ mode: DoneMode) {
+        guard mode != store.entities.settings.moveToDone else { return }
+        store.run("Done mode") { d, _ in
+            Commands.setDoneMode(d, mode: mode)
+        }
+        noteEntitiesChanged(animation: nil)
+    }
+
+    /// Move completed items to Done (manual mode) — Settings or Done list.
+    func moveToDoneNow() {
+        store.run("Move to Done") { d, env in
+            Commands.moveToDoneNow(d, env)
+        }
+        noteEntitiesChanged(animation: nil)
     }
 
     private func openPersistence(userId: String) throws {

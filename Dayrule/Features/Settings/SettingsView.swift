@@ -136,13 +136,7 @@ struct SettingsView: View {
                 footerText(doneModeFooter, colors: colors)
                 if doneMode == .manually {
                     Button("Move to Done now") {
-                        // Persist only — list refresh waits until Settings closes
-                        // (completed items leave Today via `Lists.isInDone`).
-                        model.store.run("Move to Done") { d, env in
-                            Commands.moveToDoneNow(d, env)
-                        }
-                        model.notices.dismissUndo()
-                        model.noteUserActivity()
+                        model.moveToDoneNow()
                     }
                     .buttonStyle(.dayruleLink)
                     .accessibilityIdentifier("settings.logCompleted")
@@ -446,13 +440,7 @@ struct SettingsView: View {
             set: { mode in
                 guard mode != doneMode else { return }
                 doneMode = mode
-                model.store.run("Done mode") { d, _ in
-                    Commands.setDoneMode(d, mode: mode)
-                }
-                // Don’t bump entitiesEpoch here — Settings holds list refresh
-                // until dismiss; persist’s entitiesDidChange is deferred too.
-                model.notices.dismissUndo()
-                model.noteUserActivity()
+                model.setMoveToDone(mode)
             }
         )
     }

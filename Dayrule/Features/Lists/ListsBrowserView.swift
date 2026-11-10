@@ -1988,10 +1988,7 @@ struct ListsBrowserView: View {
     }
 
     private func logCompleted() {
-        model.store.run("Move to Done") { d, env in
-            Commands.moveToDoneNow(d, env)
-        }
-        model.noteEntitiesChanged()
+        model.moveToDoneNow()
         model.undoNotice("Moved completed to-dos to Done")
     }
 
