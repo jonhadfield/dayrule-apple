@@ -141,8 +141,11 @@ struct ListsBrowserView: View {
                 selection = name
             }
         }
-        .sheet(isPresented: $model.showSettings) {
+        .sheet(isPresented: $model.showSettings, onDismiss: {
+            model.endSettingsPresentation()
+        }) {
             SettingsView(model: model)
+                .onAppear { model.beginSettingsPresentation() }
         }
         .sheet(item: $whenTarget) { target in
             WhenSheetView(model: model, ids: target.ids)

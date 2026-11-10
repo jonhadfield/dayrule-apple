@@ -23,6 +23,9 @@ struct SettingsView: View {
     @State private var unlockError: UnlockError?
     @State private var confirmingSignOut = false
     @State private var signOutHasPending = false
+    /// Local so the picker/footer update without waiting on a browser-wide
+    /// `entitiesEpoch` bump (held while Settings is open — decision 59).
+    @State private var doneMode: DoneMode = .immediately
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
 
     private enum UnlockMethod: Equatable {
@@ -99,6 +102,9 @@ struct SettingsView: View {
             } message: {
                 Text(signOutMessage)
             }
+            .onAppear {
+                doneMode = model.store.entities.settings.moveToDone
+            }
         }
     }
 
@@ -128,14 +134,15 @@ struct SettingsView: View {
                 }
                 .accessibilityIdentifier("settings.doneMode")
                 footerText(doneModeFooter, colors: colors)
-                if model.entities.settings.moveToDone == .manually {
+                if doneMode == .manually {
                     Button("Move to Done now") {
+                        // Persist only — list refresh waits until Settings closes
+                        // (completed items leave Today via `Lists.isInDone`).
                         model.store.run("Move to Done") { d, env in
                             Commands.moveToDoneNow(d, env)
                         }
-                        // Pref change — don’t run the list Motion animation across
-                        // the whole browser (felt like a long pause in Settings).
-                        model.noteEntitiesChanged(animation: nil)
+                        model.notices.dismissUndo()
+                        model.noteUserActivity()
                     }
                     .buttonStyle(.dayruleLink)
                     .accessibilityIdentifier("settings.logCompleted")
@@ -335,9 +342,11 @@ struct SettingsView: View {
     // MARK: - Pieces
 
     private var doneModeFooter: String {
-        switch model.entities.settings.moveToDone {
+        // Membership only — completedAt stays; Today/Done selectors refilter
+        // (web `lists.isInDone`). Refresh applies when Settings closes.
+        switch doneMode {
         case .immediately:
-            "Completed items go to Done straight away."
+            "Completed items leave Today and other open lists straight away."
         case .daily:
             "Completed items stay on open lists until the next day, then move to Done."
         case .manually:
@@ -433,14 +442,17 @@ struct SettingsView: View {
 
     private var doneModeBinding: Binding<DoneMode> {
         Binding(
-            get: { model.entities.settings.moveToDone },
+            get: { doneMode },
             set: { mode in
-                guard mode != model.entities.settings.moveToDone else { return }
+                guard mode != doneMode else { return }
+                doneMode = mode
                 model.store.run("Done mode") { d, _ in
                     Commands.setDoneMode(d, mode: mode)
                 }
-                // Settings pref only — skip Motion.list on the main browser.
-                model.noteEntitiesChanged(animation: nil)
+                // Don’t bump entitiesEpoch here — Settings holds list refresh
+                // until dismiss; persist’s entitiesDidChange is deferred too.
+                model.notices.dismissUndo()
+                model.noteUserActivity()
             }
         )
     }

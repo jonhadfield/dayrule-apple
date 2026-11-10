@@ -84,6 +84,10 @@ final class AppModel {
     private var syncAgain = false
     private var sceneIsActive = true
     private var lastIdleBump: ContinuousClock.Instant?
+    /// Settings sheet is up — hold browser list rebuilds (Done mode refilters
+    /// Today/Done) until dismiss so the picker stays snappy (decision 59).
+    private var settingsHoldsListRefresh = false
+    private var listRefreshPending = false
 
     private struct PendingSignup {
         var email: String
@@ -116,14 +120,44 @@ final class AppModel {
         noteUserActivity()
     }
 
+    /// Call when the Settings sheet appears / disappears. While open, list
+    /// membership refreshes (e.g. Move to Done refiltering Today) are deferred
+    /// so the sheet doesn’t stall rebuilding the browser underneath.
+    func beginSettingsPresentation() {
+        settingsHoldsListRefresh = true
+    }
+
+    func endSettingsPresentation() {
+        settingsHoldsListRefresh = false
+        flushPendingListRefresh()
+    }
+
     /// Sync, persist and hydrate paths: refresh views without resetting the idle lock.
     private func entitiesDidChange(animation: Animation?) {
+        if settingsHoldsListRefresh {
+            listRefreshPending = true
+            return
+        }
+        applyEntitiesEpoch(animation: animation)
+        scheduleRemindersIfUnlocked()
+    }
+
+    private func flushPendingListRefresh() {
+        guard listRefreshPending else { return }
+        listRefreshPending = false
+        // No insert/remove animation — membership just catches up after Settings.
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { entitiesEpoch += 1 }
+        scheduleRemindersIfUnlocked()
+    }
+
+    private func applyEntitiesEpoch(animation: Animation?) {
         if let animation {
             withAnimation(Motion.system(animation)) { entitiesEpoch += 1 }
         } else {
             entitiesEpoch += 1
         }
-        scheduleRemindersIfUnlocked()
     }
 
     /// Real user activity keeps the vault open; throttled so typing doesn't churn tasks.
@@ -1124,6 +1158,8 @@ final class AppModel {
         showFind = false
         showHelp = false
         showSettings = false
+        settingsHoldsListRefresh = false
+        listRefreshPending = false
         macLocalSheetPresented = false
         hasMacListSelection = false
         pendingMacChromeAction = nil
