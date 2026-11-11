@@ -52,8 +52,9 @@ final class DayruleUITests: XCTestCase {
             Self.isPlatformOwned(issue, window: window, touchBarFrames: touchBarFrames)
         }
         #else
-        // Dense list chrome + Fraunces still trip Dynamic Type / clip (iOS-only
-        // audit types). Smoke catches contrast, hit region, traits, etc.
+        // PLAN decision 66: ignore Dynamic Type / text-clipped false positives
+        // from Fraunces + dense chrome until a dedicated large-text polish pass.
+        // Smoke still catches contrast, hit region, traits, etc.
         try app.performAccessibilityAudit { issue in
             issue.auditType == .dynamicType || issue.auditType == .textClipped
         }
