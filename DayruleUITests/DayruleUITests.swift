@@ -49,22 +49,16 @@ final class DayruleUITests: XCTestCase {
         let touchBarFrames = Set(app.touchBars.firstMatch.descendants(matching: .any)
             .allElementsBoundByIndex.map { NSStringFromRect($0.frame) })
         try app.performAccessibilityAudit { issue in
-            if Self.isDeferredListAudit(issue) { return true }
-            return Self.isPlatformOwned(issue, window: window, touchBarFrames: touchBarFrames)
+            Self.isPlatformOwned(issue, window: window, touchBarFrames: touchBarFrames)
         }
         #else
+        // Dense list chrome + Fraunces still trip Dynamic Type / clip (iOS-only
+        // audit types). Smoke catches contrast, hit region, traits, etc.
         try app.performAccessibilityAudit { issue in
-            Self.isDeferredListAudit(issue)
+            issue.auditType == .dynamicType || issue.auditType == .textClipped
         }
         #endif
         #endif
-    }
-
-    /// Dense list chrome + Fraunces still trip Dynamic Type / clip checks; keep those
-    /// for a dedicated a11y pass. Smoke here catches contrast, hit region, traits, etc.
-    @MainActor
-    private static func isDeferredListAudit(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
-        issue.auditType == .dynamicType || issue.auditType == .textClipped
     }
 
     #if os(macOS)
