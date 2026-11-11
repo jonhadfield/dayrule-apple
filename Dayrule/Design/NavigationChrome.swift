@@ -127,18 +127,19 @@ struct DayruleEditablePageTitle: View {
 private struct DayrulePageTitleChrome<Content: View>: View {
     @ViewBuilder var content: Content
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleReadingMargin) private var readingMargin
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         VStack(alignment: .leading, spacing: 0) {
             content
-                .padding(.bottom, 8)
-            colors.text.frame(height: 2)
+                .padding(.bottom, Tokens.Space.s)
+            colors.text.frame(height: Tokens.Space.xxs)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Tokens.rowInset)
-        .padding(.top, 12)
-        .padding(.bottom, 8)
+        .padding(.horizontal, Tokens.rowInset + readingMargin)
+        .padding(.top, Tokens.Space.m)
+        .padding(.bottom, Tokens.Space.s)
     }
 }
 

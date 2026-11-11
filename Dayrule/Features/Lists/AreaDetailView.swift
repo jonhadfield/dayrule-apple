@@ -7,7 +7,6 @@ struct AreaDetailView: View {
     var onOpenProject: (ID) -> Void
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.dayruleDenseLayout) private var denseLayout
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
@@ -20,6 +19,7 @@ struct AreaDetailView: View {
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
     @FocusState private var titleFocused: Bool
+    @State private var detailWidth: CGFloat = 0
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -30,6 +30,18 @@ struct AreaDetailView: View {
         var ids: [ID]
     }
 
+    private var isCompact: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    private var readingMargin: CGFloat {
+        Tokens.readingMargin(width: detailWidth, compact: isCompact)
+    }
+
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         let ctx = ctx
@@ -38,28 +50,24 @@ struct AreaDetailView: View {
         List {
             if let view {
                 ForEach(view.projects, id: \.id) { project in
-                    Button {
-                        onOpenProject(project.id)
-                    } label: {
-                        HStack(spacing: Tokens.rowGlyphSpacing) {
-                            Image(systemName: "bookmark")
-                                .foregroundStyle(colors.textSecondary)
-                                .frame(width: Tokens.rowLeadingSlot)
-                                .accessibilityHidden(true)
-                            Text(project.title.isEmpty ? "New Project" : project.title)
-                                .dayruleRowTitle()
-                                .foregroundStyle(colors.text)
-                            Spacer(minLength: 0)
+                    RuledRow {
+                        Button {
+                            onOpenProject(project.id)
+                        } label: {
+                            HStack(spacing: Tokens.rowGlyphSpacing) {
+                                Image(systemName: "bookmark")
+                                    .foregroundStyle(colors.textSecondary)
+                                    .frame(width: Tokens.rowLeadingSlot)
+                                    .accessibilityHidden(true)
+                                Text(project.title.isEmpty ? "New Project" : project.title)
+                                    .dayruleRowTitle()
+                                    .foregroundStyle(colors.text)
+                                Spacer(minLength: 0)
+                            }
                         }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     .accessibilityIdentifier("area.project.\(project.id)")
-                    .listRowInsets(
-                        EdgeInsets(top: 0, leading: Tokens.rowInset, bottom: 0, trailing: Tokens.rowInset)
-                    )
-                    .listRowSeparatorTint(colors.hairline)
-                    .listRowBackground(colors.bg)
-                    .frame(minHeight: Tokens.rowMinHeight(dense: denseLayout))
                 }
 
                 if !view.todos.isEmpty, !view.projects.isEmpty {
@@ -86,6 +94,13 @@ struct AreaDetailView: View {
         .background(colors.bg)
         .navigationTitle(title)
         .dayruleListNavChrome(colors: colors)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            detailWidth = width
+        }
+        .contentMargins(.horizontal, readingMargin, for: .scrollContent)
+        .environment(\.dayruleReadingMargin, readingMargin)
         .dayruleEditablePageTitle(
             text: areaTitleBinding,
             prompt: "New Area",

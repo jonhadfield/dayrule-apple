@@ -403,7 +403,7 @@ struct ListsBrowserView: View {
                 Button {
                     selectTab(tab)
                 } label: {
-                    VStack(spacing: 4) {
+                    VStack(spacing: Tokens.Space.xs) {
                         Image(systemName: tab.systemImage)
                             .font(.system(size: tabIconSize, weight: .medium))
                             .symbolVariant(selected ? .fill : .none)
@@ -413,8 +413,7 @@ struct ListsBrowserView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, minHeight: Tokens.minHit)
                     .foregroundStyle(selected ? colors.accent : colors.textSecondary)
                     .dayruleAnimation(Motion.quick, value: selected)
                     .contentShape(Rectangle())
@@ -426,8 +425,8 @@ struct ListsBrowserView: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(.horizontal, 4)
-        .padding(.bottom, 2)
+        .padding(.horizontal, Tokens.Space.xs)
+        .padding(.bottom, Tokens.Space.xxs)
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .background(colors.sidebar)
         .overlay(alignment: .top) {
@@ -1064,8 +1063,7 @@ struct ListsBrowserView: View {
 
     /// Centres the list in a reading column on wide windows (regular width and macOS).
     private var readingMargin: CGFloat {
-        guard !isCompact else { return 0 }
-        return max(0, (detailWidth - Tokens.readingMaxWidth) / 2)
+        Tokens.readingMargin(width: detailWidth, compact: isCompact)
     }
 
     /// Inbox / Today / Backlog / Scheduled — same lists that used to host inline Add.
@@ -1085,7 +1083,9 @@ struct ListsBrowserView: View {
         ) {
             addTodo(to: list)
         }
-        .padding(.horizontal, readingMargin)
+        // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
+        // so the disc lines up with checkboxes (decision 19 / 68).
+        .padding(.horizontal, readingMargin + Tokens.rowInset)
         .background(colors.bg)
         .overlay(alignment: .top) {
             colors.hairline.frame(height: 1)
@@ -1125,7 +1125,6 @@ struct ListsBrowserView: View {
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(list.title)
         .dayruleListNavChrome(colors: colors)
-        .dayrulePageTitle(list.title)
         .scrollContentBackground(.hidden)
         .background(colors.bg)
         .onGeometryChange(for: CGFloat.self) { proxy in
@@ -1134,6 +1133,8 @@ struct ListsBrowserView: View {
             detailWidth = width
         }
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
+        .environment(\.dayruleReadingMargin, readingMargin)
+        .dayrulePageTitle(list.title)
         .refreshable {
             await model.syncNow()
         }
@@ -1170,8 +1171,8 @@ struct ListsBrowserView: View {
             VStack(spacing: 0) {
                 if model.needsServerSignIn {
                     syncSignInBanner(colors: colors)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, Tokens.rowInset + readingMargin)
+                        .padding(.vertical, Tokens.Space.s)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(colors.sidebar)
                         .overlay(alignment: .bottom) {

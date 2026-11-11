@@ -102,7 +102,7 @@ struct TagSheetView: View {
                             .dayruleSheetRow(colors: colors)
                     }
                 } header: {
-                    DayruleSectionHeader(title: "New tag")
+                    DayruleSectionHeader(title: "New tag", surface: .sheet)
                 }
             }
             .listStyle(.plain)

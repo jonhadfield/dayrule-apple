@@ -46,7 +46,7 @@ struct MoveSheetView: View {
                             }
                         }
                     } header: {
-                        DayruleSectionHeader(title: "Projects and areas")
+                        DayruleSectionHeader(title: "Projects and areas", surface: .sheet)
                     }
                 }
             }

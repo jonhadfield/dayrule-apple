@@ -141,6 +141,7 @@ struct GateView: View {
                 // outside this pair.
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .email)
+                    .id(Field.email)
                     .accessibilityIdentifier("gate.email")
                     .dayruleAutofillUsername()
                     .submitLabel(.next)
@@ -150,6 +151,7 @@ struct GateView: View {
 
                 SecureField("Password", text: $password, prompt: prompt("Password", colors))
                     .focused($focus, equals: .password)
+                    .id(Field.password)
                     .accessibilityIdentifier("gate.password")
                     .dayruleAutofillPassword()
                     .submitLabel(.go)
@@ -263,6 +265,7 @@ struct GateView: View {
 
                 TextField("Invite code", text: $model.inviteCode, prompt: prompt("Invite code", colors))
                     .focused($focus, equals: .invite)
+                    .id(Field.invite)
                     .accessibilityIdentifier("signup.invite")
                     .autocorrectionDisabled()
                     #if os(iOS)
@@ -275,6 +278,7 @@ struct GateView: View {
 
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .signupEmail)
+                    .id(Field.signupEmail)
                     .accessibilityIdentifier("signup.email")
                     .dayruleAutofillUsername()
                     .dayruleField(isFocused: focus == .signupEmail, colors: colors)
@@ -306,6 +310,7 @@ struct GateView: View {
 
                 TextField("Code", text: $model.signupCode, prompt: prompt("Code", colors))
                     .focused($focus, equals: .code)
+                    .id(Field.code)
                     .accessibilityIdentifier("signup.code")
                     .textContentType(.oneTimeCode)
                     .autocorrectionDisabled()
@@ -335,6 +340,7 @@ struct GateView: View {
 
                 SecureField("Password", text: $password, prompt: prompt("Password", colors))
                     .focused($focus, equals: .signupPassword)
+                    .id(Field.signupPassword)
                     .accessibilityIdentifier("signup.password")
                     .dayruleAutofillNewPassword()
                     .submitLabel(.next)
@@ -344,6 +350,7 @@ struct GateView: View {
 
                 SecureField("Confirm password", text: $confirmPassword, prompt: prompt("Confirm password", colors))
                     .focused($focus, equals: .confirmPassword)
+                    .id(Field.confirmPassword)
                     .accessibilityIdentifier("signup.confirmPassword")
                     .dayruleAutofillNewPassword()
                     .submitLabel(.go)
@@ -453,6 +460,7 @@ struct GateView: View {
 
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .recoveryEmail)
+                    .id(Field.recoveryEmail)
                     .accessibilityIdentifier("recovery.email")
                     .dayruleAutofillUsername()
                     .submitLabel(.next)
@@ -467,6 +475,7 @@ struct GateView: View {
                     axis: .vertical
                 )
                 .focused($focus, equals: .phrase)
+                .id(Field.phrase)
                 .lineLimit(4...8)
                 .autocorrectionDisabled()
                 #if os(iOS)
@@ -565,6 +574,7 @@ struct GateView: View {
                     .labelsHidden()
                     .lineLimit(1...3)
                     .focused($focus, equals: .api)
+                    .id(Field.api)
                     .accessibilityIdentifier(identifier)
                     .autocorrectionDisabled()
                     #if os(iOS)
@@ -607,19 +617,22 @@ struct GateView: View {
         identifier: String? = nil,
         colors: DayruleColors
     ) -> some View {
-        Text(title)
-            .font(font)
-            .tracking(DayruleType.titleTracking)
-            .foregroundStyle(colors.text)
-            .multilineTextAlignment(alignment)
-            .accessibilityAddTraits(.isHeader)
-            .accessibilityFocused($titleFocused)
-            .accessibilityIdentifier(identifier ?? "")
-        Text(intro)
-            .font(.body)
-            .foregroundStyle(colors.textSecondary)
-            .multilineTextAlignment(alignment)
-            .fixedSize(horizontal: false, vertical: true)
+        let stackAlignment: HorizontalAlignment = alignment == .center ? .center : .leading
+        VStack(alignment: stackAlignment, spacing: Tokens.Space.s) {
+            Text(title)
+                .font(font)
+                .tracking(DayruleType.titleTracking)
+                .foregroundStyle(colors.text)
+                .multilineTextAlignment(alignment)
+                .accessibilityAddTraits(.isHeader)
+                .accessibilityFocused($titleFocused)
+                .accessibilityIdentifier(identifier ?? "")
+            Text(intro)
+                .font(.body)
+                .foregroundStyle(colors.textSecondary)
+                .multilineTextAlignment(alignment)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     /// Inline error or info under the primary button.
@@ -635,7 +648,7 @@ struct GateView: View {
         }
     }
 
-    /// Form column: scrolls a new message into view and announces it.
+    /// Form column: scrolls a new message / focused field into view and announces errors.
     private func form<Content: View>(
         alignment: HorizontalAlignment,
         proxy: ScrollViewProxy,
@@ -652,6 +665,12 @@ struct GateView: View {
                 proxy.scrollTo("gate.message", anchor: .center)
             }
             AccessibilityNotification.Announcement(message).post()
+        }
+        .onChange(of: focus) { _, field in
+            guard let field else { return }
+            withAnimation(Motion.system(Motion.standard)) {
+                proxy.scrollTo(field, anchor: .center)
+            }
         }
     }
 }

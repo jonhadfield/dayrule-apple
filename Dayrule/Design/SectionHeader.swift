@@ -9,8 +9,10 @@ struct DayruleSectionHeader: View {
     }
 
     enum Surface {
-        /// Page lists and sheets: paper fill, hairline, full-width row.
+        /// Plain lists (Inbox / Today / Scheduled / org pages): `rowInset` rail.
         case page
+        /// Settings and picker sheets: `sheetInset` rail (decision 58 / 68).
+        case sheet
         /// iPad / Mac sidebar: no fill or hairline, sidebar insets.
         case sidebar
     }
@@ -46,15 +48,25 @@ struct DayruleSectionHeader: View {
         switch surface {
         case .page:
             pageChrome(row, colors: colors)
+        case .sheet:
+            sheetChrome(row, colors: colors)
         case .sidebar:
             row
         }
     }
 
     private func pageChrome(_ row: some View, colors: DayruleColors) -> some View {
-        // Match `DayruleSheetHeader`’s 20pt horizontal inset. On macOS, Section
-        // headers already get a system leading inset — extra padding here made
-        // chapter titles (“Your data”, “Help”) sit further in than the rows.
+        chrome(row, colors: colors, inset: Tokens.rowInset)
+    }
+
+    private func sheetChrome(_ row: some View, colors: DayruleColors) -> some View {
+        // Match `DayruleSheetHeader`. On macOS, Section headers already get a
+        // system leading inset — extra padding here made chapter titles sit
+        // further in than the rows (decision 58).
+        chrome(row, colors: colors, inset: Tokens.sheetInset)
+    }
+
+    private func chrome(_ row: some View, colors: DayruleColors, inset: CGFloat) -> some View {
         #if os(macOS)
         row
             .padding(.top, 14)
@@ -63,11 +75,11 @@ struct DayruleSectionHeader: View {
                 colors.hairline.frame(height: 1)
             }
             .background(colors.bg)
-            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
         #else
         row
-            .padding(.leading, Tokens.rowInset)
-            .padding(.trailing, Tokens.rowInset)
+            .padding(.leading, inset)
+            .padding(.trailing, inset)
             .padding(.top, 14)
             .padding(.bottom, 6)
             .overlay(alignment: .bottom) {
