@@ -73,7 +73,7 @@ struct WhenSheetView: View {
                             .dayruleSheetRow(colors: colors)
                     }
                 } header: {
-                    DayruleSectionHeader(title: "Type a date")
+                    DayruleSectionHeader(title: "Type a date", surface: .sheet)
                 }
                 SheetClearSection(title: "Clear", isVisible: !ids.isEmpty) { apply(.clear) }
             }

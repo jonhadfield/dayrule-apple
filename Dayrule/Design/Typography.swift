@@ -79,11 +79,22 @@ private struct DayruleDenseLayoutKey: EnvironmentKey {
     #endif
 }
 
+private struct DayruleReadingMarginKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
 extension EnvironmentValues {
     /// 15pt row type + 36pt row min-height (web desktop / Mac).
     var dayruleDenseLayout: Bool {
         get { self[DayruleDenseLayoutKey.self] }
         set { self[DayruleDenseLayoutKey.self] = newValue }
+    }
+
+    /// Extra horizontal inset that centres the reading column on wide windows
+    /// (PLAN decision 68). Page titles and selection chrome read this too.
+    var dayruleReadingMargin: CGFloat {
+        get { self[DayruleReadingMarginKey.self] }
+        set { self[DayruleReadingMarginKey.self] = newValue }
     }
 }
 

@@ -180,8 +180,8 @@ struct DayruleSheetHeader: View {
             .foregroundStyle(colors.text)
             .accessibilityAddTraits(.isHeader)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
+            .padding(.horizontal, Tokens.sheetInset)
+            .padding(.vertical, Tokens.Space.l)
             .overlay(alignment: .bottom) {
                 colors.hairline.frame(height: 1)
             }

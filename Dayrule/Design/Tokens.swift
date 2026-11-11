@@ -50,6 +50,8 @@ enum Tokens {
     }
 
     static let rowInset: CGFloat = 16
+    /// Settings / sheet chapter titles (decision 58 Mac rail; PLAN decision 68).
+    static let sheetInset: CGFloat = 20
     static let rowGlyphSpacing: CGFloat = 10
     static let rowLeadingSlot: CGFloat = 28
     /// Web `--row-height` at 900px and up.
@@ -70,6 +72,12 @@ enum Tokens {
     static let readingMaxWidth: CGFloat = 720
     static let minHit: CGFloat = 44
     static let badgeSize: CGFloat = 28
+
+    /// Side margin that centres content in `readingMaxWidth` on wide windows.
+    static func readingMargin(width: CGFloat, compact: Bool) -> CGFloat {
+        guard !compact else { return 0 }
+        return max(0, (width - readingMaxWidth) / 2)
+    }
 }
 
 extension Color {

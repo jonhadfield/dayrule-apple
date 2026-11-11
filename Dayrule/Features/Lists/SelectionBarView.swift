@@ -11,6 +11,7 @@ struct SelectionBarView: View {
     var onTrash: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.dayruleReadingMargin) private var readingMargin
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -30,7 +31,7 @@ struct SelectionBarView: View {
         .padding(.horizontal, Tokens.Space.s)
         .padding(.vertical, Tokens.Space.xs)
         .background(colors.text, in: Capsule())
-        .padding(.horizontal, Tokens.Space.m)
+        .padding(.horizontal, Tokens.Space.m + readingMargin)
         .padding(.vertical, Tokens.Space.s)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Selected to-dos")

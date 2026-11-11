@@ -143,7 +143,7 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            DayruleSectionHeader(title: "General")
+            DayruleSectionHeader(title: "General", surface: .sheet)
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -174,7 +174,7 @@ struct SettingsView: View {
                 colors: colors
             )
         } header: {
-            DayruleSectionHeader(title: "Sync & unlock")
+            DayruleSectionHeader(title: "Sync & unlock", surface: .sheet)
         } footer: {
             SettingsSyncUnlockFooter(model: model, colors: colors)
         }
@@ -229,7 +229,7 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            DayruleSectionHeader(title: "Reminders")
+            DayruleSectionHeader(title: "Reminders", surface: .sheet)
         } footer: {
             footerText(
                 remindersOn
@@ -268,7 +268,7 @@ struct SettingsView: View {
                 inlineError(importError, colors: colors)
             }
         } header: {
-            DayruleSectionHeader(title: "Your data")
+            DayruleSectionHeader(title: "Your data", surface: .sheet)
         } footer: {
             footerText(
                 "Exports aren’t encrypted. Unlock keys stay on this device.",
@@ -293,7 +293,7 @@ struct SettingsView: View {
                 .foregroundStyle(colors.textSecondary)
                 .accessibilityIdentifier("settings.about")
         } header: {
-            DayruleSectionHeader(title: "About")
+            DayruleSectionHeader(title: "About", surface: .sheet)
         }
         .dayruleSheetRow(colors: colors)
     }
@@ -318,7 +318,7 @@ struct SettingsView: View {
             }
             .accessibilityIdentifier("settings.delete")
         } header: {
-            DayruleSectionHeader(title: "Account")
+            DayruleSectionHeader(title: "Account", surface: .sheet)
         } footer: {
             footerText("Sign out keeps lists encrypted on this device.", colors: colors)
         }
@@ -665,8 +665,6 @@ private struct DeleteAccountView: View {
                 .buttonStyle(.dayruleDestructive)
                 .disabled(busy || password.isEmpty || confirm != "DELETE")
                 .accessibilityIdentifier("settings.delete.confirmButton")
-            } header: {
-                DayruleSectionHeader(title: "Delete account")
             } footer: {
                 Text("Removes your account and to-dos on the server and this device. It can’t be undone.")
                     .font(DayruleType.helper)
@@ -678,11 +676,7 @@ private struct DeleteAccountView: View {
         }
         .listStyle(.plain)
         .tint(colors.accent)
-        .navigationTitle("Delete account")
-        #if os(iOS)
-        .navigationBarTitleDisplayMode(.inline)
-        #endif
-        .background(colors.bg)
+        .settingsPushedPage(title: "Delete account")
     }
 
     private func runDelete() async {

@@ -47,7 +47,7 @@ struct HelpView: View {
                     .accessibilityIdentifier("help.topic.\(topic.rawValue)")
                 }
             } header: {
-                DayruleSectionHeader(title: "Articles")
+                DayruleSectionHeader(title: "Articles", surface: .sheet)
             }
             .dayruleSheetRow(colors: colors)
 
@@ -65,7 +65,7 @@ struct HelpView: View {
                 }
                 .accessibilityIdentifier("help.terms")
             } header: {
-                DayruleSectionHeader(title: "Legal")
+                DayruleSectionHeader(title: "Legal", surface: .sheet)
             }
             .dayruleSheetRow(colors: colors)
         }

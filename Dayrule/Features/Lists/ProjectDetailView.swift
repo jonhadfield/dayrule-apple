@@ -23,6 +23,7 @@ struct ProjectDetailView: View {
     @State private var repeatTarget: EditTarget?
     @State private var reminderTarget: EditTarget?
     @FocusState private var titleFocused: Bool
+    @State private var detailWidth: CGFloat = 0
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -31,6 +32,18 @@ struct ProjectDetailView: View {
     private struct WhenTarget: Identifiable {
         var id: String { ids.joined(separator: ",") }
         var ids: [ID]
+    }
+
+    private var isCompact: Bool {
+        #if os(iOS)
+        horizontalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+
+    private var readingMargin: CGFloat {
+        Tokens.readingMargin(width: detailWidth, compact: isCompact)
     }
 
     var body: some View {
@@ -120,6 +133,13 @@ struct ProjectDetailView: View {
         .background(colors.bg)
         .navigationTitle(title)
         .dayruleListNavChrome(colors: colors)
+        .onGeometryChange(for: CGFloat.self) { proxy in
+            proxy.size.width
+        } action: { width in
+            detailWidth = width
+        }
+        .contentMargins(.horizontal, readingMargin, for: .scrollContent)
+        .environment(\.dayruleReadingMargin, readingMargin)
         .dayruleEditablePageTitle(
             text: projectTitleBinding,
             prompt: "New Project",

@@ -143,9 +143,12 @@ struct DayruleTodoRow: View {
     }
 
     private func chipButton(_ chip: TodoRowModel.Chip, colors: DayruleColors) -> some View {
-        Button(action: chip.action) {
+        // Keep a 44pt hit target without growing dense 36pt rows (same negative
+        // inset pattern as DayruleCheckbox / PaperAddRow).
+        let chipHitInset = max(0, (Tokens.minHit - 28) / 2)
+        return Button(action: chip.action) {
             // Explicit icon + text: a `Label` in a row button can collapse to its icon.
-            HStack(spacing: 4) {
+            HStack(spacing: Tokens.Space.xs) {
                 Image(systemName: chip.systemImage)
                     .imageScale(.small)
                 Text(chip.label)
@@ -154,12 +157,13 @@ struct DayruleTodoRow: View {
             .foregroundStyle(chip.isOverdue ? colors.deadline : colors.textSecondary)
             .lineLimit(1)
             .fixedSize()
-            .padding(.vertical, 6)
-            .padding(.horizontal, 8)
+            .padding(.vertical, Tokens.Space.xs)
+            .padding(.horizontal, Tokens.Space.s)
             .frame(minHeight: Tokens.minHit)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .padding(.vertical, -chipHitInset)
         .layoutPriority(1)
     }
 

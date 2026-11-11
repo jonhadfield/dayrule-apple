@@ -32,7 +32,7 @@ struct MoveProjectSheetView: View {
                             .accessibilityIdentifier("moveProject.area.\(area.id)")
                         }
                     } header: {
-                        DayruleSectionHeader(title: "Areas")
+                        DayruleSectionHeader(title: "Areas", surface: .sheet)
                     }
                 }
             }

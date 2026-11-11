@@ -42,19 +42,23 @@ struct GateScaffold<Content: View>: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(alignment: alignment, spacing: Tokens.Space.l) {
-                        if let title {
-                            Text(title)
-                                .font(titleFont)
-                                .tracking(DayruleType.titleTracking)
-                                .multilineTextAlignment(textAlignment)
-                                .accessibilityAddTraits(.isHeader)
-                        }
-                        if let subtitle {
-                            Text(subtitle)
-                                .font(.body)
-                                .foregroundStyle(colors.textSecondary)
-                                .multilineTextAlignment(textAlignment)
-                                .fixedSize(horizontal: false, vertical: true)
+                        if title != nil || subtitle != nil {
+                            VStack(alignment: alignment, spacing: Tokens.Space.s) {
+                                if let title {
+                                    Text(title)
+                                        .font(titleFont)
+                                        .tracking(DayruleType.titleTracking)
+                                        .multilineTextAlignment(textAlignment)
+                                        .accessibilityAddTraits(.isHeader)
+                                }
+                                if let subtitle {
+                                    Text(subtitle)
+                                        .font(.body)
+                                        .foregroundStyle(colors.textSecondary)
+                                        .multilineTextAlignment(textAlignment)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
                         }
                         content(proxy)
                     }

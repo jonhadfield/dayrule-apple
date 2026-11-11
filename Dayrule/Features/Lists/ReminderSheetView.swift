@@ -60,7 +60,7 @@ struct ReminderSheetView: View {
                         .labelsHidden()
                         .accessibilityIdentifier("reminder.date")
                     } header: {
-                        DayruleSectionHeader(title: "Day")
+                        DayruleSectionHeader(title: "Day", surface: .sheet)
                     }
                     .dayruleSheetRow(colors: colors)
                 }
@@ -70,7 +70,7 @@ struct ReminderSheetView: View {
                     }
                     .accessibilityIdentifier("reminder.time")
                 } header: {
-                    DayruleSectionHeader(title: "Time")
+                    DayruleSectionHeader(title: "Time", surface: .sheet)
                 } footer: {
                     Text("Reminders go off on the quarter hour. The server never sees what a reminder is for.")
                         .font(DayruleType.helper)

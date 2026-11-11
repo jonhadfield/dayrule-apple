@@ -38,7 +38,7 @@ struct RepeatSheetView: View {
                     }
                     .accessibilityIdentifier("repeat.every")
                 } header: {
-                    DayruleSectionHeader(title: "How often")
+                    DayruleSectionHeader(title: "How often", surface: .sheet)
                 }
                 .dayruleSheetRow(colors: colors)
                 if freq == .week && mode == .fixed {
@@ -49,7 +49,7 @@ struct RepeatSheetView: View {
                             }
                         }
                     } header: {
-                        DayruleSectionHeader(title: "On these days")
+                        DayruleSectionHeader(title: "On these days", surface: .sheet)
                     }
                     .dayruleSheetRow(colors: colors)
                 }
@@ -66,7 +66,7 @@ struct RepeatSheetView: View {
                     }
                     .accessibilityIdentifier("repeat.anchor")
                 } header: {
-                    DayruleSectionHeader(title: "Repeat")
+                    DayruleSectionHeader(title: "Repeat", surface: .sheet)
                 }
                 .dayruleSheetRow(colors: colors)
                 SheetClearSection(

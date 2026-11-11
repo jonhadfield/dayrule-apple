@@ -53,7 +53,7 @@ struct DeadlineSheetView: View {
                             .dayruleSheetRow(colors: colors)
                     }
                 } header: {
-                    DayruleSectionHeader(title: "Type a date")
+                    DayruleSectionHeader(title: "Type a date", surface: .sheet)
                 }
                 Section {
                     DatePicker(
@@ -65,7 +65,7 @@ struct DeadlineSheetView: View {
                     .labelsHidden()
                     .dayruleSheetRow(colors: colors)
                 } header: {
-                    DayruleSectionHeader(title: "Calendar")
+                    DayruleSectionHeader(title: "Calendar", surface: .sheet)
                 }
                 SheetClearSection(
                     title: "Remove deadline",
