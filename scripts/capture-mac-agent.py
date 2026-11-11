@@ -116,7 +116,7 @@ def hid_click(x: float, y: float) -> None:
 
 
 def window_probe() -> tuple[int, str, int]:
-    """Return (window_count, front_name, text_field_count)."""
+    """Return (window_count, front_name, text+secure field count)."""
     out = run_as(
         """
 tell application "System Events"
@@ -129,7 +129,8 @@ tell application "System Events"
     set ui to entire contents of window 1
     repeat with e in ui
       try
-        if (class of e as string) is "text field" then set n to n + 1
+        set cls to class of e as string
+        if cls is "text field" or cls is "secure text field" then set n to n + 1
       end try
     end repeat
     return (wc as string) & "|" & nm & "|" & (n as string)
@@ -139,6 +140,36 @@ end tell
     )
     parts = out.split("|", 2)
     return int(parts[0]), parts[1], int(parts[2])
+
+
+def dismiss_overlays() -> None:
+    """Escape password autofill / other sheets that steal the AX tree."""
+    try:
+        run_as(
+            """
+tell application "Dayrule" to activate
+delay 0.15
+tell application "System Events"
+  tell process "Dayrule"
+    set frontmost to true
+    key code 53
+    delay 0.2
+    key code 53
+  end tell
+end tell
+"""
+        )
+    except RuntimeError:
+        pass
+
+
+def expand_advanced() -> None:
+    """Optional: DEBUG gate hides Server under Advanced.
+
+    Skipped by default — production dayrule.app is already the unresolved
+    default, and the Advanced control often has no AX name on macOS.
+    """
+    return
 
 
 def has_static(label: str) -> bool:
@@ -191,6 +222,7 @@ end tell
 
 
 def set_field(index: int, value: str) -> None:
+    """Set the Nth text/secure field (1-based), in AX tree order."""
     lit = json.dumps(value)
     run_as(
         f"""
@@ -201,7 +233,8 @@ tell application "System Events"
     set fields to {{}}
     repeat with e in ui
       try
-        if (class of e as string) is "text field" then set end of fields to e
+        set cls to class of e as string
+        if cls is "text field" or cls is "secure text field" then set end of fields to e
       end try
     end repeat
     if (count of fields) < {index} then error "expected field {index}, have " & (count of fields)
@@ -353,12 +386,15 @@ end tell
     print("waiting for gate…")
     for i in range(40):
         time.sleep(1)
+        dismiss_overlays()
         try:
             _, name, fields = window_probe()
         except RuntimeError:
             continue
-        print(f"  gate t={i+1} win={name!r} fields={fields}")
-        if fields >= 3:
+        gate_label = has_static("Sign in to open your lists.")
+        print(f"  gate t={i+1} win={name!r} fields={fields} label={gate_label}")
+        # Collapsed Advanced: email + password (2). Expanded: + API (3).
+        if fields >= 2 and (gate_label or name in ("Dayrule", "")):
             break
         if (i + 1) % 5 == 0:
             try:
@@ -371,30 +407,45 @@ end tell
         raise SystemExit("sign-in gate never appeared")
 
     print("filling gate…")
-    set_field(1, API)
-    set_field(2, email)
-    set_field(3, password)
+    dismiss_overlays()
+    expand_advanced()
+    time.sleep(0.5)
+    _, _, fields = window_probe()
+    # Field order with Advanced open: API, Email, Password.
+    # With Advanced closed: Email, Password (production API is already default).
+    if fields >= 3:
+        set_field(1, API)
+        set_field(2, email)
+        set_field(3, password)
+        email_idx, pass_idx = 2, 3
+    else:
+        set_field(1, email)
+        set_field(2, password)
+        email_idx, pass_idx = 1, 2
     # verify without printing password
     verify = run_as(
-        """
+        f"""
 tell application "System Events"
   tell process "Dayrule"
     set ui to entire contents of window 1
-    set fields to {}
+    set fields to {{}}
     repeat with e in ui
       try
-        if (class of e as string) is "text field" then set end of fields to e
+        set cls to class of e as string
+        if cls is "text field" or cls is "secure text field" then set end of fields to e
       end try
     end repeat
-    return (value of item 1 of fields as string) & "|" & (value of item 2 of fields as string) & "|" & (length of (value of item 3 of fields as string) as string)
+    set em to value of item {email_idx} of fields as string
+    set plen to length of (value of item {pass_idx} of fields as string)
+    return em & "|" & (plen as string)
   end tell
 end tell
 """
     )
-    api_v, email_v, pass_len = verify.split("|", 2)
-    if "dayrule.app" not in api_v or email_v != email or int(pass_len) < 12:
-        raise SystemExit(f"gate fill failed: api={api_v!r} email={email_v!r} pass_len={pass_len}")
-    print(f"gate ok api={api_v} email={email_v} pass_len={pass_len}")
+    email_v, pass_len = verify.split("|", 1)
+    if email_v != email or int(pass_len) < 12:
+        raise SystemExit(f"gate fill failed: email={email_v!r} pass_len={pass_len}")
+    print(f"gate ok email={email_v} pass_len={pass_len} fields={fields}")
 
     click_signin()
     print("waiting for lists + Kitchen (AX omits project labels)…")
@@ -431,23 +482,61 @@ end tell
             "Kitchen never appeared — seed the agent account before capturing"
         )
 
-    click_static("Today")
+    def go(list_name: str) -> None:
+        """Sidebar select. After a project row, Today sometimes misses once — retry
+        via Inbox, then icon + label centers."""
+        for attempt in range(20):
+            try:
+                if window_probe()[1] == list_name:
+                    return
+            except RuntimeError:
+                pass
+            if attempt == 4 and list_name != "Inbox":
+                # Project rows can leave the next Today click dead; bounce via Inbox.
+                try:
+                    click_static("Inbox")
+                    time.sleep(0.4)
+                except RuntimeError:
+                    pass
+            try:
+                x, y = static_center(list_name)
+            except RuntimeError:
+                time.sleep(0.3)
+                continue
+            hid_click(x - 40, y)
+            time.sleep(0.35)
+            try:
+                if window_probe()[1] == list_name:
+                    return
+            except RuntimeError:
+                pass
+            hid_click(x, y)
+            time.sleep(0.35)
+        raise SystemExit(f"never reached list {list_name!r}")
+
+    # Leave Kitchen (probe used project coords) via Inbox so Today lands.
+    go("Inbox")
+    go("Today")
     shot("01-today")
-    click_static("Inbox")
+    go("Inbox")
     shot("02-inbox")
-    click_static("Scheduled")
+    go("Scheduled")
     shot("03-scheduled")
-    click_static("Backlog")
+    go("Backlog")
     shot("04-backlog")
     tx, ty = static_center("Trash")
     hid_click(tx - 20, ty + 56)
     time.sleep(0.3)
     if window_probe()[1] != "Kitchen":
         hid_click(tx - 20, ty + 72)
+        time.sleep(0.3)
+    if window_probe()[1] != "Kitchen":
+        raise SystemExit("never reached Kitchen for project shot")
     shot("05-project-kitchen")
     # First project todo — not exposed as AX static text
     ix, iy = static_center("Inbox")
     hid_click(ix + 340, iy + 110)
+    time.sleep(0.8)
     shot("06-editor-checklist")
 
     try:
