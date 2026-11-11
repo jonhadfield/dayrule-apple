@@ -16,12 +16,14 @@ private struct DayruleFieldModifier: ViewModifier {
             .padding(14)
             .background(colors.sidebar, in: shape)
             .overlay {
+                // Animate only the stroke — animating the whole field fights
+                // Password AutoFill / Bitwarden insertion into SecureField.
                 shape.strokeBorder(
                     isFocused ? colors.accent : colors.fieldBorder,
                     lineWidth: 1
                 )
+                .animation(Motion.quick, value: isFocused)
             }
-            .animation(Motion.quick, value: isFocused)
             #if os(macOS)
             .focusEffectDisabled()
             #endif
@@ -32,6 +34,39 @@ private struct DayruleFieldModifier: ViewModifier {
 extension View {
     func dayruleField(isFocused: Bool, colors: DayruleColors) -> some View {
         modifier(DayruleFieldModifier(isFocused: isFocused, colors: colors))
+    }
+
+    /// Account / email field for Password AutoFill (iCloud Keychain, Bitwarden, 1Password).
+    /// Use `.username` even when the value is an email so managers pair it with `.password`.
+    /// Requires Associated Domains `webcredentials:dayrule.app` (already in entitlements).
+    func dayruleAutofillUsername() -> some View {
+        self
+            .textContentType(.username)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            .keyboardType(.emailAddress)
+            #endif
+    }
+
+    /// Sign-in password for Password AutoFill / third-party managers.
+    func dayruleAutofillPassword() -> some View {
+        self
+            .textContentType(.password)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
+    }
+
+    /// New-password pair (signup). Managers offer generate + save.
+    func dayruleAutofillNewPassword() -> some View {
+        self
+            .textContentType(.newPassword)
+            .autocorrectionDisabled()
+            #if os(iOS)
+            .textInputAutocapitalization(.never)
+            #endif
     }
 
     /// Unboxed field for rows that already draw their own paper (PaperAddRow, sheet rows).

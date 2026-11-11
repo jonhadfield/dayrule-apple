@@ -637,7 +637,7 @@ private struct DeleteAccountView: View {
                     prompt: Text("Password").foregroundStyle(colors.textSecondary)
                 )
                 .dayruleBareField(colors: colors)
-                .textContentType(.password)
+                .dayruleAutofillPassword()
                 .accessibilityIdentifier("settings.delete.password")
                 TextField(
                     "Type DELETE to confirm",

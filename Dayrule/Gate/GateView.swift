@@ -136,15 +136,13 @@ struct GateView: View {
                     colors: colors
                 )
 
+                // Adjacent username + password so AutoFill / Bitwarden / Keychain
+                // can detect a login form (PLAN decision 67). Keep Advanced / toggles
+                // outside this pair.
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .email)
                     .accessibilityIdentifier("gate.email")
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    #endif
+                    .dayruleAutofillUsername()
                     .submitLabel(.next)
                     .onSubmit { focus = .password }
                     .dayruleField(isFocused: focus == .email, colors: colors)
@@ -153,11 +151,7 @@ struct GateView: View {
                 SecureField("Password", text: $password, prompt: prompt("Password", colors))
                     .focused($focus, equals: .password)
                     .accessibilityIdentifier("gate.password")
-                    .textContentType(.password)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
+                    .dayruleAutofillPassword()
                     .submitLabel(.go)
                     .onSubmit {
                         guard canSignIn else { return }
@@ -282,12 +276,7 @@ struct GateView: View {
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .signupEmail)
                     .accessibilityIdentifier("signup.email")
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    #endif
+                    .dayruleAutofillUsername()
                     .dayruleField(isFocused: focus == .signupEmail, colors: colors)
                     .disabled(busy)
                     .onChange(of: model.email) { codeSent = false }
@@ -347,7 +336,7 @@ struct GateView: View {
                 SecureField("Password", text: $password, prompt: prompt("Password", colors))
                     .focused($focus, equals: .signupPassword)
                     .accessibilityIdentifier("signup.password")
-                    .textContentType(.newPassword)
+                    .dayruleAutofillNewPassword()
                     .submitLabel(.next)
                     .onSubmit { focus = .confirmPassword }
                     .dayruleField(isFocused: focus == .signupPassword, colors: colors)
@@ -356,7 +345,7 @@ struct GateView: View {
                 SecureField("Confirm password", text: $confirmPassword, prompt: prompt("Confirm password", colors))
                     .focused($focus, equals: .confirmPassword)
                     .accessibilityIdentifier("signup.confirmPassword")
-                    .textContentType(.newPassword)
+                    .dayruleAutofillNewPassword()
                     .submitLabel(.go)
                     .onSubmit {
                         guard canContinue else { return }
@@ -464,12 +453,8 @@ struct GateView: View {
 
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .recoveryEmail)
-                    .textContentType(.username)
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    #endif
+                    .accessibilityIdentifier("recovery.email")
+                    .dayruleAutofillUsername()
                     .submitLabel(.next)
                     .onSubmit { focus = .phrase }
                     .dayruleField(isFocused: focus == .recoveryEmail, colors: colors)
