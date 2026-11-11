@@ -1068,6 +1068,31 @@ struct ListsBrowserView: View {
         return max(0, (detailWidth - Tokens.readingMaxWidth) / 2)
     }
 
+    /// Inbox / Today / Backlog / Scheduled — same lists that used to host inline Add.
+    private func listAllowsPinnedAdd(_ list: ListName) -> Bool {
+        list == .inbox || list == .today || list == .backlog || list == .scheduled
+    }
+
+    /// Sticky paper Add under the scrolling rows; keeps checkbox alignment (decision 19).
+    @ViewBuilder
+    private func pinnedPaperAdd(list: ListName, colors: DayruleColors) -> some View {
+        let draft = draftBinding(for: list)
+        PaperAddRow(
+            title: draft,
+            canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            keepFocusAfterSubmit: list != .scheduled,
+            focus: $addFieldFocused
+        ) {
+            addTodo(to: list)
+        }
+        .padding(.horizontal, readingMargin)
+        .background(colors.bg)
+        .overlay(alignment: .top) {
+            colors.hairline.frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+    }
+
     @ViewBuilder
     private func listDetail(list: ListName, colors: DayruleColors) -> some View {
         List {
@@ -1095,17 +1120,6 @@ struct ListsBrowserView: View {
                     .moveDisabled(!onMoveOK)
                 }
             }
-            if !selecting, list == .inbox || list == .today || list == .backlog || list == .scheduled {
-                let draft = draftBinding(for: list)
-                PaperAddRow(
-                    title: draft,
-                    canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-                    keepFocusAfterSubmit: list != .scheduled,
-                    focus: $addFieldFocused
-                ) {
-                    addTodo(to: list)
-                }
-            }
         }
         .listStyle(.plain)
         .scrollDismissesKeyboard(.interactively)
@@ -1124,6 +1138,8 @@ struct ListsBrowserView: View {
             await model.syncNow()
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Pin Add in the viewport (decision 64) so long Today/Inbox don’t
+            // bury the paper row. Selection bar still replaces it.
             if selecting {
                 SelectionBarView(
                     count: selectedIds.count,
@@ -1144,6 +1160,9 @@ struct ListsBrowserView: View {
                     onTrash: trashSelection
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+            } else if listAllowsPinnedAdd(list) {
+                pinnedPaperAdd(list: list, colors: colors)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .dayruleAnimation(Motion.standard, value: selecting)
