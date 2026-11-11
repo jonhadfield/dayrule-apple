@@ -1,13 +1,13 @@
 import SwiftUI
 
-/// Value-only input for `DayruleTodoRow` (no AppModel dependency).
-struct TodoRowModel {
-    /// Trailing chip, e.g. a deadline or When date that opens its sheet.
-    struct Chip {
+/// Value-only display input for `DayruleTodoRow` (no AppModel / closures).
+/// Equatable so list rows can use `.equatable()` and skip unchanged bodies.
+struct TodoRowModel: Equatable {
+    /// Trailing chip chrome (action lives on `DayruleTodoRow.onChip`).
+    struct Chip: Equatable {
         var label: String
         var systemImage: String
         var isOverdue: Bool
-        var action: () -> Void
     }
 
     var id: ID
@@ -19,11 +19,27 @@ struct TodoRowModel {
     var hasReminder: Bool = false
     var repeats: Bool = false
     var hasNotes: Bool = false
+    /// Labeled tuple is not `Equatable`-synthesizable; compare manually below.
     var checklist: (done: Int, total: Int)?
     var chip: Chip?
     /// VoiceOver hint for tapping the row; `nil` when tapping does nothing (Trash),
     /// which also drops the button trait and default action.
     var openHint: String? = "Opens to-do"
+
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.id == rhs.id
+            && lhs.title == rhs.title
+            && lhs.status == rhs.status
+            && lhs.subtitle == rhs.subtitle
+            && lhs.subtitleIsOverdue == rhs.subtitleIsOverdue
+            && lhs.hasReminder == rhs.hasReminder
+            && lhs.repeats == rhs.repeats
+            && lhs.hasNotes == rhs.hasNotes
+            && lhs.checklist?.done == rhs.checklist?.done
+            && lhs.checklist?.total == rhs.checklist?.total
+            && lhs.chip == rhs.chip
+            && lhs.openHint == rhs.openHint
+    }
 }
 
 /// Named VoiceOver action on a row (Move to Today, Trash, …).
@@ -33,13 +49,22 @@ struct RowAction {
 }
 
 /// Shared to-do row for list and project screens.
+///
+/// `Equatable` ignores closures and compares display + selection-mode inputs so
+/// `.equatable()` can skip re-renders when a parent list rebuilds unchanged rows.
+/// Callers that close over multi-select must pass `selecting` so toggle/open
+/// closures refresh when selection mode flips.
 struct DayruleTodoRow: View {
     var model: TodoRowModel
     var identifier: String
     var onToggle: () -> Void
     var onOpen: () -> Void
+    /// Chip tap; kept off `TodoRowModel` so the model stays value-Equatable.
+    var onChip: (() -> Void)? = nil
     /// Multi-select highlight (PLAN §6.5 selection mode).
     var isSelected: Bool = false
+    /// Closed over by list `onToggle` / `onOpen`; participates in `==`.
+    var selecting: Bool = false
     var accessibilityActions: [RowAction] = []
 
     @Environment(\.colorScheme) private var colorScheme
@@ -146,7 +171,7 @@ struct DayruleTodoRow: View {
         // Keep a 44pt hit target without growing dense 36pt rows (same negative
         // inset pattern as DayruleCheckbox / PaperAddRow).
         let chipHitInset = max(0, (Tokens.minHit - 28) / 2)
-        return Button(action: chip.action) {
+        return Button(action: { onChip?() }) {
             // Explicit icon + text: a `Label` in a row button can collapse to its icon.
             HStack(spacing: Tokens.Space.xs) {
                 Image(systemName: chip.systemImage)
@@ -182,6 +207,17 @@ struct DayruleTodoRow: View {
             parts.append(chip.isOverdue ? "Overdue, \(chip.label)" : chip.label)
         }
         return parts.joined(separator: ", ")
+    }
+}
+
+extension DayruleTodoRow: Equatable {
+    /// `nonisolated` so Swift 6 allows `Equatable` on a `@MainActor` `View`.
+    nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.model == rhs.model
+            && lhs.identifier == rhs.identifier
+            && lhs.isSelected == rhs.isSelected
+            && lhs.selecting == rhs.selecting
+            && lhs.accessibilityActions.map(\.name) == rhs.accessibilityActions.map(\.name)
     }
 }
 

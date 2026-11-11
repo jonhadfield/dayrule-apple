@@ -342,6 +342,7 @@ struct ProjectDetailView: View {
                 RowAction(name: "Trash") { trash(todo.id, title: title) },
             ]
         )
+        .equatable()
         .opacity(model.linger.fading.contains(todo.id) ? 0 : 1)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {

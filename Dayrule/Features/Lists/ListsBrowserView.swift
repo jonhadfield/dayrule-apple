@@ -1413,9 +1413,7 @@ struct ListsBrowserView: View {
                     label: trailing.label,
                     systemImage: trailing.systemImage,
                     isOverdue: trailing.isOverdue
-                ) {
-                    whenTarget = WhenTarget(ids: [row.id])
-                }
+                )
             },
             openHint: list == .trash ? nil : (row.isTodo ? "Opens to-do" : "Opens project")
         )
@@ -1503,9 +1501,12 @@ struct ListsBrowserView: View {
                 }
             },
             onOpen: { openRow(row, list: list) },
+            onChip: row.trailing == nil ? nil : { whenTarget = WhenTarget(ids: [row.id]) },
             isSelected: selecting && selectedIds.contains(row.id),
+            selecting: selecting,
             accessibilityActions: rowActions(row, list: list)
         )
+        .equatable()
         .opacity(model.linger.fading.contains(row.id) ? 0 : 1)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if list == .trash {
