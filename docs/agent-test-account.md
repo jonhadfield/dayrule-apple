@@ -46,7 +46,14 @@ scripts, Mac UI driving, etc.) uses this one.
    scripts refuse to write PNGs until Kitchen is visible so a personal vault
    is never captured by mistake.
 
-5. Point capture at the agent file:
+5. Point capture at the agent file. **Mac preferred path** (see
+   `docs/mac-app-store.md`):
+
+   ```bash
+   python3 scripts/capture-mac-agent.py agent-creds.txt
+   ```
+
+   Fallbacks:
 
    ```bash
    CAPTURE=macos ./scripts/capture-app-store-screenshots.sh agent-creds.txt
@@ -55,7 +62,8 @@ scripts, Mac UI driving, etc.) uses this one.
    ```
 
    Scripts default to `agent-creds.txt` when present, else fall back to an
-   explicit path argument — not to `creds.txt`.
+   explicit path argument — not to `creds.txt`. iPhone/iPad ASC shots still
+   use `CAPTURE=iphone` / `CAPTURE=ipad` with the UITest harness.
 
 ## Rules
 

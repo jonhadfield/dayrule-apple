@@ -27,18 +27,30 @@ iPhone build you care about).
    Store Connect**. The local keychain may only have Apple Development +
    Developer ID; Xcode re-signs for the Mac App Store on upload if the
    team can issue **Apple Distribution**.
-2. **Screenshots** — capture with
-   `CAPTURE=macos scripts/capture-app-store-screenshots.sh` (agent test
-   account in local `agent-creds.txt` — not App Review `creds.txt`; see
-   `docs/agent-test-account.md`). On first run, macOS may prompt to allow
-   **Accessibility** for Xcode (System Settings → Privacy & Security →
-   Accessibility); without it the UITest cannot see the gate. If the Mac
-   session is stay-unlocked, the UITest often never sees `gate.email` —
-   use `scripts/capture-mac-asc-applescript.sh` after a Debug build, or
-   keep the Kitchen set already in `docs/app-store-screenshots/macos/`.
+2. **Screenshots** — prefer the Mac agent driver (not App Review creds):
+
+   ```bash
+   # Debug Dayrule.app under DerivedData/Dayrule-*/Build/Products/Debug/
+   python3 scripts/capture-mac-agent.py agent-creds.txt
+   ```
+
+   Uses System Events + HID clicks against the **agent** vault
+   (`agent-creds.txt` — see `docs/agent-test-account.md`). Needs
+   **Accessibility** for Terminal/your shell (System Settings → Privacy &
+   Security → Accessibility). Handles the DEBUG gate with Advanced
+   collapsed (email + password; production API is the default), dismisses
+   password autofill, and waits for Kitchen before writing PNGs to
+   `docs/app-store-screenshots/macos/`.
+
+   Fallbacks when the Python path is awkward: UITest via
+   `CAPTURE=macos scripts/capture-app-store-screenshots.sh agent-creds.txt`
+   (Xcode needs Accessibility; stay-unlocked sessions often miss
+   `gate.email`), or `scripts/capture-mac-asc-applescript.sh` after a Debug
+   build.
+
    Upload sizes Apple lists for Mac (commonly 1280×800, 1440×900,
    2560×1600 / 2880×1800). Window captures are Retina-scaled (2784×1824);
-   resize before ASC:
+   resize before ASC (`macos-2560x1600/` is gitignored):
 
    ```bash
    mkdir -p docs/app-store-screenshots/macos-2560x1600
