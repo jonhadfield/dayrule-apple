@@ -48,7 +48,7 @@ in code or by a named manual step — not by assumption.
 ## Manual / release gates
 
 - [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.1 (26)** iOS uploaded 2026-11-11 — matches Mac **(26)** already on ASC; prior **(25)** pinned paper Add (#93); **(24)** Settings/sidebar drop (#87–#89); `0.1.0` train closed for new submissions)
-- [x] App Store **0.1.1** submitted for review 2026-11-11 — iOS build **25**, Mac build **26** (Waiting for Review); denser agent-seeded screenshots on the version page
+- [x] App Store **0.1.1** submitted for review 2026-11-11 — iOS + Mac build **26** (Waiting for Review; iOS binary swapped from 25 after TF upload); denser agent-seeded screenshots on the version page
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
