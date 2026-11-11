@@ -1,4 +1,7 @@
 import XCTest
+#if os(macOS)
+import AppKit
+#endif
 
 /// Captures App Store screenshots against production using the demo account.
 /// Run only via `scripts/capture-app-store-screenshots.sh` (not in normal CI).
@@ -105,6 +108,16 @@ final class AppStoreScreenshotTests: XCTestCase {
 
         let app = XCUIApplication()
         app.launchEnvironment["DAYRULE_API"] = "https://dayrule.app"
+        #if os(macOS)
+        // Stuck Debug Dayrule (stay-unlocked / hung) makes launch()'s terminate
+        // fail. Force-quit via AppKit before XCUIApplication.launch.
+        for running in NSRunningApplication.runningApplications(
+            withBundleIdentifier: "uk.co.lessknown.dayrule"
+        ) {
+            _ = running.forceTerminate()
+        }
+        Thread.sleep(forTimeInterval: 1)
+        #endif
         app.launch()
         #if os(macOS)
         app.activate()
@@ -251,13 +264,81 @@ final class AppStoreScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.4)
         }
 
+        /// Add sample titles via pinned/list Add when missing (agent vault for ASC).
+        func seedMissing(_ titles: [String], dismissWhenSheet: Bool = false) {
+            for title in titles {
+                if app.staticTexts[title].waitForExistence(timeout: 0.4) { continue }
+                let field = app.textFields["list.addField"]
+                guard field.waitForExistence(timeout: 4) else { continue }
+                field.tap()
+                field.typeText(title)
+                let add = app.buttons["list.addButton"]
+                if add.waitForExistence(timeout: 2), add.isEnabled {
+                    add.tap()
+                } else {
+                    field.typeText("\n")
+                }
+                Thread.sleep(forTimeInterval: 0.5)
+                if dismissWhenSheet {
+                    // Scheduled Add opens When (already tomorrow). Prefer the
+                    // selected chip button; swipe dismisses if ambiguous.
+                    let tomorrowChip = app.buttons["Tomorrow"]
+                    if tomorrowChip.waitForExistence(timeout: 2) {
+                        tomorrowChip.firstMatch.tap()
+                        Thread.sleep(forTimeInterval: 0.4)
+                    } else {
+                        app.swipeDown()
+                        Thread.sleep(forTimeInterval: 0.4)
+                    }
+                }
+            }
+            // Leave Add so shots aren’t keyboard-first.
+            if app.buttons["list.addDone"].waitForExistence(timeout: 1) {
+                app.buttons["list.addDone"].tap()
+            }
+            dismissKeyboard()
+            // Tap the large title to clear any lingering keyboard chrome.
+            if app.navigationBars.firstMatch.exists {
+                app.navigationBars.firstMatch.tap()
+            }
+            Thread.sleep(forTimeInterval: 0.6)
+        }
+
+        // Fatten sparse agent lists so ASC shots aren’t empty paper.
         go("today")
+        seedMissing([
+            "Review today's list",
+            "Walk for twenty minutes",
+            "Reply to the school email",
+            "Pick up dry cleaning",
+            "Book dentist check-up",
+            "Water the plants",
+            "Prep tomorrow's lunch",
+            "Call the plumber back",
+        ])
         shot("01-today")
 
         go("inbox")
+        seedMissing([
+            "Welcome — try completing this",
+            "Read the library holds email",
+            "Sort the recycling",
+            "Draft weekend plan",
+            "Return the borrowed book",
+            "Check the boiler pressure",
+            "Order dishwasher tablets",
+            "Email the landlord about the leak",
+            "Sharpen the kitchen knives",
+        ])
         shot("02-inbox")
 
         go("scheduled")
+        seedMissing([
+            "Museum with the kids",
+            "MOT appointment",
+            "Garden centre run",
+            "Softball practice",
+        ], dismissWhenSheet: true)
         shot("03-scheduled")
 
         if phone {
@@ -281,6 +362,12 @@ final class AppStoreScreenshotTests: XCTestCase {
             }
         } else {
             go("backlog")
+            seedMissing([
+                "Plan spring planting",
+                "Replace hallway bulbs",
+                "Catalogue the vinyl",
+                "Research heat pump quotes",
+            ])
             shot("04-backlog")
             ensureSidebarVisible(app)
             // Prefer sidebar project control — "Kitchen" also appears as a todo tag.
