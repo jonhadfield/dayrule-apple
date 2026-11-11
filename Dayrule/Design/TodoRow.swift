@@ -212,12 +212,13 @@ struct DayruleTodoRow: View {
 
 extension DayruleTodoRow: Equatable {
     /// `nonisolated` so Swift 6 allows `Equatable` on a `@MainActor` `View`.
+    /// Skip `accessibilityActions` — its closures are MainActor-isolated and action
+    /// *names* almost never change without a model / selection update.
     nonisolated static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.model == rhs.model
             && lhs.identifier == rhs.identifier
             && lhs.isSelected == rhs.isSelected
             && lhs.selecting == rhs.selecting
-            && lhs.accessibilityActions.map(\.name) == rhs.accessibilityActions.map(\.name)
     }
 }
 
