@@ -1,9 +1,21 @@
 name: CI
 
+# Cost: macOS minutes dominate. Run only on PRs (not again on main merge),
+# skip docs/version-only diffs, honour ci-skip, and use one macos-15 job
+# (shared setup → Mac build → iOS unit tests). See PLAN decision 65.
 on:
   pull_request:
-  push:
-    branches: [main]
+    paths-ignore:
+      # Workflow is skipped only when *every* changed file matches these.
+      - "docs/**"
+      - "claudedocs/**"
+      - ".agents/**"
+      - "**/*.md"
+      - "**/*.png"
+      - "skills-lock.json"
+      - "project.yml"
+      - "Dayrule.xcodeproj/**"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,15 +26,16 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Shared setup is duplicated across jobs so Build macOS and Test iOS overlap
-# (wall-clock). Each job stays self-contained — no DerivedData artifacts.
-# Keep job budgets tight: hung simctl/xcodebuild has burned hour-long macOS
-# minutes before (decision 33, 45).
 jobs:
-  build-macos:
+  ci:
+    # Label escape hatch for WIP PRs that touch code but should not bill yet.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      !contains(github.event.pull_request.labels.*.name, 'ci-skip')
     runs-on: macos-15
-    # Healthy runs finish in ~2–3m wall-clock; keep a little brew/cold-cache headroom.
-    timeout-minutes: 8
+    # Healthy serial run ~5–8m (one setup + Mac build + iOS tests). Cap under
+    # the old parallel pair’s combined bill; hung simctl must not run long.
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -72,49 +85,6 @@ jobs:
             -scheme Dayrule \
             -destination 'platform=macOS' \
             CODE_SIGNING_ALLOWED=NO
-
-  test-ios:
-    runs-on: macos-15
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-
-      - name: Select Xcode
-        timeout-minutes: 1
-        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Verify shared fixture lock
-        timeout-minutes: 1
-        run: |
-          set -euo pipefail
-          while read -r line; do
-            case "$line" in
-              web_commit=*)
-                sha="${line#web_commit=}"
-                [[ "$sha" =~ ^[0-9a-f]{40}$ ]] || {
-                  echo "SHARED.lock web_commit must be a full 40-char SHA, got: $sha" >&2
-                  exit 1
-                }
-                ;;
-              *)
-                hash="${line%%  *}"
-                file="${line#*  }"
-                actual="$(shasum -a 256 "docs/shared/$file" | awk '{print $1}')"
-                test "$hash" = "$actual"
-                ;;
-            esac
-          done < docs/shared/SHARED.lock
-
-      - name: Generate project
-        timeout-minutes: 3
-        run: brew install xcodegen && xcodegen generate
-
-      - name: Resolve packages
-        timeout-minutes: 3
-        run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
       # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
