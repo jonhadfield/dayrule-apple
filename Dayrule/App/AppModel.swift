@@ -1275,6 +1275,17 @@ final class AppModel {
         entitiesDidChange(animation: nil)
     }
 
+    /// Settings hold/flush (decision 59): whether a list refresh is deferred.
+    var testingListRefreshPending: Bool { listRefreshPending }
+
+    var testingSettingsHoldsListRefresh: Bool { settingsHoldsListRefresh }
+
+    /// Flush immediately (tests skip the dismiss animation delay).
+    func testingFlushPendingListRefresh() {
+        settingsHoldsListRefresh = false
+        flushPendingListRefresh()
+    }
+
     func testingSetGateBusy(_ busy: Bool) {
         gateBusy = busy
     }
@@ -1282,6 +1293,27 @@ final class AppModel {
     /// Test hook: set Gate phase without running unlock / vault open.
     func testingSetPhase(_ phase: Phase) {
         self.phase = phase
+    }
+
+    /// Empty unlocked vault for UI accessibility audits (`DAYRULE_UI_TEST_UNLOCKED=1`).
+    func testingOpenEmptyUnlockedVault() async {
+        Primitives.ready()
+        let userId = "ui-test-unlocked"
+        let salt = Primitives.randomBytes(CryptoConstants.saltBytes)
+        do {
+            _ = try await crypto.createLocalDemo(
+                password: "password-ok-12",
+                userId: userId,
+                salt: salt
+            )
+            store.hydrate(.empty())
+            vaultLoading = false
+            phase = .unlocked
+            bumpIdle()
+        } catch {
+            errorMessage = error.localizedDescription
+            phase = .locked
+        }
     }
 
     /// Invoked after the unlocked-phase check on the BG success path, before

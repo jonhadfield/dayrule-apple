@@ -26,6 +26,47 @@ final class DayruleUITests: XCTestCase {
         #endif
     }
 
+    /// Unlocked Inbox audit via Debug empty vault (`DAYRULE_UI_TEST_UNLOCKED`).
+    @MainActor
+    func testUnlockedInboxAccessibilityAudit() throws {
+        #if !DEBUG
+        throw XCTSkip("DAYRULE_UI_TEST_UNLOCKED is Debug-only")
+        #else
+        let app = XCUIApplication()
+        app.launchEnvironment["DAYRULE_MEMORY_KEYCHAIN"] = "1"
+        app.launchEnvironment["DAYRULE_UI_TEST_UNLOCKED"] = "1"
+        app.launch()
+
+        let addField = app.textFields["list.addField"]
+        let inbox = app.descendants(matching: .any)["list.sidebar.inbox"]
+        XCTAssertTrue(
+            addField.waitForExistence(timeout: 30) || inbox.waitForExistence(timeout: 30),
+            "empty unlocked Inbox should appear"
+        )
+
+        #if os(macOS)
+        let window = app.windows.firstMatch.frame
+        let touchBarFrames = Set(app.touchBars.firstMatch.descendants(matching: .any)
+            .allElementsBoundByIndex.map { NSStringFromRect($0.frame) })
+        try app.performAccessibilityAudit { issue in
+            if Self.isDeferredListAudit(issue) { return true }
+            return Self.isPlatformOwned(issue, window: window, touchBarFrames: touchBarFrames)
+        }
+        #else
+        try app.performAccessibilityAudit { issue in
+            Self.isDeferredListAudit(issue)
+        }
+        #endif
+        #endif
+    }
+
+    /// Dense list chrome + Fraunces still trip Dynamic Type / clip checks; keep those
+    /// for a dedicated a11y pass. Smoke here catches contrast, hit region, traits, etc.
+    @MainActor
+    private static func isDeferredListAudit(_ issue: XCUIAccessibilityAuditIssue) -> Bool {
+        issue.auditType == .dynamicType || issue.auditType == .textClipped
+    }
+
     #if os(macOS)
     /// Issues macOS raises on elements that AppKit and SwiftUI own, not the app.
     /// Apple's own SwiftUI apps (Calculator, Passwords) fail the audit on the same

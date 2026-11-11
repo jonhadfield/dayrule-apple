@@ -84,7 +84,15 @@ struct GateView: View {
             colors.bg.ignoresSafeArea()
         }
         .dayruleAnimation(Motion.screen, value: screen)
-        .task { await model.tryDeviceUnlock() }
+        .task {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["DAYRULE_UI_TEST_UNLOCKED"] == "1" {
+                await model.testingOpenEmptyUnlockedVault()
+                return
+            }
+            #endif
+            await model.tryDeviceUnlock()
+        }
         .onChange(of: screen) { _, next in
             focus = nil
             guard next != .restoring, next != .unlocked else { return }
