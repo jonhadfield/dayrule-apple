@@ -76,8 +76,11 @@ struct ListsBrowserView: View {
     @State private var phonePath: [PhoneRoute] = []
     @State private var phoneTab: PhoneTab = .inbox
     @State private var didApplyDefaultList = false
-    /// Per-list Add drafts so switching tabs doesn’t leak half-typed titles.
-    @State private var draftTitles: [ListName: String] = [:]
+    /// Add drafts live in an `@Observable` store observed only by the pinned
+    /// Add bar — typing must not invalidate this shell (and re-walk lists).
+    @State private var addDrafts = ListAddDrafts()
+    /// Bumped to ask the Add bar to focus (Home Screen / ⌘N).
+    @State private var addFocusNonce = 0
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
     @State private var tagTarget: WhenTarget?
@@ -102,7 +105,6 @@ struct ListsBrowserView: View {
     @State private var cachedTrashCount = 0
     @State private var cachedBacklogCount = 0
     @State private var cachedDoneCount = 0
-    @FocusState private var addFieldFocused: Bool
     @ScaledMetric(relativeTo: .body) private var tabIconSize: CGFloat = 18
     @ScaledMetric(relativeTo: .body) private var browseIconWidth: CGFloat = 22
 
@@ -297,7 +299,7 @@ struct ListsBrowserView: View {
         selection = .inbox
         // Wait a turn so the Inbox Add row is on screen before focusing.
         Task { @MainActor in
-            addFieldFocused = true
+            addFocusNonce &+= 1
         }
     }
 
@@ -523,13 +525,6 @@ struct ListsBrowserView: View {
             }
             .help("Settings (⌘,)")
         }
-    }
-
-    private func draftBinding(for list: ListName) -> Binding<String> {
-        Binding(
-            get: { draftTitles[list] ?? "" },
-            set: { draftTitles[list] = $0 }
-        )
     }
 
     @ViewBuilder
@@ -1074,23 +1069,17 @@ struct ListsBrowserView: View {
     /// Sticky paper Add under the scrolling rows; keeps checkbox alignment (decision 19).
     @ViewBuilder
     private func pinnedPaperAdd(list: ListName, colors: DayruleColors) -> some View {
-        let draft = draftBinding(for: list)
-        PaperAddRow(
-            title: draft,
-            canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            keepFocusAfterSubmit: list != .scheduled,
-            focus: $addFieldFocused
-        ) {
-            addTodo(to: list)
+        // Separate view observes `addDrafts` so keystrokes don’t rebuild `List`.
+        PinnedListAddBar(
+            drafts: addDrafts,
+            list: list,
+            colors: colors,
+            readingMargin: readingMargin,
+            focusNonce: addFocusNonce,
+            keepFocusAfterSubmit: list != .scheduled
+        ) { title in
+            addTodo(to: list, title: title)
         }
-        // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
-        // so the disc lines up with checkboxes (decision 19 / 68).
-        .padding(.horizontal, readingMargin + Tokens.rowInset)
-        .background(colors.bg)
-        .overlay(alignment: .top) {
-            colors.hairline.frame(height: 1)
-        }
-        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
@@ -1263,6 +1252,7 @@ struct ListsBrowserView: View {
     @ViewBuilder
     private func scheduledSections(colors: DayruleColors) -> some View {
         let scheduled = Lists.scheduled(model.entities, ctx)
+        let progress = Self.checklistProgress(model.entities)
         let dayGroups = scheduled.days.filter { !$0.items.isEmpty }
         let monthGroups = scheduled.months.filter { !$0.items.isEmpty }
         if dayGroups.isEmpty, monthGroups.isEmpty, scheduled.waiting.isEmpty {
@@ -1271,7 +1261,7 @@ struct ListsBrowserView: View {
             ForEach(dayGroups, id: \.date) { day in
                 Section {
                     ForEach(day.items, id: \.id) { item in
-                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                     }
                 } header: {
                     scheduledDayHeader(day.date, colors: colors)
@@ -1280,7 +1270,7 @@ struct ListsBrowserView: View {
             ForEach(monthGroups, id: \.month) { month in
                 Section {
                     ForEach(month.items, id: \.id) { item in
-                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                     }
                 } header: {
                     DayruleSectionHeader(
@@ -1293,7 +1283,7 @@ struct ListsBrowserView: View {
             if !scheduled.waiting.isEmpty {
                 Section {
                     ForEach(scheduled.waiting, id: \.id) { item in
-                        listRow(scheduledRow(item), list: .scheduled, colors: colors)
+                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                     }
                 } header: {
                     DayruleSectionHeader(title: "Waiting", tone: .accent, style: .caps)
@@ -1315,9 +1305,9 @@ struct ListsBrowserView: View {
         return DayruleSectionHeader(title: header.primary, tone: .accent, style: .caps, trailing: trailing)
     }
 
-    private func scheduledRow(_ item: ListItem) -> Row {
+    private func scheduledRow(_ item: ListItem, progress: [ID: (done: Int, total: Int)]) -> Row {
         if item.isTodo, let t = model.entities.todos[item.id] {
-            return todoRow(t, subtitle: nil, trailing: nil, overdue: false)
+            return todoRow(t, subtitle: nil, trailing: nil, overdue: false, progress: progress)
         }
         return Row(
             id: item.id,
@@ -1746,6 +1736,7 @@ struct ListsBrowserView: View {
     }
 
     private func rows(for name: ListName) -> [Row] {
+        let progress = Self.checklistProgress(model.entities)
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
@@ -1753,7 +1744,8 @@ struct ListsBrowserView: View {
                     $0,
                     subtitle: $0.deadline.map { DayruleDateFormat.due($0, today: ctx.today) },
                     trailing: nil,
-                    overdue: Lists.isOverdue(.todo($0), ctx)
+                    overdue: Lists.isOverdue(.todo($0), ctx),
+                    progress: progress
                 )
             }
         case .today:
@@ -1765,7 +1757,8 @@ struct ListsBrowserView: View {
                         t,
                         subtitle: kind,
                         trailing: trailing,
-                        overdue: Lists.isOverdue($0, ctx)
+                        overdue: Lists.isOverdue($0, ctx),
+                        progress: progress
                     )
                 }
                 return Row(
@@ -1781,12 +1774,18 @@ struct ListsBrowserView: View {
         case .scheduled:
             // Prefer `scheduledSections`; this path is unused for phone listDetail.
             return Lists.scheduled(model.entities, ctx).days.flatMap { day in
-                day.items.map { scheduledRow($0) }
+                day.items.map { scheduledRow($0, progress: progress) }
             }
         case .backlog:
             return Lists.backlog(model.entities, ctx).flatMap { g in
                 g.todos.map {
-                    todoRow($0, subtitle: containerLabel(g.container), trailing: nil, overdue: false)
+                    todoRow(
+                        $0,
+                        subtitle: containerLabel(g.container),
+                        trailing: nil,
+                        overdue: false,
+                        progress: progress
+                    )
                 }
             }
         case .notNow:
@@ -1794,14 +1793,14 @@ struct ListsBrowserView: View {
             return n.projects.map {
                 Row(id: $0.id, title: $0.title, subtitle: "Project", isTodo: false, status: $0.status)
             } + n.todos.map {
-                todoRow($0, subtitle: nil, trailing: nil, overdue: false)
+                todoRow($0, subtitle: nil, trailing: nil, overdue: false, progress: progress)
             }
         case .done:
             return Lists.doneList(model.entities, ctx).flatMap { day in
                 let when = DayruleDateFormat.relative(day.date, today: ctx.today)
                 return day.items.map {
                     if $0.isTodo, let t = model.entities.todos[$0.id] {
-                        return todoRow(t, subtitle: when, trailing: nil, overdue: false)
+                        return todoRow(t, subtitle: when, trailing: nil, overdue: false, progress: progress)
                     }
                     return Row(id: $0.id, title: $0.title, subtitle: when, isTodo: false, status: $0.status)
                 }
@@ -1812,11 +1811,24 @@ struct ListsBrowserView: View {
                 Row(id: $0.id, title: $0.title, subtitle: "Area", isTodo: false, status: .open)
             } + t.items.map {
                 if $0.isTodo, let todo = model.entities.todos[$0.id] {
-                    return todoRow(todo, subtitle: nil, trailing: nil, overdue: false)
+                    return todoRow(todo, subtitle: nil, trailing: nil, overdue: false, progress: progress)
                 }
                 return Row(id: $0.id, title: $0.title, subtitle: nil, isTodo: $0.isTodo, status: $0.status)
             }
         }
+    }
+
+    /// One pass over checklist items for a list snapshot (avoids per-row filters).
+    private static func checklistProgress(_ e: Entities) -> [ID: (done: Int, total: Int)] {
+        var map: [ID: (done: Int, total: Int)] = [:]
+        map.reserveCapacity(min(e.checklistItems.count, e.todos.count))
+        for item in e.checklistItems.values {
+            var entry = map[item.todoId, default: (done: 0, total: 0)]
+            entry.total += 1
+            if item.done { entry.done += 1 }
+            map[item.todoId] = entry
+        }
+        return map
     }
 
     private func todayTrailing(for item: ListItem) -> TrailingChip? {
@@ -1844,9 +1856,14 @@ struct ListsBrowserView: View {
         return "\(days)d overdue"
     }
 
-    private func todoRow(_ todo: Todo, subtitle: String?, trailing: TrailingChip?, overdue: Bool) -> Row {
-        let checklist = model.entities.checklistItems.values.filter { $0.todoId == todo.id }
-        let done = checklist.filter(\.done).count
+    private func todoRow(
+        _ todo: Todo,
+        subtitle: String?,
+        trailing: TrailingChip?,
+        overdue: Bool,
+        progress: [ID: (done: Int, total: Int)]
+    ) -> Row {
+        let checklist = progress[todo.id]
         return Row(
             id: todo.id,
             title: todo.title.isEmpty ? "Untitled" : todo.title,
@@ -1857,13 +1874,13 @@ struct ListsBrowserView: View {
             hasReminder: todo.reminderAt != nil,
             isRepeating: todo.repeat != nil || todo.repeatTemplateId != nil,
             hasNotes: !todo.notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            checklist: checklist.isEmpty ? nil : (done: done, total: checklist.count),
+            checklist: checklist.flatMap { $0.total > 0 ? $0 : nil },
             trailing: trailing
         )
     }
 
-    private func addTodo(to list: ListName) {
-        let title = (draftTitles[list] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    private func addTodo(to list: ListName, title raw: String) {
+        let title = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { return }
         // Use the list on screen, not `selection` — on phone those can diverge.
         do {
@@ -1882,7 +1899,7 @@ struct ListsBrowserView: View {
                     return try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
                 }
             }
-            draftTitles[list] = ""
+            addDrafts.clear(list)
             model.noteEntitiesChanged()
             model.bumpHaptic(\.add)
             // Scheduled defaults to tomorrow; open When so the date is choosable. Wait a
@@ -2136,5 +2153,72 @@ struct ListsBrowserView: View {
         var hasNotes: Bool = false
         var checklist: (done: Int, total: Int)?
         var trailing: TrailingChip?
+    }
+}
+
+/// Per-list Add drafts. Observed only by `PinnedListAddBar` so keystrokes don’t
+/// invalidate `ListsBrowserView` and re-run list selectors (perf review #1).
+@Observable
+@MainActor
+final class ListAddDrafts {
+    private var titles: [ListName: String] = [:]
+
+    func title(for list: ListName) -> String {
+        titles[list] ?? ""
+    }
+
+    func setTitle(_ value: String, for list: ListName) {
+        if value.isEmpty {
+            titles[list] = nil
+        } else {
+            titles[list] = value
+        }
+    }
+
+    func clear(_ list: ListName) {
+        titles[list] = nil
+    }
+
+    func binding(for list: ListName) -> Binding<String> {
+        Binding(
+            get: { self.title(for: list) },
+            set: { self.setTitle($0, for: list) }
+        )
+    }
+}
+
+/// Sticky Add chrome that owns draft Observation + focus (decision 64 shell).
+private struct PinnedListAddBar: View {
+    @Bindable var drafts: ListAddDrafts
+    var list: ListName
+    var colors: DayruleColors
+    var readingMargin: CGFloat
+    var focusNonce: Int
+    var keepFocusAfterSubmit: Bool
+    var onSubmit: (String) -> Void
+
+    @FocusState private var focused: Bool
+
+    var body: some View {
+        let draft = drafts.binding(for: list)
+        PaperAddRow(
+            title: draft,
+            canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            keepFocusAfterSubmit: keepFocusAfterSubmit,
+            focus: $focused
+        ) {
+            onSubmit(drafts.title(for: list))
+        }
+        // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
+        // so the disc lines up with checkboxes (decision 19 / 68).
+        .padding(.horizontal, readingMargin + Tokens.rowInset)
+        .background(colors.bg)
+        .overlay(alignment: .top) {
+            colors.hairline.frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .onChange(of: focusNonce) { _, _ in
+            focused = true
+        }
     }
 }
