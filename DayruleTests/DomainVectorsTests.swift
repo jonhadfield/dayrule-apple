@@ -11,6 +11,7 @@ struct DomainVectorsTests {
         var order: OrderSection
         var hlc: HlcSection
         var merge: MergeSection?
+        var mergeTraces: [MergeTrace]?
         var lists: ListsSection?
         var repeats: RepeatsSection?
         var find: FindSection?
@@ -349,6 +350,17 @@ struct DomainVectorsTests {
         var latestStamp: [LatestStampCase]
     }
 
+    /// Web PLAN §16.1: fold `versions` in each `foldOrders` index sequence;
+    /// every order must equal `result`. Optional `tombstone` applies
+    /// `resolveTombstone` to the folded entity (result is then a Resolution).
+    private struct MergeTrace: Decodable {
+        var name: String
+        var versions: [AnyJSON]
+        var foldOrders: [[Int]]
+        var tombstone: String?
+        var result: AnyJSON
+    }
+
     private struct MergeTriple: Decodable {
         var local: AnyJSON?
         var remote: AnyJSON
@@ -555,6 +567,43 @@ struct DomainVectorsTests {
         for t in merge.latestStamp {
             let clock = t.entity.dictionary?["clock"] as? FieldClock
             #expect(Merge.latestStamp(clock) == t.result)
+        }
+    }
+
+    @Test("mergeTraces converge in every fold order")
+    func mergeTraceVectors() throws {
+        let file = try load()
+        let traces = try #require(file.mergeTraces)
+        #expect(!traces.isEmpty)
+        for trace in traces {
+            for order in trace.foldOrders {
+                var folded: [String: Any]?
+                for i in order {
+                    let remote = try #require(trace.versions[i].dictionary)
+                    folded = Merge.mergeEntity(local: folded, remote: remote)
+                }
+                if let tombstone = trace.tombstone {
+                    let got = Merge.resolveTombstone(entity: folded, tombstone: tombstone)
+                    let expected = try #require(trace.result.dictionary)
+                    let kind = try #require(expected["kind"] as? String)
+                    switch (got, kind) {
+                    case (.delete, "delete"):
+                        break
+                    case (.keep(let v), "keep"):
+                        #expect(
+                            Self.jsonEquals(v, expected["value"] as Any),
+                            "\(trace.name) order \(order)"
+                        )
+                    default:
+                        Issue.record("\(trace.name) tombstone mismatch order \(order)")
+                    }
+                } else {
+                    #expect(
+                        Self.jsonEquals(folded as Any, trace.result.value),
+                        "\(trace.name) order \(order)"
+                    )
+                }
+            }
         }
     }
 

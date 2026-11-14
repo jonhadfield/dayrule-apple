@@ -1,11 +1,7 @@
 name: Local sync e2e
 
-# PLAN §14.2: checkout dayrule @ SHARED.lock, Postgres, serve-api, SyncE2E + SyncUITests.
-# Local: E2E_DATABASE_URL=… ./scripts/local-sync-e2e.sh
-#
-# Requires repo secret DAYRULE_WEB_TOKEN: a fine-grained PAT (or classic) with
-# Contents: Read on the private jonhadfield/dayrule repo. The default
-# GITHUB_TOKEN cannot clone that repo.
+# PLAN §14.2: checkout public dayrule @ SHARED.lock, Postgres, serve-api,
+# SyncE2E + SyncUITests. Local: E2E_DATABASE_URL=… ./scripts/local-sync-e2e.sh
 # Not on every main push: intermittent sim/xcodebuild hangs billed macOS
 # minutes (decision 45/46). Run weekly, manually before TestFlight, or locally.
 on:
@@ -51,7 +47,6 @@ jobs:
         with:
           repository: jonhadfield/dayrule
           ref: ${{ steps.lock.outputs.sha }}
-          token: ${{ secrets.DAYRULE_WEB_TOKEN }}
           path: dayrule-web
           persist-credentials: false
 
