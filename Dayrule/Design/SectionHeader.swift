@@ -72,10 +72,13 @@ struct DayruleSectionHeader: View {
             .padding(.top, 14)
             .padding(.bottom, 6)
             .overlay(alignment: .bottom) {
-                colors.hairline.frame(height: 1)
+                colors.hairline
+                    .frame(height: 1)
+                    .padding(.horizontal, -inset)
             }
             .background(colors.bg)
             .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
+            .listRowSeparator(.hidden)
         #else
         row
             .padding(.leading, inset)
@@ -87,6 +90,7 @@ struct DayruleSectionHeader: View {
             }
             .background(colors.bg)
             .listRowInsets(EdgeInsets())
+            .listRowSeparator(.hidden)
         #endif
     }
 
