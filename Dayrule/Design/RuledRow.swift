@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// Paper ruled row: hairline under content; min height 46 phone compact /
+/// Paper ruled row: one hairline under content; min height 46 phone compact /
 /// 36 dense (Mac and iPad regular — PLAN §6.2).
 ///
-/// On macOS, SwiftUI `List` still draws a system row separator even when a custom
-/// hairline is overlaid — the two stack as a double rule. Mac therefore uses one
-/// tinted system separator; iOS keeps the drawn hairline (decision 71).
+/// Always draw our own hairline and hide the system separator on every
+/// platform. macOS system separators still read as a double rule even when we
+/// only tint them (decision 71 → 73).
 struct RuledRow<Content: View>: View {
     enum Style {
         /// Hairline under the row.
@@ -35,29 +35,36 @@ struct RuledRow<Content: View>: View {
                 minHeight: Tokens.rowMinHeight(dense: denseLayout),
                 alignment: .leading
             )
-            #if os(iOS)
             .overlay(alignment: .bottom) {
                 if style == .ruled {
-                    colors.hairline.frame(height: 1)
+                    // Full-bleed within the row background (cancel listRowInsets).
+                    colors.hairline
+                        .frame(height: 1)
+                        .padding(.horizontal, -Tokens.rowInset)
                 }
             }
-            .listRowSeparator(.hidden)
-            #else
-            .listRowSeparator(style == .ruled ? .visible : .hidden)
-            .listRowSeparatorTint(colors.hairline)
-            #endif
             .listRowInsets(
                 EdgeInsets(top: 0, leading: Tokens.rowInset, bottom: 0, trailing: Tokens.rowInset)
             )
+            .listRowSeparator(.hidden)
             .listRowBackground(colors.bg)
     }
 }
 
 extension View {
-    /// Paper list chrome: hide system *section* rules so `DayruleSectionHeader`
-    /// hairlines stay single (decision 53 / 71).
+    /// Paper list chrome: hide system section *and* row rules so drawn hairlines
+    /// stay single (decisions 53 / 71 / 73).
     func dayrulePaperList() -> some View {
         listSectionSeparator(.hidden)
+            .listRowSeparator(.hidden)
+    }
+
+    /// One drawn hairline under a non-`RuledRow` list row (Browse links).
+    func dayruleDrawnRowRule(colors: DayruleColors) -> some View {
+        listRowSeparator(.hidden)
+            .overlay(alignment: .bottom) {
+                colors.hairline.frame(height: 1)
+            }
     }
 }
 

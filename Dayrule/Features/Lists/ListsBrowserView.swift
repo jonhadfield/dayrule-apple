@@ -604,12 +604,12 @@ struct ListsBrowserView: View {
             }
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .listRowBackground(colors.bg)
-            .listRowSeparatorTint(colors.hairline)
+            .dayruleDrawnRowRule(colors: colors)
             .modifier(sidebarDropModifier(SidebarDrop.action(for: name, today: ctx.today)))
         }
         newListTrigger(colors: colors, style: .browseRow)
             .listRowBackground(colors.bg)
-            .listRowSeparatorTint(colors.hairline)
+            .dayruleDrawnRowRule(colors: colors)
 
         let tree = cachedBrowseTree
         if !tree.looseProjects.isEmpty {
@@ -633,7 +633,7 @@ struct ListsBrowserView: View {
                 .accessibilityIdentifier("list.sidebar.area.\(group.area.id)")
                 .contextMenu { areaContextMenu(group.area) }
                 .listRowBackground(colors.bg)
-                .listRowSeparatorTint(colors.hairline)
+                .dayruleDrawnRowRule(colors: colors)
                 .modifier(sidebarDropModifier(SidebarDrop.action(areaId: group.area.id)))
                 ForEach(group.projects, id: \.id) { project in
                     phoneProjectLink(project, colors: colors)
@@ -653,7 +653,7 @@ struct ListsBrowserView: View {
         .accessibilityIdentifier("list.sidebar.project.\(project.id)")
         .contextMenu { projectContextMenu(project) }
         .listRowBackground(colors.bg)
-        .listRowSeparatorTint(colors.hairline)
+        .dayruleDrawnRowRule(colors: colors)
         .modifier(sidebarDropModifier(SidebarDrop.action(projectId: project.id)))
     }
 
