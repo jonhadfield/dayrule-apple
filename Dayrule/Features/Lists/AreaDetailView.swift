@@ -75,7 +75,6 @@ struct AreaDetailView: View {
                         ForEach(view.todos, id: \.id) { todo in
                             todoRow(todo, ctx: ctx, colors: colors)
                         }
-                        addRow(draft: $draftTitle)
                     } header: {
                         DayruleSectionHeader(title: "To-Dos", tone: .muted, style: .caps)
                     }
@@ -83,7 +82,6 @@ struct AreaDetailView: View {
                     ForEach(view.todos, id: \.id) { todo in
                         todoRow(todo, ctx: ctx, colors: colors)
                     }
-                    addRow(draft: $draftTitle)
                 }
             } else {
                 DayruleEmptyState(systemImage: "shippingbox", accessibilityLabel: "Area not found")
@@ -102,6 +100,19 @@ struct AreaDetailView: View {
         }
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
         .environment(\.dayruleReadingMargin, readingMargin)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if view != nil {
+                PinnedPaperAddBar(
+                    title: $draftTitle,
+                    colors: colors,
+                    readingMargin: readingMargin,
+                    fieldIdentifier: "area.addField",
+                    buttonIdentifier: "area.addButton"
+                ) {
+                    addTodo(draft: $draftTitle)
+                }
+            }
+        }
         .dayruleEditablePageTitle(
             text: areaTitleBinding,
             prompt: "New Area",
@@ -317,18 +328,6 @@ struct AreaDetailView: View {
                 ? nil
                 : (done: checklist.filter(\.done).count, total: checklist.count)
         )
-    }
-
-    @ViewBuilder
-    private func addRow(draft: Binding<String>) -> some View {
-        PaperAddRow(
-            title: draft,
-            canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            fieldIdentifier: "area.addField",
-            buttonIdentifier: "area.addButton"
-        ) {
-            addTodo(draft: draft)
-        }
     }
 
     // MARK: - Actions

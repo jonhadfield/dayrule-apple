@@ -85,7 +85,6 @@ struct ProjectDetailView: View {
                 .onMove { source, destination in
                     moveTodos(peers: loosePeers, source: source, destination: destination)
                 }
-                addRow(headingId: nil, draft: $draftTitle)
 
                 ForEach(view.headings, id: \.heading.id) { group in
                     let peers = group.todos.map(\.id)
@@ -141,6 +140,19 @@ struct ProjectDetailView: View {
         }
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
         .environment(\.dayruleReadingMargin, readingMargin)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if view != nil {
+                PinnedPaperAddBar(
+                    title: $draftTitle,
+                    colors: colors,
+                    readingMargin: readingMargin,
+                    fieldIdentifier: "project.addField",
+                    buttonIdentifier: "project.addButton"
+                ) {
+                    addTodo(headingId: nil, draft: $draftTitle)
+                }
+            }
+        }
         .dayruleEditablePageTitle(
             text: projectTitleBinding,
             prompt: "New Project",
