@@ -393,6 +393,142 @@
       }
     ]
   },
+  "mergeTraces": [
+    {
+      "name": "concurrent-title-and-notes",
+      "versions": [
+        {
+          "id": "todo-1",
+          "title": "Milk",
+          "clock": {
+            "id": "1",
+            "title": "0000001-000-a"
+          }
+        },
+        {
+          "id": "todo-1",
+          "notes": "2 litres",
+          "clock": {
+            "id": "1",
+            "notes": "0000002-000-b"
+          }
+        },
+        {
+          "id": "todo-1",
+          "title": "Oat milk",
+          "clock": {
+            "id": "1",
+            "title": "0000003-000-a"
+          }
+        }
+      ],
+      "foldOrders": [
+        [
+          0,
+          1,
+          2
+        ],
+        [
+          2,
+          0,
+          1
+        ],
+        [
+          1,
+          2,
+          0
+        ],
+        [
+          2,
+          1,
+          0
+        ]
+      ],
+      "result": {
+        "id": "todo-1",
+        "title": "Oat milk",
+        "notes": "2 litres",
+        "clock": {
+          "id": "1",
+          "title": "0000003-000-a",
+          "notes": "0000002-000-b"
+        }
+      }
+    },
+    {
+      "name": "tombstone-loses-to-later-edit",
+      "versions": [
+        {
+          "id": "todo-2",
+          "title": "Old",
+          "clock": {
+            "id": "1",
+            "title": "0000004-000-a"
+          }
+        },
+        {
+          "id": "todo-2",
+          "title": "Keep me",
+          "clock": {
+            "id": "1",
+            "title": "0000008-000-b"
+          }
+        }
+      ],
+      "foldOrders": [
+        [
+          0,
+          1
+        ],
+        [
+          1,
+          0
+        ]
+      ],
+      "tombstone": "0000005-000-a",
+      "result": {
+        "kind": "keep",
+        "value": {
+          "id": "todo-2",
+          "title": "Keep me",
+          "clock": {
+            "id": "1",
+            "title": "0000008-000-b"
+          }
+        }
+      }
+    },
+    {
+      "name": "tombstone-wins-over-older-entity",
+      "versions": [
+        {
+          "id": "todo-2",
+          "title": "Old",
+          "clock": {
+            "id": "1",
+            "title": "0000004-000-a"
+          }
+        }
+      ],
+      "foldOrders": [
+        [
+          0
+        ]
+      ],
+      "tombstone": "0000009-000-a",
+      "result": {
+        "kind": "keep",
+        "value": {
+          "id": "todo-2",
+          "title": "Old",
+          "clock": {
+            "id": "1",
+            "title": "0000004-000-a"
+          }
+        }
+      }
+    }
+  ],
   "organisation": {
     "today": "2026-10-04",
     "seed": {
