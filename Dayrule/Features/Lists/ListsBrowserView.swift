@@ -2193,7 +2193,7 @@ final class ListAddDrafts {
     }
 }
 
-/// Sticky Add chrome that owns draft Observation + focus (decision 64 shell).
+/// List-scoped draft Observation bridge into `PinnedPaperAddBar` (decision 64 / 76).
 private struct PinnedListAddBar: View {
     @Bindable var drafts: ListAddDrafts
     var list: ListName
@@ -2203,28 +2203,15 @@ private struct PinnedListAddBar: View {
     var keepFocusAfterSubmit: Bool
     var onSubmit: (String) -> Void
 
-    @FocusState private var focused: Bool
-
     var body: some View {
-        let draft = drafts.binding(for: list)
-        PaperAddRow(
-            title: draft,
-            canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-            keepFocusAfterSubmit: keepFocusAfterSubmit,
-            ruled: false,
-            focus: $focused
+        PinnedPaperAddBar(
+            title: drafts.binding(for: list),
+            colors: colors,
+            readingMargin: readingMargin,
+            focusNonce: focusNonce,
+            keepFocusAfterSubmit: keepFocusAfterSubmit
         ) {
             onSubmit(drafts.title(for: list))
-        }
-        // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
-        // so the disc lines up with checkboxes (decision 19 / 68).
-        .padding(.horizontal, readingMargin + Tokens.rowInset)
-        // Sidebar-tinted shelf — the list’s last hairline is the only rule above
-        // Add (a second top hairline stacked as a double line; decision 64 / 71).
-        .background(colors.sidebar)
-        .accessibilityElement(children: .contain)
-        .onChange(of: focusNonce) { _, _ in
-            focused = true
         }
     }
 }

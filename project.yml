@@ -50,6 +50,9 @@ targets:
       - target: DayruleShare
         embed: true
         destinationFilters: [iOS]
+      - target: DayruleWidget
+        embed: true
+        destinationFilters: [iOS]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule
@@ -104,6 +107,24 @@ targets:
         SWIFT_STRICT_CONCURRENCY: complete
         TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+  DayruleWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: DayruleWidget
+      - path: Dayrule/WidgetCounts
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: uk.co.lessknown.dayrule.widget
+        DEVELOPMENT_TEAM: VBZY8FBYR5
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: DayruleWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: DayruleWidget/DayruleWidget.entitlements
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+        MARKETING_VERSION: "0.1.2"
+        CURRENT_PROJECT_VERSION: 29
   DayruleTests:
     type: bundle.unit-test
     supportedDestinations: [iOS, macOS]

@@ -257,8 +257,18 @@ final class AppModel {
         Task { await ReminderScheduler.reschedule(entities: snapshot) }
         #if os(iOS)
         ReminderBackgroundRefresh.scheduleIfNeeded()
+        publishWidgetCounts(entities: snapshot)
         #endif
     }
+
+    #if os(iOS)
+    /// Count-only Home Screen widget — no titles (decision 76).
+    private func publishWidgetCounts(entities: Entities) {
+        let ctx = Lists.Context(today: When.toLocalDate(Date()), keepVisible: nil)
+        let counts = Lists.sidebarCounts(entities, ctx)
+        WidgetCountsStore.publish(inboxOpen: counts.inbox, todayOpen: counts.today)
+    }
+    #endif
 
     #if os(iOS)
     /// BGAppRefresh: refresh the nearest 64 while stay-unlocked (PLAN §11).
@@ -1211,6 +1221,9 @@ final class AppModel {
         phase = .locked
         store.hydrate(.empty())
         entitiesEpoch += 1
+        #if os(iOS)
+        WidgetCountsStore.clear()
+        #endif
     }
 
     /// User chose Lock: drop any stale gate message (lock() keeps it for signOut / 401).
