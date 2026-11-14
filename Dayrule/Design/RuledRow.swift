@@ -1,11 +1,29 @@
 import SwiftUI
 
+/// Paper fill + optional bottom hairline for list rows (PLAN §6.2).
+/// Callers that set `listRowBackground` (e.g. selection tint) must use this so
+/// they do not wipe the rule — that left only AppKit’s double grid on Mac.
+struct DayrulePaperRowBackground: View {
+    var fill: Color
+    var hairline: Color
+    var showsHairline: Bool
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            fill
+            if showsHairline {
+                hairline.frame(height: 1)
+            }
+        }
+    }
+}
+
 /// Paper ruled row: one hairline under content; min height 46 phone compact /
 /// 36 dense (Mac and iPad regular — PLAN §6.2).
 ///
-/// Always draw our own hairline and hide the system separator on every
-/// platform. macOS system separators still read as a double rule even when we
-/// only tint them (decision 71 → 73).
+/// System list separators stay hidden; we draw one paper hairline in the row
+/// background. On macOS, AppKit grid lines are also cleared via
+/// `MacListHideSystemSeparators` on `dayrulePaperList` (decision 74).
 struct RuledRow<Content: View>: View {
     enum Style {
         /// Hairline under the row.
@@ -29,42 +47,47 @@ struct RuledRow<Content: View>: View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         // Padding sits inside the min height, so a single-line row is exactly `rowHeight`.
         content()
-            .padding(.vertical, 4)
+            .padding(.vertical, Tokens.Space.xs)
             .frame(
                 maxWidth: .infinity,
                 minHeight: Tokens.rowMinHeight(dense: denseLayout),
                 alignment: .leading
             )
-            .overlay(alignment: .bottom) {
-                if style == .ruled {
-                    // Full-bleed within the row background (cancel listRowInsets).
-                    colors.hairline
-                        .frame(height: 1)
-                        .padding(.horizontal, -Tokens.rowInset)
-                }
-            }
             .listRowInsets(
                 EdgeInsets(top: 0, leading: Tokens.rowInset, bottom: 0, trailing: Tokens.rowInset)
             )
             .listRowSeparator(.hidden)
-            .listRowBackground(colors.bg)
+            .listRowBackground(
+                DayrulePaperRowBackground(
+                    fill: colors.bg,
+                    hairline: colors.hairline,
+                    showsHairline: style == .ruled
+                )
+            )
     }
 }
 
 extension View {
     /// Paper list chrome: hide system section *and* row rules so drawn hairlines
-    /// stay single (decisions 53 / 71 / 73).
+    /// stay single (decisions 53 / 71 / 73 / 74).
     func dayrulePaperList() -> some View {
         listSectionSeparator(.hidden)
             .listRowSeparator(.hidden)
+            #if os(macOS)
+            .background(MacListHideSystemSeparators())
+            #endif
     }
 
     /// One drawn hairline under a non-`RuledRow` list row (Browse links).
     func dayruleDrawnRowRule(colors: DayruleColors) -> some View {
         listRowSeparator(.hidden)
-            .overlay(alignment: .bottom) {
-                colors.hairline.frame(height: 1)
-            }
+            .listRowBackground(
+                DayrulePaperRowBackground(
+                    fill: colors.bg,
+                    hairline: colors.hairline,
+                    showsHairline: true
+                )
+            )
     }
 }
 
@@ -83,7 +106,7 @@ struct DayruleNoteRow: View {
                     ProgressView().controlSize(.small)
                 }
                 Text(text)
-                    .font(.footnote)
+                    .font(DayruleType.meta)
                     .foregroundStyle(colors.textSecondary)
             }
             .accessibilityElement(children: .combine)
@@ -106,7 +129,7 @@ struct DayruleEmptyState: View {
                 .font(.system(size: glyphSize))
                 .foregroundStyle(colors.textSecondary.opacity(0.15))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 32)
+                .padding(.vertical, Tokens.Space.xxl)
                 .accessibilityElement()
                 .accessibilityLabel(accessibilityLabel)
         }

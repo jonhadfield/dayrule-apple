@@ -109,7 +109,15 @@ struct DayruleTodoRow: View {
                 }
             }
         }
-        .listRowBackground(isSelected ? colors.selectedRow : colors.bg)
+        // Must keep the paper hairline — a plain fill here wiped RuledRow’s
+        // background and left only AppKit’s double grid on Mac (decision 74).
+        .listRowBackground(
+            DayrulePaperRowBackground(
+                fill: isSelected ? colors.selectedRow : colors.bg,
+                hairline: colors.hairline,
+                showsHairline: true
+            )
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
