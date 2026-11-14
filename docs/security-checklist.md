@@ -47,7 +47,7 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.2 (28)** iOS+Mac uploaded 2026-11-14 — SyncEngine actor + single row hairline; prior **0.1.1 (27)** AutoFill / spacing / Equatable; **(26)** store review binary; `0.1.1` train closed for new submissions)
+- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.2 (29)** iOS+Mac uploaded 2026-11-14 — Mac single hairline (NSTableView + selection bg); prior **(28)** SyncEngine/hairline; **0.1.1 (27)** AutoFill / spacing / Equatable; **(26)** store review binary; `0.1.1` train closed for new submissions)
 - [x] App Store **0.1.1** submitted for review 2026-11-11 — iOS + Mac build **26** (approved / train closed; next store cut is **0.1.2**); denser agent-seeded screenshots on the version page
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
@@ -55,7 +55,7 @@ in code or by a named manual step — not by assumption.
 - [x] App Review demo account — runbook `docs/app-review-demo.md` (no second step; credentials only in App Store Connect; maintained for resubmits)
 - [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
 - [x] French encryption declaration / export-compliance — answered for the shipped store submissions
-- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac store **0.1.1** approved on build **26**; TestFlight **0.1.2 (28)** on ASC for both platforms; prior **0.1.1 (27)** / **(26)**)
+- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac store **0.1.1** approved on build **26**; TestFlight **0.1.2 (29)** on ASC for both platforms; prior **0.1.1 (27)** / **(26)**)
 - [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops:** leave env unset until deliberately cutting old builds; then set floors ≥ oldest supported `CFBundleVersion`.
 
 **Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.
