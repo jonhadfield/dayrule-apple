@@ -152,7 +152,7 @@ struct SyncEngineTests {
         let (engine, cipher, _) = try await makeEngine(crypto: crypto, net: net)
         try await cipher.setUploaded(true)
         try await engine.sync()
-        #expect(engine.sawUnknownAlg)
+        #expect(await engine.sawUnknownAlg)
         #expect(try await cipher.needsUpgrade())
         #expect(try await cipher.opaqueCount() == 1)
         #expect(try await cipher.isEmpty()) // no plaintext merge
@@ -201,7 +201,7 @@ struct SyncEngineTests {
         try await cipher.replaceAll(e)
         try await cipher.setUploaded(true)
         try await engine.sync()
-        #expect(engine.sawUnknownAlg)
+        #expect(await engine.sawUnknownAlg)
         #expect(try await cipher.needsUpgrade())
         #expect(store.entities.todos["t1"]?.title == "Keep me")
     }

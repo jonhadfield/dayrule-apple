@@ -12,10 +12,44 @@ enum SyncBlockedError: Error, LocalizedError, Equatable {
     }
 }
 
+/// MainActor `EntityStore` access from the sync actor (decision 72).
+/// All store traffic goes through `MainActor.run` so list UI is not blocked by
+/// pull/push crypto and network — only by brief merge applies.
+private struct EntityStoreHandle: Sendable {
+    private final class Box: @unchecked Sendable {
+        let store: EntityStore
+        init(_ store: EntityStore) { self.store = store }
+    }
+
+    private let box: Box
+
+    init(_ store: EntityStore) {
+        box = Box(store)
+    }
+
+    func entities() async -> Entities {
+        let store = box.store
+        return await MainActor.run { store.entities }
+    }
+
+    func applyRemote(_ changes: [StoreChange]) async {
+        let store = box.store
+        await MainActor.run { store.applyRemote(changes) }
+    }
+
+    func tick() async -> String {
+        let store = box.store
+        return await MainActor.run { store.tick() }
+    }
+}
+
 /// Pull/merge/push cycle (web `sync/engine.ts`).
-@MainActor
-final class SyncEngine {
-    private let store: EntityStore
+///
+/// Own actor so decrypt / encrypt / transport / CipherStore work is not
+/// scheduled on the UI executor. Entity merges still hop to MainActor
+/// (decision 72).
+actor SyncEngine {
+    private let store: EntityStoreHandle
     private let db: CipherStore
     private let crypto: CryptoActor
     private let net: any SyncTransport
@@ -30,13 +64,13 @@ final class SyncEngine {
         crypto: CryptoActor,
         net: any SyncTransport
     ) {
-        self.store = store
+        self.store = EntityStoreHandle(store)
         self.db = db
         self.crypto = crypto
         self.net = net
     }
 
-    convenience init(store: EntityStore, db: CipherStore, crypto: CryptoActor, api: APIClient) {
+    init(store: EntityStore, db: CipherStore, crypto: CryptoActor, api: APIClient) {
         self.init(store: store, db: db, crypto: crypto, net: api)
     }
 
@@ -44,7 +78,8 @@ final class SyncEngine {
     func sync() async throws {
         sawUnknownAlg = try await db.needsUpgrade()
         if !(try await db.uploaded()) {
-            try await db.markDirty(Incoming.allKeys(store.entities))
+            let keys = Incoming.allKeys(await store.entities())
+            try await db.markDirty(keys)
             try await db.setUploaded(true)
         }
         for _ in 0..<4 {
@@ -89,12 +124,13 @@ final class SyncEngine {
                 }
                 if !payloads.isEmpty {
                     let tombs = try await db.tombstones(for: keys)
+                    let entities = await store.entities()
                     let result = Incoming.incomingChanges(
-                        entities: store.entities,
+                        entities: entities,
                         items: payloads,
                         localTombstones: tombs
                     )
-                    store.applyRemote(result.changes)
+                    await store.applyRemote(result.changes)
                     try await db.setSeqs(seqEntries)
                     if !result.pushBack.isEmpty {
                         try await db.markDirty(result.pushBack)
@@ -113,16 +149,17 @@ final class SyncEngine {
 
     private func prune(seen: Set<String>) async throws {
         let pending = Set(try await db.pendingKeys())
-        let gone = Incoming.allKeys(store.entities).filter {
+        let entities = await store.entities()
+        let gone = Incoming.allKeys(entities).filter {
             $0 != CipherStore.settingsKey && !seen.contains($0) && !pending.contains($0)
         }
         guard !gone.isEmpty else { return }
-        let stamp = store.tick()
+        let stamp = await store.tick()
         let result = Incoming.incomingChanges(
-            entities: store.entities,
+            entities: entities,
             items: gone.map { Incoming.Item(key: $0, value: nil, deleted: stamp) }
         )
-        store.applyRemote(result.changes)
+        await store.applyRemote(result.changes)
     }
 
     /// Returns true if something conflicted (caller should pull again).
@@ -133,14 +170,22 @@ final class SyncEngine {
             if batch.isEmpty { return conflicted }
             let keys = batch.map(\.key)
             let seqs = try await db.seqs(keys)
+            let entities = await store.entities()
             var wire: [PushWireRecord] = []
             var ids: [String] = []
             for key in keys {
-                let valueAny = Incoming.lookup(store.entities, key: key)
+                let valueAny = Incoming.lookup(entities, key: key)
                 let value = valueAny.map(JSONDict.fromAny)
-                let deleted: String? = value == nil
-                    ? (try await db.tombstone(key) ?? store.tick())
-                    : nil
+                let deleted: String?
+                if value == nil {
+                    if let existing = try await db.tombstone(key) {
+                        deleted = existing
+                    } else {
+                        deleted = await store.tick()
+                    }
+                } else {
+                    deleted = nil
+                }
                 let (id, env) = try await crypto.encryptSyncPayload(
                     key: key,
                     value: value,
