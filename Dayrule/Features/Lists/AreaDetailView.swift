@@ -90,6 +90,7 @@ struct AreaDetailView: View {
             }
         }
         .listStyle(.plain)
+        .dayrulePaperList()
         .scrollContentBackground(.hidden)
         .background(colors.bg)
         .navigationTitle(title)

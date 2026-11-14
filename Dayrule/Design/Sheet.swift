@@ -201,11 +201,12 @@ extension View {
     }
 
     /// Paper row inside a sheet Form/List; apply per row or on a Section.
-    /// Hides the system section separator so a `DayruleSectionHeader` hairline
-    /// is not doubled (PLAN decision 53).
+    /// Hides system row + section separators so a `DayruleSectionHeader` hairline
+    /// is the only rule (PLAN decision 53 / 71). Within-chapter rows breathe by
+    /// spacing, not a second line.
     func dayruleSheetRow(colors: DayruleColors) -> some View {
         listRowBackground(colors.bg)
-            .listRowSeparatorTint(colors.hairline)
+            .listRowSeparator(.hidden)
             .listSectionSeparator(.hidden)
             .foregroundStyle(colors.text)
     }

@@ -70,6 +70,10 @@ struct HelpView: View {
             .dayruleSheetRow(colors: colors)
         }
         .listStyle(.plain)
+        .dayrulePaperList()
+        #if os(iOS)
+        .listSectionSpacing(Tokens.Space.m)
+        #endif
     }
 }
 

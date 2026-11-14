@@ -65,8 +65,9 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.plain)
+            .dayrulePaperList()
             #if os(iOS)
-            // Chapter breathing room once system double rules are gone (decision 53).
+            // Chapter breathing room once system double rules are gone (decision 53 / 71).
             .listSectionSpacing(Tokens.Space.m)
             #endif
             // Keep Toggle / Picker terracotta, not system blue, on paper.

@@ -31,6 +31,7 @@ struct QuickFindView: View {
                 }
             }
             .listStyle(.plain)
+            .dayrulePaperList()
             #if os(iOS)
             .searchable(
                 text: $query,

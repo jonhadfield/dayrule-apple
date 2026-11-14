@@ -6,6 +6,8 @@ struct PaperAddRow: View {
     @Binding var title: String
     var canAdd: Bool
     var keepFocusAfterSubmit: Bool = true
+    /// Pinned Add sits on a tinted shelf — no second rule under the field (decision 71).
+    var ruled: Bool = true
     var focus: FocusState<Bool>.Binding?
     var fieldIdentifier: String = "list.addField"
     var buttonIdentifier: String = "list.addButton"
@@ -19,6 +21,7 @@ struct PaperAddRow: View {
         title: Binding<String>,
         canAdd: Bool,
         keepFocusAfterSubmit: Bool = true,
+        ruled: Bool = true,
         focus: FocusState<Bool>.Binding? = nil,
         fieldIdentifier: String = "list.addField",
         buttonIdentifier: String = "list.addButton",
@@ -27,6 +30,7 @@ struct PaperAddRow: View {
         _title = title
         self.canAdd = canAdd
         self.keepFocusAfterSubmit = keepFocusAfterSubmit
+        self.ruled = ruled
         self.focus = focus
         self.fieldIdentifier = fieldIdentifier
         self.buttonIdentifier = buttonIdentifier
@@ -40,7 +44,7 @@ struct PaperAddRow: View {
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
-        RuledRow {
+        RuledRow(style: ruled ? .ruled : .note) {
             HStack(spacing: Tokens.rowGlyphSpacing) {
                 Button {
                     if canAdd {
