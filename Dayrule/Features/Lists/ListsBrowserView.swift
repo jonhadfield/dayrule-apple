@@ -534,6 +534,7 @@ struct ListsBrowserView: View {
                 phoneBrowseRows(colors: colors)
             }
             .listStyle(.plain)
+            .dayrulePaperList()
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .modifier(SyncNeedsUpdateAnimationModifier(model: model))
@@ -541,6 +542,9 @@ struct ListsBrowserView: View {
             List(selection: $selection) {
                 sidebarRows(colors: colors)
             }
+            .listStyle(.sidebar)
+            .dayrulePaperList()
+            .listRowSeparator(.hidden)
             .scrollContentBackground(.hidden)
             .background(colors.sidebar)
             .modifier(SyncNeedsUpdateAnimationModifier(model: model))
@@ -670,7 +674,7 @@ struct ListsBrowserView: View {
 
     @ViewBuilder
     private func sidebarRows(colors: DayruleColors) -> some View {
-        SyncNeedsUpdateBanner(model: model, colors: colors, rowBackground: .clear)
+        SyncNeedsUpdateBanner(model: model, colors: colors, rowBackground: .clear, hideSeparator: true)
         let names = ListName.allCases.filter { $0 != .notNow }
         ForEach(names, id: \.self) { name in
             HStack(spacing: 0) {
@@ -1111,6 +1115,7 @@ struct ListsBrowserView: View {
             }
         }
         .listStyle(.plain)
+        .dayrulePaperList()
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(list.title)
         .dayruleListNavChrome(colors: colors)
@@ -2206,6 +2211,7 @@ private struct PinnedListAddBar: View {
             title: draft,
             canAdd: !draft.wrappedValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
             keepFocusAfterSubmit: keepFocusAfterSubmit,
+            ruled: false,
             focus: $focused
         ) {
             onSubmit(drafts.title(for: list))
@@ -2213,10 +2219,9 @@ private struct PinnedListAddBar: View {
         // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
         // so the disc lines up with checkboxes (decision 19 / 68).
         .padding(.horizontal, readingMargin + Tokens.rowInset)
-        .background(colors.bg)
-        .overlay(alignment: .top) {
-            colors.hairline.frame(height: 1)
-        }
+        // Sidebar-tinted shelf — the list’s last hairline is the only rule above
+        // Add (a second top hairline stacked as a double line; decision 64 / 71).
+        .background(colors.sidebar)
         .accessibilityElement(children: .contain)
         .onChange(of: focusNonce) { _, _ in
             focused = true
