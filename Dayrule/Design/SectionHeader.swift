@@ -68,29 +68,34 @@ struct DayruleSectionHeader: View {
 
     private func chrome(_ row: some View, colors: DayruleColors, inset: CGFloat) -> some View {
         #if os(macOS)
+        // 12 + 8 = same 20pt vertical chrome as the old 14+6, on the 8pt grid.
         row
-            .padding(.top, 14)
-            .padding(.bottom, 6)
-            .overlay(alignment: .bottom) {
-                colors.hairline
-                    .frame(height: 1)
-                    .padding(.horizontal, -inset)
-            }
-            .background(colors.bg)
+            .padding(.top, Tokens.Space.m)
+            .padding(.bottom, Tokens.Space.s)
             .listRowInsets(EdgeInsets(top: 0, leading: inset, bottom: 0, trailing: inset))
             .listRowSeparator(.hidden)
+            .listRowBackground(
+                DayrulePaperRowBackground(
+                    fill: colors.bg,
+                    hairline: colors.hairline,
+                    showsHairline: true
+                )
+            )
         #else
         row
             .padding(.leading, inset)
             .padding(.trailing, inset)
-            .padding(.top, 14)
-            .padding(.bottom, 6)
-            .overlay(alignment: .bottom) {
-                colors.hairline.frame(height: 1)
-            }
-            .background(colors.bg)
+            .padding(.top, Tokens.Space.m)
+            .padding(.bottom, Tokens.Space.s)
             .listRowInsets(EdgeInsets())
             .listRowSeparator(.hidden)
+            .listRowBackground(
+                DayrulePaperRowBackground(
+                    fill: colors.bg,
+                    hairline: colors.hairline,
+                    showsHairline: true
+                )
+            )
         #endif
     }
 
@@ -156,8 +161,8 @@ struct DayruleFormSection<Content: View, Header: View, Footer: View>: View {
                 // leading inset indented footers past in-row helpers.
                 footer
                     .listRowSeparator(.hidden)
-                    .padding(.top, 4)
-                    .padding(.bottom, 8)
+                    .padding(.top, Tokens.Space.xs)
+                    .padding(.bottom, Tokens.Space.s)
             }
         } header: {
             header

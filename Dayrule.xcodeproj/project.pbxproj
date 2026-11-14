@@ -43,6 +43,7 @@
 		319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */; };
 		323F876777A60A21AA7FF38C /* WhenSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A623CE13C0EC4AE36C0B332D /* WhenSheetView.swift */; };
 		33512D406B1FF04BB06264A4 /* DomainVectorsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5988F00B2890D3A2CEB69C2 /* DomainVectorsTests.swift */; };
+		341646CED60B82B3BEC546BD /* MacListSeparators.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AAC84046AC0375D1A8CCC8 /* MacListSeparators.swift */; };
 		3471F9DBE5ED78CB6353B971 /* PasskeySignInTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */; };
 		34FED0087086C173E8D97B31 /* World.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9A6D321AF398DD22A708FC /* World.swift */; };
 		35B2037FC4B6BF6087528746 /* UuidV7Tests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 21624A016DAA93040A515E60 /* UuidV7Tests.swift */; };
@@ -390,6 +391,7 @@
 		E25CBE21AB117E4C63F80969 /* VaultPullTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultPullTests.swift; sourceTree = "<group>"; };
 		E33A5717E2C0EBD5E438D3D4 /* TodoRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoRow.swift; sourceTree = "<group>"; };
 		E34B59C8D0191E0E52C125A9 /* CipherStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CipherStoreTests.swift; sourceTree = "<group>"; };
+		E3AAC84046AC0375D1A8CCC8 /* MacListSeparators.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacListSeparators.swift; sourceTree = "<group>"; };
 		E3F529958287BF2C2D09E0BC /* ClientPlatformTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientPlatformTests.swift; sourceTree = "<group>"; };
 		E53DB8A42C5E24C14EEEC081 /* AppModelLockTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelLockTests.swift; sourceTree = "<group>"; };
 		E68FBEE1E60A9CFB9853D989 /* RecoveryPhraseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryPhraseView.swift; sourceTree = "<group>"; };
@@ -558,6 +560,7 @@
 			children = (
 				57AF130657190E4861550019 /* BuildInfo.swift */,
 				92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */,
+				E3AAC84046AC0375D1A8CCC8 /* MacListSeparators.swift */,
 				6C2E91EF5C081EF755681B85 /* MacWindowCloseGate.swift */,
 			);
 			path = Platform;
@@ -1032,6 +1035,7 @@
 				52DAE6F37E4412EE939E3F4D /* ListStyle.swift in Sources */,
 				BACDBC180DF1DD4AD49FCA60 /* Lists.swift in Sources */,
 				4C4E0A198B4141767C26545A /* ListsBrowserView.swift in Sources */,
+				341646CED60B82B3BEC546BD /* MacListSeparators.swift in Sources */,
 				ACF8159F23C478954024AF44 /* MacWindowCloseGate.swift in Sources */,
 				C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */,
 				02CEB9BD1F3938CA38CBE210 /* Merge.swift in Sources */,
