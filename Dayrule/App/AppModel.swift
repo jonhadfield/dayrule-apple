@@ -642,7 +642,7 @@ final class AppModel {
                 hasCompletedInitialSync = true
             }
             let pending = (try? await cipherStore?.pendingKeys()) ?? []
-            if syncEngine.sawUnknownAlg {
+            if await syncEngine.sawUnknownAlg {
                 setSyncStatus(.needsUpdate)
             } else if !pending.isEmpty {
                 // Push ran but rows remain — surface it instead of a false "Up to date".
