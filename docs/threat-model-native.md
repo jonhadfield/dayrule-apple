@@ -1,7 +1,7 @@
 # Dayrule native (iOS + macOS) — threat model deltas
 
 Reviewed with M0; broadened for macOS with the multiplatform target. The
-web threat model at `/Users/hadfielj/Repositories/dayrule/docs/threat-model.md`
+web threat model in the companion Dayrule web repo (`docs/threat-model.md`)
 still applies. This file only records **device-specific** differences.
 
 ## Trust boundary
