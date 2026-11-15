@@ -257,20 +257,36 @@ final class AppStoreScreenshotTests: XCTestCase {
                 app.keyboards.buttons["Hide keyboard"].tap()
             } else if app.buttons["Hide keyboard"].exists {
                 app.buttons["Hide keyboard"].tap()
+            } else if app.buttons["list.addDone"].waitForExistence(timeout: 0.5) {
+                app.buttons["list.addDone"].tap()
             } else if app.keyboards.firstMatch.exists {
-                // Tap the sheet title chrome to resign first responder.
-                app.staticTexts["To-do"].tap()
+                // Resign without requiring a specific sheet title.
+                if app.navigationBars.firstMatch.exists {
+                    app.navigationBars.firstMatch.tap()
+                } else {
+                    app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+                }
             }
             Thread.sleep(forTimeInterval: 0.4)
         }
+
+        var capturedWhenShot = false
 
         /// Add sample titles via pinned/list Add when missing (agent vault for ASC).
         func seedMissing(_ titles: [String], dismissWhenSheet: Bool = false) {
             for title in titles {
                 if app.staticTexts[title].waitForExistence(timeout: 0.4) { continue }
+                // Exit multi-select / sheets left over from prior gestures.
+                if app.buttons["Cancel"].waitForExistence(timeout: 0.3) {
+                    app.buttons["Cancel"].tap()
+                    Thread.sleep(forTimeInterval: 0.3)
+                }
+                dismissKeyboard()
                 let field = app.textFields["list.addField"]
                 guard field.waitForExistence(timeout: 4) else { continue }
                 field.tap()
+                // Wait for keyboard — typeText fails hard if focus never lands.
+                guard app.keyboards.firstMatch.waitForExistence(timeout: 3) else { continue }
                 field.typeText(title)
                 let add = app.buttons["list.addButton"]
                 if add.waitForExistence(timeout: 2), add.isEnabled {
@@ -280,8 +296,14 @@ final class AppStoreScreenshotTests: XCTestCase {
                 }
                 Thread.sleep(forTimeInterval: 0.5)
                 if dismissWhenSheet {
-                    // Scheduled Add opens When (already tomorrow). Prefer the
-                    // selected chip button; swipe dismisses if ambiguous.
+                    // Scheduled Add opens When (already tomorrow). Capture once
+                    // for ASC, then confirm Tomorrow.
+                    if !capturedWhenShot,
+                       app.buttons["Tomorrow"].waitForExistence(timeout: 2)
+                    {
+                        shot("07-when")
+                        capturedWhenShot = true
+                    }
                     let tomorrowChip = app.buttons["Tomorrow"]
                     if tomorrowChip.waitForExistence(timeout: 2) {
                         tomorrowChip.firstMatch.tap()
@@ -304,6 +326,223 @@ final class AppStoreScreenshotTests: XCTestCase {
             Thread.sleep(forTimeInterval: 0.6)
         }
 
+        func sidebarProject(named name: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@ AND label == %@",
+                    "list.sidebar.project.",
+                    name
+                )
+            ).firstMatch
+        }
+
+        func openNewListMenu() {
+            let newList = app.buttons["browse.newList"]
+            guard newList.waitForExistence(timeout: 4) else { return }
+            newList.tap()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+
+        /// Create a named project via New List when missing, then open it.
+        @discardableResult
+        func ensureProject(named name: String) -> Bool {
+            if phone {
+                go("browse")
+            } else {
+                ensureSidebarVisible(app)
+            }
+            let existing = sidebarProject(named: name)
+            if existing.waitForExistence(timeout: 1.5) {
+                existing.tap()
+                Thread.sleep(forTimeInterval: 0.5)
+                return true
+            }
+            // Browse list may show the title without a sidebar id (phone).
+            if phone, app.staticTexts[name].waitForExistence(timeout: 1) {
+                app.staticTexts[name].tap()
+                Thread.sleep(forTimeInterval: 0.5)
+                return true
+            }
+            openNewListMenu()
+            let newProject = app.buttons["browse.newProject"]
+            guard newProject.waitForExistence(timeout: 3) else { return false }
+            newProject.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            let titleField = app.textFields["project.title"]
+            guard titleField.waitForExistence(timeout: 4) else { return false }
+            titleField.tap()
+            // Clear placeholder "New Project" if selected.
+            titleField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 24))
+            titleField.typeText(name)
+            dismissKeyboard()
+            Thread.sleep(forTimeInterval: 0.4)
+            // Stay on the new project so the caller can seed todos.
+            return true
+        }
+
+        /// Pop project/area detail back to Browse / sidebar root.
+        func leaveDetailToBrowse() {
+            dismissKeyboard()
+            if phone {
+                // Prefer the Browse tab over Back — title fields steal Back focus.
+                let browseTab = app.buttons["phone.tab.browse"]
+                if browseTab.waitForExistence(timeout: 2) {
+                    browseTab.tap()
+                    Thread.sleep(forTimeInterval: 0.4)
+                    return
+                }
+            }
+            let back = app.navigationBars.buttons.element(boundBy: 0)
+            if back.waitForExistence(timeout: 1), back.isHittable {
+                back.tap()
+                Thread.sleep(forTimeInterval: 0.4)
+            }
+        }
+
+        func ensureArea(named name: String) {
+            if phone {
+                go("browse")
+            } else {
+                ensureSidebarVisible(app)
+            }
+            if app.staticTexts[name].waitForExistence(timeout: 1) {
+                leaveDetailToBrowse()
+                return
+            }
+            let areaRow = app.descendants(matching: .any).matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@ AND label == %@",
+                    "list.sidebar.area.",
+                    name
+                )
+            ).firstMatch
+            if areaRow.waitForExistence(timeout: 1) {
+                leaveDetailToBrowse()
+                return
+            }
+            openNewListMenu()
+            let newArea = app.buttons["browse.newArea"]
+            guard newArea.waitForExistence(timeout: 3) else { return }
+            newArea.tap()
+            Thread.sleep(forTimeInterval: 0.8)
+            let titleField = app.textFields["area.title"]
+            guard titleField.waitForExistence(timeout: 4) else { return }
+            titleField.tap()
+            titleField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: 24))
+            titleField.typeText(name)
+            dismissKeyboard()
+            Thread.sleep(forTimeInterval: 0.4)
+            leaveDetailToBrowse()
+        }
+
+        /// Add loose project todos via the pinned project Add field.
+        func seedProjectTodos(_ titles: [String]) {
+            let projectAdd = app.textFields["project.addField"]
+            guard projectAdd.waitForExistence(timeout: 4) else { return }
+            for title in titles {
+                if app.staticTexts[title].waitForExistence(timeout: 0.3) { continue }
+                projectAdd.tap()
+                guard app.keyboards.firstMatch.waitForExistence(timeout: 2) else { continue }
+                projectAdd.typeText(title)
+                let addBtn = app.buttons["project.addButton"]
+                if addBtn.waitForExistence(timeout: 1), addBtn.isEnabled {
+                    addBtn.tap()
+                } else {
+                    projectAdd.typeText("\n")
+                }
+                Thread.sleep(forTimeInterval: 0.35)
+            }
+            dismissKeyboard()
+        }
+
+        /// House / Kitchen / Garden / Holidays — denser Browse + sidebar for ASC.
+        func ensureDemoOrganisation() {
+            ensureArea(named: "House")
+            _ = ensureProject(named: "Kitchen")
+            seedProjectTodos([
+                "Paint the cupboards",
+                "Replace the tap washer",
+                "Reorganise the pantry",
+                "Buy new tea towels",
+                "Descale the kettle",
+                "Oil the chopping boards",
+            ])
+            _ = ensureProject(named: "Garden")
+            seedProjectTodos([
+                "Sow the sweet peas",
+                "Mend the fence panel",
+                "Order compost",
+                "Sharpen the shears",
+                "Plant the spring bulbs",
+            ])
+            _ = ensureProject(named: "Holidays")
+            seedProjectTodos([
+                "Book the cottage",
+                "Pack the walking boots",
+                "Check passport dates",
+                "Arrange pet sitting",
+            ])
+            // Leave on Kitchen for the project shot that follows.
+            _ = ensureProject(named: "Kitchen")
+        }
+
+        func openPaintEditor() {
+            let paintTitle = app.staticTexts["Paint the cupboards"]
+            XCTAssertTrue(paintTitle.waitForExistence(timeout: 8), "Paint todo missing")
+            if paintTitle.isHittable {
+                paintTitle.tap()
+            } else {
+                let cell = app.cells.containing(
+                    NSPredicate(format: "label CONTAINS %@", "Paint the cupboards")
+                ).firstMatch
+                if cell.exists, cell.isHittable {
+                    cell.tap()
+                } else {
+                    app.coordinate(withNormalizedOffset: .zero)
+                        .withOffset(CGVector(dx: 120, dy: 190))
+                        .tap()
+                }
+            }
+            let opened = app.textFields["editor.title"].waitForExistence(timeout: 6)
+                || app.textViews["editor.title"].waitForExistence(timeout: 3)
+                || app.buttons["editor.save"].waitForExistence(timeout: 3)
+                || app.buttons["editor.checklist.add"].waitForExistence(timeout: 2)
+            if !opened {
+                dumpDebug(app, out: out, tag: "editor")
+            }
+            XCTAssertTrue(opened, "editor did not open — see debug-editor.*")
+            // Prefer a short, finished checklist — skip if Paint already has items.
+            let hasChecklist = app.staticTexts["Sand the doors"].waitForExistence(timeout: 0.4)
+                || app.staticTexts["Undercoat"].waitForExistence(timeout: 0.2)
+            if !hasChecklist {
+                let checklistAdd = app.buttons["editor.checklist.add"]
+                for item in ["Sand the doors", "Undercoat", "Top coat"] {
+                    guard checklistAdd.waitForExistence(timeout: 2) else { break }
+                    checklistAdd.tap()
+                    Thread.sleep(forTimeInterval: 0.25)
+                    let fields = app.textFields
+                    let count = fields.count
+                    guard count > 0 else { continue }
+                    let last = fields.element(boundBy: count - 1)
+                    if last.waitForExistence(timeout: 1) {
+                        last.tap()
+                        last.typeText(item)
+                    }
+                    Thread.sleep(forTimeInterval: 0.25)
+                }
+            }
+            dismissKeyboard()
+            Thread.sleep(forTimeInterval: 0.4)
+        }
+
+        func closeEditor() {
+            if app.buttons["editor.save"].exists { app.buttons["editor.save"].tap() }
+            else if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+            else if app.buttons["Save"].exists { app.buttons["Save"].tap() }
+            else { app.swipeDown() }
+            Thread.sleep(forTimeInterval: 0.4)
+        }
+
         // Fatten sparse agent lists so ASC shots aren’t empty paper.
         go("today")
         seedMissing([
@@ -315,6 +554,10 @@ final class AppStoreScreenshotTests: XCTestCase {
             "Water the plants",
             "Prep tomorrow's lunch",
             "Call the plumber back",
+            "Put the bins out",
+            "Pack the swimming bag",
+            "Confirm Friday babysitter",
+            "Defrost the freezer drawer",
         ])
         shot("01-today")
 
@@ -329,37 +572,60 @@ final class AppStoreScreenshotTests: XCTestCase {
             "Order dishwasher tablets",
             "Email the landlord about the leak",
             "Sharpen the kitchen knives",
+            "Renew the parking permit",
+            "Photograph the meter reading",
+            "Write thank-you notes",
+            "Label the spare keys",
         ])
         shot("02-inbox")
 
         go("scheduled")
+        // Unique title forces a When sheet so we can capture 07-when even when
+        // the rest of the Scheduled list is already seeded.
+        let whenProbe = "Weekend market \(Int(Date().timeIntervalSince1970) % 100_000)"
         seedMissing([
+            whenProbe,
             "Museum with the kids",
             "MOT appointment",
             "Garden centre run",
             "Softball practice",
+            "Parents' evening",
+            "Roofers' quote visit",
+            "Blood test at the GP",
         ], dismissWhenSheet: true)
         shot("03-scheduled")
 
+        // Projects + area first so Browse / sidebar shots look lived-in.
+        ensureDemoOrganisation()
+
+        // Push dense seed so Mac agent capture / other devices see the same vault.
+        if app.buttons["Settings"].waitForExistence(timeout: 2) {
+            app.buttons["Settings"].tap()
+        } else if app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch.exists {
+            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Settings")).firstMatch.tap()
+        }
+        if app.buttons["settings.syncNow"].waitForExistence(timeout: 4) {
+            app.buttons["settings.syncNow"].tap()
+            Thread.sleep(forTimeInterval: 5)
+        }
+        if app.buttons["Close"].waitForExistence(timeout: 1) {
+            app.buttons["Close"].tap()
+        } else if app.buttons["Done"].waitForExistence(timeout: 1) {
+            app.buttons["Done"].tap()
+        } else {
+            app.swipeDown()
+        }
+        Thread.sleep(forTimeInterval: 0.5)
+
         if phone {
             go("browse")
-            Thread.sleep(forTimeInterval: 0.5)
+            Thread.sleep(forTimeInterval: 0.6)
             shot("04-browse")
-            let kitchen = app.staticTexts["Kitchen"]
-            if kitchen.waitForExistence(timeout: 10) {
-                kitchen.tap()
-                Thread.sleep(forTimeInterval: 1)
-                shot("05-project-kitchen")
-                let paint = app.staticTexts["Paint the cupboards"]
-                if paint.waitForExistence(timeout: 5) {
-                    paint.tap()
-                    Thread.sleep(forTimeInterval: 1)
-                    shot("06-editor-checklist")
-                    if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-                    else if app.buttons["Save"].exists { app.buttons["Save"].tap() }
-                    else { app.swipeDown() }
-                }
-            }
+            _ = ensureProject(named: "Kitchen")
+            shot("05-project-kitchen")
+            openPaintEditor()
+            shot("06-editor-checklist")
+            closeEditor()
         } else {
             go("backlog")
             seedMissing([
@@ -367,61 +633,40 @@ final class AppStoreScreenshotTests: XCTestCase {
                 "Replace hallway bulbs",
                 "Catalogue the vinyl",
                 "Research heat pump quotes",
+                "Frame the beach photos",
+                "Service the bike",
+                "Clear the loft hatch",
+                "Sort the tool drawer",
+                "Wash the spare duvet",
             ])
             shot("04-backlog")
+            // Sidebar should now list Kitchen / Garden / Holidays.
             ensureSidebarVisible(app)
-            // Prefer sidebar project control — "Kitchen" also appears as a todo tag.
-            let kitchenProject = app.descendants(matching: .any).matching(
-                NSPredicate(
-                    format: "identifier BEGINSWITH %@ AND label == %@",
-                    "list.sidebar.project.",
-                    "Kitchen"
-                )
-            ).firstMatch
-            if kitchenProject.waitForExistence(timeout: 8) {
-                kitchenProject.tap()
-            } else {
-                let anyProject = app.descendants(matching: .any).matching(
-                    NSPredicate(format: "identifier BEGINSWITH %@", "list.sidebar.project.")
-                ).firstMatch
-                XCTAssertTrue(anyProject.waitForExistence(timeout: 3), "no sidebar project")
-                anyProject.tap()
-            }
-            Thread.sleep(forTimeInterval: 1)
+            _ = ensureProject(named: "Kitchen")
             shot("05-project-kitchen")
-            // Row buttons often report hitPoint -1 in split view; tap the title label /
-            // cell / absolute point instead.
-            let paintTitle = app.staticTexts["Paint the cupboards"]
-            XCTAssertTrue(paintTitle.waitForExistence(timeout: 8), "Paint todo missing")
-            if paintTitle.isHittable {
-                paintTitle.tap()
-            } else {
-                let cell = app.cells.containing(
-                    NSPredicate(format: "label CONTAINS %@", "Paint the cupboards")
-                ).firstMatch
-                if cell.exists, cell.isHittable {
-                    cell.tap()
-                } else {
-                    // Point inside the title (from a11y frame ~54,179 on 1032-wide).
-                    app.coordinate(withNormalizedOffset: .zero)
-                        .withOffset(CGVector(dx: 120, dy: 190))
-                        .tap()
-                }
-            }
-            let opened = app.textFields["editor.title"].waitForExistence(timeout: 6)
-                || app.textViews["editor.title"].waitForExistence(timeout: 3)
-                || app.buttons["editor.save"].waitForExistence(timeout: 3)
-                || app.buttons["editor.checklist.add"].waitForExistence(timeout: 2)
-            if !opened {
-                dumpDebug(app, out: out, tag: "editor")
-            }
-            XCTAssertTrue(opened, "editor did not open — see debug-editor.*")
-            dismissKeyboard()
-            Thread.sleep(forTimeInterval: 0.5)
+            openPaintEditor()
             shot("06-editor-checklist")
-            if app.buttons["editor.save"].exists { app.buttons["editor.save"].tap() }
-            else if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-            else if app.buttons["Save"].exists { app.buttons["Save"].tap() }
+            closeEditor()
+        }
+
+        // Quick Find overlay (toolbar magnifying glass on phone / sidebar on split).
+        let findBtn: XCUIElement = {
+            if app.buttons["list.find"].exists { return app.buttons["list.find"] }
+            if app.buttons["sidebar.find"].exists { return app.buttons["sidebar.find"] }
+            return app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", "Find")).firstMatch
+        }()
+        if findBtn.waitForExistence(timeout: 4) {
+            findBtn.tap()
+            let findField = app.textFields["find.field"]
+            if findField.waitForExistence(timeout: 3) {
+                findField.tap()
+                _ = app.keyboards.firstMatch.waitForExistence(timeout: 2)
+                findField.typeText("paint")
+                Thread.sleep(forTimeInterval: 0.9)
+                shot("08-find")
+                if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+                else { app.swipeDown() }
+            }
         }
     }
 }
