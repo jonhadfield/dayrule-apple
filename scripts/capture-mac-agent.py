@@ -683,11 +683,67 @@ def open_project(name: str) -> bool:
     return False
 
 
-def trash_untitled_rows() -> None:
-    """Delete leftover New Project / New Area via sidebar context menu.
+def trash_open_untitled(title: str) -> bool:
+    """Trash the open New Project / New Area detail (toolbar or ··· menu)."""
+    if title == "New Area" and focus_ax("area.trash", timeout=2.0):
+        time.sleep(0.3)
+        return True
+    # Project ··· menu — prefer description click over deep AX walks.
+    try:
+        run_as(
+            """
+tell application "System Events"
+  tell process "Dayrule"
+    set frontmost to true
+    delay 0.1
+    set clicked to false
+    repeat with b in (buttons of window 1)
+      try
+        set d to description of b as string
+        if d is "Project actions" then
+          click b
+          set clicked to true
+          exit repeat
+        end if
+      end try
+    end repeat
+    if not clicked then
+      repeat with b in (entire contents of window 1)
+        try
+          if (class of b as string) is "button" then
+            set d to ""
+            try
+              set d to description of b as string
+            end try
+            if d is "Project actions" then
+              click b
+              set clicked to true
+              exit repeat
+            end if
+          end if
+        end try
+      end repeat
+    end if
+    if not clicked then error "no Project actions"
+    delay 0.25
+    if not (exists menu 1) then error "no actions menu"
+    click menu item "Move to Trash" of menu 1
+  end tell
+end tell
+"""
+        )
+        time.sleep(0.35)
+        return True
+    except RuntimeError:
+        key_code(53)
+        time.sleep(0.1)
+        return False
 
-    Opening ··· / AX for project.trash hangs on dense vaults — right-click the
-    sidebar row and choose Move to Trash instead (same path as Help).
+
+def trash_untitled_rows() -> None:
+    """Delete leftover New Project / New Area.
+
+    Prefer sidebar context menu; fall back to the open detail's Trash / ··· menu.
     """
     print("  trash untitled…", flush=True)
     spots = sidebar_project_spots()
@@ -707,15 +763,14 @@ def trash_untitled_rows() -> None:
                 time.sleep(0.35)
                 print(f"    trashed {title!r} (context menu)", flush=True)
                 break
-            key_code(53)  # dismiss menu
-            time.sleep(0.15)
-            # Area detail exposes a toolbar Trash button.
-            if title == "New Area" and focus_ax("area.trash", timeout=2.0):
-                time.sleep(0.3)
-                print(f"    trashed {title!r} (toolbar)", flush=True)
+            key_code(53)
+            time.sleep(0.12)
+            if trash_open_untitled(title):
+                print(f"    trashed {title!r} (detail)", flush=True)
                 break
             print(f"    skip trash {title!r}", flush=True)
-            return
+            # Keep scanning other sidebar slots instead of aborting the pass.
+            continue
         if not found:
             break
 
