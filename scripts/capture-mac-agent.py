@@ -56,6 +56,14 @@ def load_creds() -> tuple[str, str]:
 
 def find_app() -> Path:
     import glob
+    import os
+
+    override = os.environ.get("DAYRULE_APP")
+    if override:
+        p = Path(override)
+        if not p.is_dir():
+            raise SystemExit(f"DAYRULE_APP not found: {p}")
+        return p
 
     matches = sorted(
         glob.glob(
@@ -67,7 +75,8 @@ def find_app() -> Path:
     )
     if not matches:
         raise SystemExit("Dayrule.app Debug not found")
-    return Path(matches[0])
+    # Prefer newest mtime — multiple DerivedData folders may exist.
+    return Path(max(matches, key=lambda m: Path(m).stat().st_mtime))
 
 
 def ensure_helpers() -> None:
