@@ -28,6 +28,9 @@ build/
 *.p8
 AuthKey_*.p8
 
+# Vercel link metadata (projectId / orgId) — never commit
+.vercel/
+
 # IDE
 .idea/
 

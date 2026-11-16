@@ -1383,6 +1383,10 @@ final class AppModel {
             store.hydrate(.empty())
             entitiesEpoch += 1
             phase = .locked
+            #if os(iOS)
+            // Same as applyLockedUI — deleteAccount does not call lock()/applyLockedUI.
+            WidgetCountsStore.clear()
+            #endif
             await api.setToken(nil)
             await crypto.lock()
             try? sessions.clear()
