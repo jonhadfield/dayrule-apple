@@ -69,7 +69,9 @@ struct RuledRow<Content: View>: View {
 
 extension View {
     /// Paper list chrome: hide system section *and* row rules so drawn hairlines
-    /// stay single (decisions 53 / 71 / 73 / 74).
+    /// stay single (decisions 53 / 71 / 73 / 74). Scheduled day headers are
+    /// flat rows (not `Section`s) so a top section rule cannot stack under the
+    /// page-title hairline.
     func dayrulePaperList() -> some View {
         listSectionSeparator(.hidden)
             .listRowSeparator(.hidden)

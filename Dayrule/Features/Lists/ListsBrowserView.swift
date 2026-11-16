@@ -1263,35 +1263,29 @@ struct ListsBrowserView: View {
         if dayGroups.isEmpty, monthGroups.isEmpty, scheduled.waiting.isEmpty {
             emptyRow(list: .scheduled)
         } else {
+            // Flat rows (not `Section` headers): a Section under the page title
+            // stacked a system top rule on the page-title hairline (double
+            // underline). Day number + “Tomorrow”/weekday still read as headers.
             ForEach(dayGroups, id: \.date) { day in
-                Section {
-                    ForEach(day.items, id: \.id) { item in
-                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
-                    }
-                } header: {
-                    scheduledDayHeader(day.date, colors: colors)
+                scheduledDayHeader(day.date, colors: colors)
+                ForEach(day.items, id: \.id) { item in
+                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                 }
             }
             ForEach(monthGroups, id: \.month) { month in
-                Section {
-                    ForEach(month.items, id: \.id) { item in
-                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
-                    }
-                } header: {
-                    DayruleSectionHeader(
-                        title: DayruleDateFormat.month(month.month),
-                        tone: .accent,
-                        style: .caps
-                    )
+                DayruleSectionHeader(
+                    title: DayruleDateFormat.month(month.month),
+                    tone: .accent,
+                    style: .caps
+                )
+                ForEach(month.items, id: \.id) { item in
+                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                 }
             }
             if !scheduled.waiting.isEmpty {
-                Section {
-                    ForEach(scheduled.waiting, id: \.id) { item in
-                        listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
-                    }
-                } header: {
-                    DayruleSectionHeader(title: "Waiting", tone: .accent, style: .caps)
+                DayruleSectionHeader(title: "Waiting", tone: .accent, style: .caps)
+                ForEach(scheduled.waiting, id: \.id) { item in
+                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
                 }
             }
         }
@@ -1406,8 +1400,8 @@ struct ListsBrowserView: View {
             title: row.title,
             // Trash rows get no live checkbox.
             status: row.isTodo && list != .trash ? row.status : nil,
-            // Non-Today lists keep the subtitle under the title; Today uses trailing chips.
-            subtitle: list == .today ? nil : row.subtitle,
+            // Due dates use trailing chips (Today + Inbox); other lists keep subtitles.
+            subtitle: (list == .today || list == .inbox) ? nil : row.subtitle,
             subtitleIsOverdue: row.deadlineOverdue,
             hasReminder: row.hasReminder,
             repeats: row.isRepeating,
@@ -1746,10 +1740,12 @@ struct ListsBrowserView: View {
         switch name {
         case .inbox:
             return Lists.inbox(model.entities, ctx).map {
+                // Trailing due chip (same layout as Today) — a deadline subtitle
+                // made Inbox rows taller than Today’s single-line + chip rows.
                 todoRow(
                     $0,
-                    subtitle: $0.deadline.map { DayruleDateFormat.due($0, today: ctx.today) },
-                    trailing: nil,
+                    subtitle: nil,
+                    trailing: inboxTrailing(for: $0),
                     overdue: Lists.isOverdue(.todo($0), ctx),
                     progress: progress
                 )
@@ -1851,6 +1847,23 @@ struct ListsBrowserView: View {
             return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
         }
         return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
+    }
+
+    /// Inbox: only show a chip when there is a due date (no perpetual “Today”).
+    private func inboxTrailing(for todo: Todo) -> TrailingChip? {
+        guard let deadline = todo.deadline else { return nil }
+        if Lists.isOverdue(.todo(todo), ctx) {
+            return TrailingChip(
+                systemImage: "clock",
+                label: overdueLabel(deadline: deadline),
+                isOverdue: true
+            )
+        }
+        return TrailingChip(
+            systemImage: "calendar",
+            label: DayruleDateFormat.due(deadline, today: ctx.today),
+            isOverdue: false
+        )
     }
 
     private func overdueLabel(deadline: LocalDate? = nil, startDate: LocalDate? = nil) -> String {

@@ -134,7 +134,9 @@ private struct DayrulePageTitleChrome<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             content
                 .padding(.bottom, Tokens.Space.s)
-            colors.text.frame(height: Tokens.Space.xxs)
+            // One paper hairline — match list row rules (not a 2pt ink bar that
+            // stacked with the first section separator as a double underline).
+            colors.hairline.frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, Tokens.rowInset + readingMargin)
