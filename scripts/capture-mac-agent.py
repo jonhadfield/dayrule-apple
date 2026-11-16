@@ -22,6 +22,7 @@ OUT = Path(
 )
 WINID = Path("/tmp/dayrule-winid")
 CLICK = Path("/tmp/dayrule-click")
+RCLICK = Path("/tmp/dayrule-rclick")
 AXFOCUS = Path("/tmp/dayrule-axfocus")
 API = "https://dayrule.app"
 
@@ -55,6 +56,14 @@ def load_creds() -> tuple[str, str]:
 
 def find_app() -> Path:
     import glob
+    import os
+
+    override = os.environ.get("DAYRULE_APP")
+    if override:
+        p = Path(override)
+        if not p.is_dir():
+            raise SystemExit(f"DAYRULE_APP not found: {p}")
+        return p
 
     matches = sorted(
         glob.glob(
@@ -66,7 +75,8 @@ def find_app() -> Path:
     )
     if not matches:
         raise SystemExit("Dayrule.app Debug not found")
-    return Path(matches[0])
+    # Prefer newest mtime — multiple DerivedData folders may exist.
+    return Path(max(matches, key=lambda m: Path(m).stat().st_mtime))
 
 
 def ensure_helpers() -> None:
@@ -108,6 +118,24 @@ up?.post(tap: .cghidEventTap)
 """
         )
         sh("swiftc", str(src), "-o", str(CLICK), "-framework", "Cocoa")
+    if not (RCLICK.exists() and RCLICK.stat().st_mode & 0o111):
+        src = Path("/tmp/dayrule-rclick.swift")
+        src.write_text(
+            """
+import Cocoa
+let args = CommandLine.arguments
+guard args.count >= 3, let x = Double(args[1]), let y = Double(args[2]) else {
+  fputs("usage: rclick x y\\n", stderr); exit(1)
+}
+let pt = CGPoint(x: x, y: y)
+let down = CGEvent(mouseEventSource: nil, mouseType: .rightMouseDown, mouseCursorPosition: pt, mouseButton: .right)
+let up = CGEvent(mouseEventSource: nil, mouseType: .rightMouseUp, mouseCursorPosition: pt, mouseButton: .right)
+down?.post(tap: .cghidEventTap)
+usleep(40000)
+up?.post(tap: .cghidEventTap)
+"""
+        )
+        sh("swiftc", str(src), "-o", str(RCLICK), "-framework", "Cocoa")
     if not (AXFOCUS.exists() and AXFOCUS.stat().st_mode & 0o111):
         src = Path("/tmp/dayrule-axfocus.swift")
         src.write_text(
@@ -177,6 +205,12 @@ exit(0)
 def hid_click(x: float, y: float, settle: float = 0.35) -> None:
     run_as('tell application "Dayrule" to activate\ndelay 0.08')
     sh(str(CLICK), str(int(x)), str(int(y)))
+    time.sleep(settle)
+
+
+def hid_right_click(x: float, y: float, settle: float = 0.35) -> None:
+    run_as('tell application "Dayrule" to activate\ndelay 0.08')
+    sh(str(RCLICK), str(int(x)), str(int(y)))
     time.sleep(settle)
 
 
@@ -514,14 +548,41 @@ tell application "System Events" to key code {code}{using}
     time.sleep(0.2)
 
 
-def focus_ax(identifier: str) -> bool:
+def focus_ax(identifier: str, timeout: float = 3.0) -> bool:
     """Focus a control by accessibilityIdentifier (compiled AX helper)."""
     ensure_helpers()
     run_as('tell application "Dayrule" to activate\ndelay 0.05')
-    r = subprocess.run(
-        [str(AXFOCUS), identifier], capture_output=True, text=True
-    )
+    try:
+        r = subprocess.run(
+            [str(AXFOCUS), identifier],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False
     return r.returncode == 0
+
+
+def click_popup_menu_item(label: str) -> bool:
+    """Click a label in the frontmost contextual/popup menu."""
+    lit = json.dumps(label)
+    try:
+        run_as(
+            f"""
+tell application "System Events"
+  tell process "Dayrule"
+    set frontmost to true
+    delay 0.12
+    if not (exists menu 1) then error "no popup menu"
+    click menu item {lit} of menu 1
+  end tell
+end tell
+"""
+        )
+        return True
+    except RuntimeError:
+        return False
 
 
 def click_add_field() -> None:
@@ -600,15 +661,19 @@ def rename_front(name: str) -> None:
     time.sleep(0.35)
 
 
-def open_project(name: str) -> bool:
-    """Click sidebar slots under Trash until window title matches."""
+def sidebar_project_spots() -> list[tuple[int, int]]:
+    """Sidebar slots under Trash (projects/areas sit there on Mac)."""
     try:
         tx, ty = static_center("Trash")
-        spots = [(tx - 20, ty + dy) for dy in (56, 72, 88, 104, 120, 136, 152)]
+        return [(tx - 20, ty + dy) for dy in (56, 72, 88, 104, 120, 136, 152, 168)]
     except RuntimeError:
         x, y, _, _ = window_frame()
-        spots = [(x + 36, y + 220 + i * 28) for i in range(8)]
-    for sx, sy in spots:
+        return [(x + 36, y + 220 + i * 28) for i in range(8)]
+
+
+def open_project(name: str) -> bool:
+    """Click sidebar slots under Trash until window title matches."""
+    for sx, sy in sidebar_project_spots():
         hid_click(sx, sy, settle=0.2)
         try:
             if window_probe()[1] == name:
@@ -618,12 +683,71 @@ def open_project(name: str) -> bool:
     return False
 
 
+def trash_open_untitled(title: str) -> bool:
+    """Trash the open New Project / New Area detail (toolbar or ··· menu)."""
+    if title == "New Area" and focus_ax("area.trash", timeout=2.0):
+        time.sleep(0.3)
+        return True
+    # Project ··· menu — prefer description click over deep AX walks.
+    try:
+        run_as(
+            """
+tell application "System Events"
+  tell process "Dayrule"
+    set frontmost to true
+    delay 0.1
+    set clicked to false
+    repeat with b in (buttons of window 1)
+      try
+        set d to description of b as string
+        if d is "Project actions" then
+          click b
+          set clicked to true
+          exit repeat
+        end if
+      end try
+    end repeat
+    if not clicked then
+      repeat with b in (entire contents of window 1)
+        try
+          if (class of b as string) is "button" then
+            set d to ""
+            try
+              set d to description of b as string
+            end try
+            if d is "Project actions" then
+              click b
+              set clicked to true
+              exit repeat
+            end if
+          end if
+        end try
+      end repeat
+    end if
+    if not clicked then error "no Project actions"
+    delay 0.25
+    if not (exists menu 1) then error "no actions menu"
+    click menu item "Move to Trash" of menu 1
+  end tell
+end tell
+"""
+        )
+        time.sleep(0.35)
+        return True
+    except RuntimeError:
+        key_code(53)
+        time.sleep(0.1)
+        return False
+
+
 def trash_untitled_rows() -> None:
-    """Best-effort delete of leftover New Project / New Area (geometry only)."""
+    """Delete leftover New Project / New Area.
+
+    Prefer sidebar context menu; fall back to the open detail's Trash / ··· menu.
+    """
     print("  trash untitled…", flush=True)
-    x, y, _, _ = window_frame()
-    spots = [(x + 36, y + 220 + i * 28) for i in range(8)]
-    for _ in range(4):
+    spots = sidebar_project_spots()
+    for _ in range(6):
         found = False
         for sx, sy in spots:
             hid_click(sx, sy, settle=0.18)
@@ -634,17 +758,44 @@ def trash_untitled_rows() -> None:
             if title not in ("New Project", "New Area"):
                 continue
             found = True
-            if focus_ax("project.actions"):
-                time.sleep(0.2)
-            if focus_ax("project.trash") or focus_ax("area.trash"):
-                time.sleep(0.3)
-                print(f"    trashed {title!r}", flush=True)
-            else:
-                print(f"    skip trash {title!r} (no AX control)", flush=True)
-                return
-            break
+            hid_right_click(sx, sy, settle=0.3)
+            if click_popup_menu_item("Move to Trash"):
+                time.sleep(0.35)
+                print(f"    trashed {title!r} (context menu)", flush=True)
+                break
+            key_code(53)
+            time.sleep(0.12)
+            if trash_open_untitled(title):
+                print(f"    trashed {title!r} (detail)", flush=True)
+                break
+            print(f"    skip trash {title!r}", flush=True)
+            # Keep scanning other sidebar slots instead of aborting the pass.
+            continue
         if not found:
             break
+
+
+def ensure_named(name: str, *, area: bool = False) -> None:
+    """Open name if present; else rename an untitled row; else create."""
+    if open_project(name):
+        return
+    spots = sidebar_project_spots()
+    for sx, sy in spots:
+        hid_click(sx, sy, settle=0.18)
+        try:
+            title = window_probe()[1]
+        except RuntimeError:
+            continue
+        if title in ("New Project", "New Area"):
+            rename_front(name)
+            time.sleep(0.2)
+            if open_project(name) or window_probe()[1] == name:
+                print(f"    renamed untitled → {name!r}", flush=True)
+                return
+    if area:
+        create_area(name)
+    else:
+        create_project(name)
 
 
 def seed_dense(go) -> None:
@@ -714,8 +865,7 @@ def seed_dense(go) -> None:
     print("  org House/Kitchen/Garden/Holidays", flush=True)
     trash_untitled_rows()
 
-    if not open_project("Kitchen"):
-        create_project("Kitchen")
+    ensure_named("Kitchen")
     for t in (
         "Paint the cupboards",
         "Replace the tap washer",
@@ -726,11 +876,9 @@ def seed_dense(go) -> None:
     ):
         add_todo(t)
 
-    if not open_project("House"):
-        create_area("House")
+    ensure_named("House", area=True)
 
-    if not open_project("Garden"):
-        create_project("Garden")
+    ensure_named("Garden")
     for t in (
         "Sow the sweet peas",
         "Mend the fence panel",
@@ -740,8 +888,7 @@ def seed_dense(go) -> None:
     ):
         add_todo(t)
 
-    if not open_project("Holidays"):
-        create_project("Holidays")
+    ensure_named("Holidays")
     for t in (
         "Book the cottage",
         "Pack the walking boots",
