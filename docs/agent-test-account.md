@@ -9,7 +9,7 @@ scripts, Mac UI driving, etc.) uses this one.
 | Purpose | Apple Guideline 2.1 | Local capture / automation |
 | Creds file | `creds.txt` (gitignored) | `agent-creds.txt` (gitignored) |
 | Where else | App Store Connect only | Never ASC; never commit |
-| Seed | Sample lists for screenshots | Same shape (Kitchen, etc.) is fine |
+| Seed | Sample lists for screenshots | Same shape (Kitchen, Garden, Holidays, House) |
 
 ## Create (once)
 
@@ -33,37 +33,47 @@ scripts, Mac UI driving, etc.) uses this one.
    email, the invite, and the password. Skip two-step (**Not now**). Save the
    recovery phrase offline (not in this repo).
 
-4. Seed sample content (Inbox / Today / Scheduled / a **Kitchen** project with
-   “Paint the cupboards”) and confirm sync. Prefer the encrypted sync seeder
-   (server never sees plaintext):
+4. Seed sample content on the agent vault (encrypted on device — the server
+   never sees plaintext). There is no server-side plaintext seeder.
+
+   **iPhone / iPad (preferred for first seed + ASC PNGs):** the UITest harness
+   signs in against production, creates dense lists + Kitchen / Garden /
+   Holidays / House, syncs, then captures:
 
    ```bash
-   cd /path/to/dayrule/server
-   go run ./cmd/seed-agent -api https://dayrule.app -creds /path/to/dayrule-apple/agent-creds.txt
+   CAPTURE=iphone ./scripts/capture-app-store-screenshots.sh agent-creds.txt
+   CAPTURE=ipad   ./scripts/capture-app-store-screenshots.sh agent-creds.txt
    ```
 
-   Then **Sync now** (or lock/unlock) on the Mac Debug build. Screenshot
-   scripts refuse to write PNGs until Kitchen is visible so a personal vault
-   is never captured by mistake.
-
-5. Point capture at the agent file. **Mac preferred path** (see
-   `docs/mac-app-store.md`):
+   **Mac:** `scripts/capture-mac-agent.py` signs in, waits until Kitchen is
+   visible (so a personal vault is never captured), seeds denser Today /
+   Scheduled / Backlog / projects via the list Add field, Sync now, then
+   writes PNGs:
 
    ```bash
    python3 scripts/capture-mac-agent.py agent-creds.txt
    ```
 
-   Fallbacks:
+   Resize Retina window captures before ASC upload (see `docs/mac-app-store.md`):
 
    ```bash
-   CAPTURE=macos ./scripts/capture-app-store-screenshots.sh agent-creds.txt
-   # or
-   ./scripts/capture-mac-asc-applescript.sh agent-creds.txt
+   mkdir -p docs/app-store-screenshots/macos-2560x1600
+   for f in docs/app-store-screenshots/macos/*.png; do
+     sips -z 1600 2560 "$f" --out "docs/app-store-screenshots/macos-2560x1600/$(basename "$f")"
+   done
    ```
 
-   Scripts default to `agent-creds.txt` when present, else fall back to an
-   explicit path argument — not to `creds.txt`. iPhone/iPad ASC shots still
-   use `CAPTURE=iphone` / `CAPTURE=ipad` with the UITest harness.
+5. Capture entry points (scripts default to `agent-creds.txt` when present —
+   never to App Review `creds.txt`):
+
+   ```bash
+   python3 scripts/capture-mac-agent.py agent-creds.txt
+   CAPTURE=iphone ./scripts/capture-app-store-screenshots.sh agent-creds.txt
+   CAPTURE=ipad   ./scripts/capture-app-store-screenshots.sh agent-creds.txt
+   # fallbacks:
+   CAPTURE=macos ./scripts/capture-app-store-screenshots.sh agent-creds.txt
+   ./scripts/capture-mac-asc-applescript.sh agent-creds.txt
+   ```
 
 ## Rules
 

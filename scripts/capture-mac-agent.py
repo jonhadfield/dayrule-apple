@@ -22,6 +22,7 @@ OUT = Path(
 )
 WINID = Path("/tmp/dayrule-winid")
 CLICK = Path("/tmp/dayrule-click")
+AXFOCUS = Path("/tmp/dayrule-axfocus")
 API = "https://dayrule.app"
 
 
@@ -69,7 +70,7 @@ def find_app() -> Path:
 
 
 def ensure_helpers() -> None:
-    """CGWindowID + HID click (System Events `click at` misses SwiftUI sidebar rows)."""
+    """CGWindowID + HID click + AX focus-by-identifier."""
     if not (WINID.exists() and WINID.stat().st_mode & 0o111):
         src = Path("/tmp/dayrule-winid.swift")
         src.write_text(
@@ -107,18 +108,86 @@ up?.post(tap: .cghidEventTap)
 """
         )
         sh("swiftc", str(src), "-o", str(CLICK), "-framework", "Cocoa")
+    if not (AXFOCUS.exists() and AXFOCUS.stat().st_mode & 0o111):
+        src = Path("/tmp/dayrule-axfocus.swift")
+        src.write_text(
+            r"""
+import ApplicationServices
+import Cocoa
+import Foundation
+
+let args = CommandLine.arguments
+guard args.count >= 2 else {
+  fputs("usage: axfocus <AXIdentifier>\n", stderr); exit(1)
+}
+let want = args[1]
+let trust = AXIsProcessTrustedWithOptions(
+  [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+)
+guard trust else { fputs("accessibility not trusted\n", stderr); exit(2) }
+
+func children(_ el: AXUIElement) -> [AXUIElement] {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &raw) == .success,
+        let arr = raw as? [AXUIElement] else { return [] }
+  return arr
+}
+
+func identifier(of el: AXUIElement) -> String? {
+  var raw: CFTypeRef?
+  // SwiftUI maps accessibilityIdentifier → AXIdentifier.
+  if AXUIElementCopyAttributeValue(el, "AXIdentifier" as CFString, &raw) == .success,
+     let s = raw as? String { return s }
+  return nil
+}
+
+func find(_ root: AXUIElement, id: String, depth: Int = 0) -> AXUIElement? {
+  if depth > 40 { return nil }
+  if identifier(of: root) == id { return root }
+  for c in children(root) {
+    if let hit = find(c, id: id, depth: depth + 1) { return hit }
+  }
+  return nil
+}
+
+let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "uk.co.lessknown.dayrule")
+guard let app = apps.first else { fputs("Dayrule not running\n", stderr); exit(3) }
+let appEl = AXUIElementCreateApplication(app.processIdentifier)
+guard let target = find(appEl, id: want) else {
+  fputs("missing \(want)\n", stderr); exit(4)
+}
+AXUIElementSetAttributeValue(target, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+// Also raise + press if it's a button-like control.
+AXUIElementPerformAction(target, kAXPressAction as CFString)
+exit(0)
+"""
+        )
+        sh(
+            "swiftc",
+            str(src),
+            "-o",
+            str(AXFOCUS),
+            "-framework",
+            "Cocoa",
+            "-framework",
+            "ApplicationServices",
+        )
 
 
-def hid_click(x: float, y: float) -> None:
-    run_as('tell application "Dayrule" to activate\ndelay 0.15')
+def hid_click(x: float, y: float, settle: float = 0.35) -> None:
+    run_as('tell application "Dayrule" to activate\ndelay 0.08')
     sh(str(CLICK), str(int(x)), str(int(y)))
-    time.sleep(0.85)
+    time.sleep(settle)
 
 
-def window_probe() -> tuple[int, str, int]:
-    """Return (window_count, front_name, text+secure field count)."""
-    out = run_as(
-        """
+def window_probe(*, count_fields: bool = False) -> tuple[int, str, int]:
+    """Return (window_count, front_name, field_count).
+
+    Field counting walks the AX tree — only enable on the gate (empty vault).
+    """
+    if count_fields:
+        out = run_as(
+            """
 tell application "System Events"
   if not (exists process "Dayrule") then return "0|none|0"
   tell process "Dayrule"
@@ -137,9 +206,40 @@ tell application "System Events"
   end tell
 end tell
 """
-    )
+        )
+    else:
+        out = run_as(
+            """
+tell application "System Events"
+  if not (exists process "Dayrule") then return "0|none|0"
+  tell process "Dayrule"
+    set wc to count of windows
+    if wc < 1 then return "0|none|0"
+    set nm to name of window 1 as string
+    return (wc as string) & "|" & nm & "|0"
+  end tell
+end tell
+"""
+        )
     parts = out.split("|", 2)
     return int(parts[0]), parts[1], int(parts[2])
+
+
+def window_frame() -> tuple[int, int, int, int]:
+    """Return (x, y, w, h) of window 1."""
+    out = run_as(
+        """
+tell application "System Events"
+  tell process "Dayrule"
+    set p to position of window 1
+    set s to size of window 1
+    return ((item 1 of p) as integer as text) & "," & ((item 2 of p) as integer as text) & "," & ((item 1 of s) as integer as text) & "," & ((item 2 of s) as integer as text)
+  end tell
+end tell
+"""
+    )
+    x, y, w, h = out.split(",")
+    return int(x), int(y), int(w), int(h)
 
 
 def dismiss_overlays() -> None:
@@ -181,12 +281,9 @@ def has_static(label: str) -> bool:
 tell application "System Events"
   tell process "Dayrule"
     if (count of windows) < 1 then return "no"
-    set ui to entire contents of window 1
-    repeat with e in ui
-      try
-        if ((class of e as string) is "static text") and (name of e is {lit}) then return "yes"
-      end try
-    end repeat
+    tell window 1
+      if (count of (static texts whose name is {lit})) > 0 then return "yes"
+    end tell
     return "no"
   end tell
 end tell
@@ -199,26 +296,27 @@ end tell
 
 
 def gate_error() -> str | None:
-    out = run_as(
-        """
+    """Light check — never walk entire contents (hangs on large vaults)."""
+    try:
+        out = run_as(
+            """
 tell application "System Events"
   tell process "Dayrule"
-    if (count of windows) < 1 then return ""
-    set ui to entire contents of window 1
-    repeat with e in ui
-      try
-        if (class of e as string) is "static text" then
-          set nm to name of e as string
-          if nm contains "wrong" or nm contains "Could" or nm contains "Invalid" or nm contains "network" or nm contains "try again" then return nm
-        end if
-      end try
-    end repeat
+    tell window 1
+      set names to name of every static text
+      repeat with nm in names
+        set s to nm as string
+        if s contains "wrong" or s contains "Could" or s contains "Invalid" or s contains "network" or s contains "try again" then return s
+      end repeat
+    end tell
     return ""
   end tell
 end tell
 """
-    )
-    return out or None
+        )
+        return out or None
+    except RuntimeError:
+        return None
 
 
 def set_field(index: int, value: str) -> None:
@@ -250,9 +348,29 @@ end tell
 
 
 def static_center(label: str) -> tuple[int, int]:
+    """Prefer direct `static texts whose name` — falls back to deep walk once."""
     lit = json.dumps(label)
-    out = run_as(
-        f"""
+    try:
+        out = run_as(
+            f"""
+tell application "System Events"
+  tell process "Dayrule"
+    tell window 1
+      set matches to static texts whose name is {lit}
+      if (count of matches) < 1 then error "missing"
+      set e to item 1 of matches
+      set p to position of e
+      set s to size of e
+      return ((item 1 of p) + (item 1 of s) / 2 as integer as text) & "," & ((item 2 of p) + (item 2 of s) / 2 as integer as text)
+    end tell
+  end tell
+end tell
+"""
+        )
+    except RuntimeError:
+        # Nested SwiftUI labels sometimes aren't direct static texts of the window.
+        out = run_as(
+            f"""
 tell application "System Events"
   tell process "Dayrule"
     set ui to entire contents of window 1
@@ -269,7 +387,7 @@ tell application "System Events"
   end tell
 end tell
 """
-    )
+        )
     x, y = out.split(",", 1)
     return int(x), int(y)
 
@@ -342,6 +460,313 @@ def shot(name: str) -> None:
     print(f"wrote {path.name} ({path.stat().st_size} bytes)")
 
 
+def keystroke(text: str, **mods: bool) -> None:
+    """Type via System Events. Short chords only (e.g. ⌘N) — not free text."""
+    parts = []
+    if mods.get("command"):
+        parts.append("command down")
+    if mods.get("option"):
+        parts.append("option down")
+    if mods.get("shift"):
+        parts.append("shift down")
+    if mods.get("control"):
+        parts.append("control down")
+    using = f" using {{{', '.join(parts)}}}" if parts else ""
+    lit = json.dumps(text)
+    run_as(
+        f"""
+tell application "Dayrule" to activate
+delay 0.1
+tell application "System Events" to keystroke {lit}{using}
+"""
+    )
+    time.sleep(0.25)
+
+
+def paste_text(text: str) -> None:
+    """Paste unicode titles (apostrophes / em dashes break raw keystroke)."""
+    subprocess.run(
+        ["pbcopy"],
+        input=text.encode("utf-8"),
+        check=True,
+    )
+    time.sleep(0.05)
+    keystroke("v", command=True)
+    time.sleep(0.2)
+
+
+def key_code(code: int, **mods: bool) -> None:
+    parts = []
+    if mods.get("command"):
+        parts.append("command down")
+    if mods.get("option"):
+        parts.append("option down")
+    if mods.get("shift"):
+        parts.append("shift down")
+    using = f" using {{{', '.join(parts)}}}" if parts else ""
+    run_as(
+        f"""
+tell application "Dayrule" to activate
+delay 0.05
+tell application "System Events" to key code {code}{using}
+"""
+    )
+    time.sleep(0.2)
+
+
+def focus_ax(identifier: str) -> bool:
+    """Focus a control by accessibilityIdentifier (compiled AX helper)."""
+    ensure_helpers()
+    run_as('tell application "Dayrule" to activate\ndelay 0.05')
+    r = subprocess.run(
+        [str(AXFOCUS), identifier], capture_output=True, text=True
+    )
+    return r.returncode == 0
+
+
+def click_add_field() -> None:
+    """Focus the on-screen list Add field (placement follows the open list)."""
+    # Prefer AX id; ⌘N focuses Add for the current list; geometry is last resort.
+    if focus_ax("list.addField"):
+        time.sleep(0.15)
+        return
+    keystroke("n", command=True)
+    time.sleep(0.4)
+    if focus_ax("list.addField"):
+        time.sleep(0.1)
+        return
+    x, y, w, h = window_frame()
+    ax = x + 220 + max(w - 220, 100) // 2
+    ay = y + h - 36
+    hid_click(ax, ay, settle=0.25)
+
+
+def add_todo(title: str) -> None:
+    """Focus Add, paste title, Return — uses the on-screen list's placement."""
+    click_add_field()
+    paste_text(title)
+    time.sleep(0.12)
+    key_code(36)  # Return
+    time.sleep(0.35)
+
+
+def focus_title_field() -> None:
+    """Click the large title area then select-all (no entire-contents walk)."""
+    x, y, w, h = window_frame()
+    # Detail title sits just under the toolbar, right of the sidebar.
+    hid_click(x + 280, y + 72)
+    time.sleep(0.15)
+    keystroke("a", command=True)
+    time.sleep(0.1)
+
+def create_project(name: str) -> None:
+    """⌘⌥N new project and name it."""
+    keystroke("n", command=True, option=True)
+    time.sleep(0.55)
+    try:
+        focus_title_field()
+    except RuntimeError:
+        keystroke("a", command=True)
+        time.sleep(0.08)
+    paste_text(name)
+    time.sleep(0.15)
+    key_code(36)
+    time.sleep(0.4)
+
+
+def create_area(name: str) -> None:
+    keystroke("a", command=True, option=True)
+    time.sleep(0.55)
+    try:
+        focus_title_field()
+    except RuntimeError:
+        keystroke("a", command=True)
+        time.sleep(0.08)
+    paste_text(name)
+    time.sleep(0.15)
+    key_code(36)
+    time.sleep(0.4)
+
+
+def rename_front(name: str) -> None:
+    """Rename the open project/area title field."""
+    try:
+        focus_title_field()
+    except RuntimeError:
+        return
+    paste_text(name)
+    time.sleep(0.15)
+    key_code(36)
+    time.sleep(0.35)
+
+
+def open_project(name: str) -> bool:
+    """Click sidebar slots under Trash until window title matches."""
+    try:
+        tx, ty = static_center("Trash")
+        spots = [(tx - 20, ty + dy) for dy in (56, 72, 88, 104, 120, 136, 152)]
+    except RuntimeError:
+        x, y, _, _ = window_frame()
+        spots = [(x + 36, y + 220 + i * 28) for i in range(8)]
+    for sx, sy in spots:
+        hid_click(sx, sy, settle=0.2)
+        try:
+            if window_probe()[1] == name:
+                return True
+        except RuntimeError:
+            pass
+    return False
+
+
+def trash_untitled_rows() -> None:
+    """Best-effort delete of leftover New Project / New Area (geometry only)."""
+    print("  trash untitled…", flush=True)
+    x, y, _, _ = window_frame()
+    spots = [(x + 36, y + 220 + i * 28) for i in range(8)]
+    for _ in range(4):
+        found = False
+        for sx, sy in spots:
+            hid_click(sx, sy, settle=0.18)
+            try:
+                title = window_probe()[1]
+            except RuntimeError:
+                continue
+            if title not in ("New Project", "New Area"):
+                continue
+            found = True
+            if focus_ax("project.actions"):
+                time.sleep(0.2)
+            if focus_ax("project.trash") or focus_ax("area.trash"):
+                time.sleep(0.3)
+                print(f"    trashed {title!r}", flush=True)
+            else:
+                print(f"    skip trash {title!r} (no AX control)", flush=True)
+                return
+            break
+        if not found:
+            break
+
+
+def seed_dense(go) -> None:
+    """Fatten sparse agent vault so ASC shots look lived-in (matches UITest seed)."""
+    print("seeding dense demo content…", flush=True)
+
+    def fill(list_name: str, titles: tuple[str, ...], when: bool = False) -> None:
+        print(f"  {list_name} ({len(titles)})", flush=True)
+        go(list_name)
+        try:
+            if window_probe()[1] != list_name:
+                raise SystemExit(f"expected window {list_name!r} before seed")
+        except RuntimeError as e:
+            raise SystemExit(f"window probe failed on {list_name}: {e}") from e
+        for t in titles:
+            add_todo(t)
+            if when:
+                # List Add already sets When=tomorrow; Escape dismisses the sheet.
+                time.sleep(0.25)
+                key_code(53)
+                time.sleep(0.15)
+
+    # Inbox is already dense from earlier mis-seeds — don't pile more.
+    fill(
+        "Today",
+        (
+            "Walk for twenty minutes",
+            "Reply to the school email",
+            "Pick up dry cleaning",
+            "Book dentist check-up",
+            "Water the plants",
+            "Prep tomorrow's lunch",
+            "Call the plumber back",
+            "Put the bins out",
+            "Pack the swimming bag",
+            "Confirm Friday babysitter",
+        ),
+    )
+    fill(
+        "Scheduled",
+        (
+            "Museum with the kids",
+            "MOT appointment",
+            "Garden centre run",
+            "Softball practice",
+            "Parents evening",
+            "Roofers quote visit",
+            "Blood test at the GP",
+        ),
+        when=True,
+    )
+    fill(
+        "Backlog",
+        (
+            "Plan spring planting",
+            "Replace hallway bulbs",
+            "Catalogue the vinyl",
+            "Research heat pump quotes",
+            "Frame the beach photos",
+            "Service the bike",
+            "Clear the loft hatch",
+            "Sort the tool drawer",
+            "Wash the spare duvet",
+        ),
+    )
+
+    print("  org House/Kitchen/Garden/Holidays", flush=True)
+    trash_untitled_rows()
+
+    if not open_project("Kitchen"):
+        create_project("Kitchen")
+    for t in (
+        "Paint the cupboards",
+        "Replace the tap washer",
+        "Reorganise the pantry",
+        "Buy new tea towels",
+        "Descale the kettle",
+        "Oil the chopping boards",
+    ):
+        add_todo(t)
+
+    if not open_project("House"):
+        create_area("House")
+
+    if not open_project("Garden"):
+        create_project("Garden")
+    for t in (
+        "Sow the sweet peas",
+        "Mend the fence panel",
+        "Order compost",
+        "Sharpen the shears",
+        "Plant the spring bulbs",
+    ):
+        add_todo(t)
+
+    if not open_project("Holidays"):
+        create_project("Holidays")
+    for t in (
+        "Book the cottage",
+        "Pack the walking boots",
+        "Check passport dates",
+        "Arrange pet sitting",
+    ):
+        add_todo(t)
+
+    trash_untitled_rows()
+
+    print("  sync…", flush=True)
+    keystroke(",", command=True)
+    time.sleep(0.6)
+    if focus_ax("settings.syncNow"):
+        time.sleep(3)
+    else:
+        try:
+            click_static("Sync now")
+            time.sleep(3)
+        except RuntimeError:
+            pass
+    key_code(53)
+    time.sleep(0.3)
+    print("seed done", flush=True)
+
 def main() -> None:
     email, password = load_creds()
     print(f"Mac agent capture as {email}")
@@ -388,7 +813,7 @@ end tell
         time.sleep(1)
         dismiss_overlays()
         try:
-            _, name, fields = window_probe()
+            _, name, fields = window_probe(count_fields=True)
         except RuntimeError:
             continue
         gate_label = has_static("Sign in to open your lists.")
@@ -410,7 +835,7 @@ end tell
     dismiss_overlays()
     expand_advanced()
     time.sleep(0.5)
-    _, _, fields = window_probe()
+    _, _, fields = window_probe(count_fields=True)
     # Field order with Advanced open: API, Email, Password.
     # With Advanced closed: Email, Password (production API is already default).
     if fields >= 3:
@@ -449,30 +874,44 @@ end tell
 
     click_signin()
     print("waiting for lists + Kitchen (AX omits project labels)…")
+    list_titles = {
+        "Today",
+        "Inbox",
+        "Scheduled",
+        "Backlog",
+        "Done",
+        "Trash",
+        "Kitchen",
+        "Garden",
+        "Holidays",
+        "House",
+    }
     kitchen_ok = False
     for i in range(90):
-        time.sleep(2)
-        err = None
-        try:
-            err = gate_error()
-        except RuntimeError:
-            pass
-        if err:
-            raise SystemExit(f"sign-in error: {err}")
+        time.sleep(1.2)
         try:
             _, name, _ = window_probe()
         except RuntimeError:
             name = "?"
-        if has_static("Trash"):
-            tx, ty = static_center("Trash")
-            hid_click(tx - 20, ty + 56)
-            time.sleep(0.3)
-            try:
-                _, name, _ = window_probe()
-            except RuntimeError:
-                pass
-            if name == "Kitchen":
+        # Still on gate — light error check only then.
+        if name in ("Dayrule", "", "none"):
+            err = gate_error()
+            if err:
+                raise SystemExit(f"sign-in error: {err}")
+        unlocked = name in list_titles
+        if not unlocked:
+            # Fallback: sidebar Trash label (may be nested — try once every few loops).
+            if i % 3 == 0 and has_static("Trash"):
+                unlocked = True
+        if unlocked:
+            # Confirm Kitchen exists (agent vault gate). Project rows omit AX labels.
+            if name == "Kitchen" or open_project("Kitchen"):
                 print("agent vault visible (Kitchen)")
+                kitchen_ok = True
+                break
+            # Already on a smart list with Trash in the tree — agent vault is open.
+            if name in list_titles and name != "Dayrule":
+                print(f"agent vault visible ({name})")
                 kitchen_ok = True
                 break
         if (i + 1) % 5 == 0:
@@ -481,7 +920,6 @@ end tell
         raise SystemExit(
             "Kitchen never appeared — seed the agent account before capturing"
         )
-
     def go(list_name: str) -> None:
         """Sidebar select. After a project row, Today sometimes misses once — retry
         via Inbox, then icon + label centers."""
@@ -516,6 +954,8 @@ end tell
 
     # Leave Kitchen (probe used project coords) via Inbox so Today lands.
     go("Inbox")
+    seed_dense(go)
+
     go("Today")
     shot("01-today")
     go("Inbox")
@@ -524,19 +964,13 @@ end tell
     shot("03-scheduled")
     go("Backlog")
     shot("04-backlog")
-    tx, ty = static_center("Trash")
-    hid_click(tx - 20, ty + 56)
-    time.sleep(0.3)
-    if window_probe()[1] != "Kitchen":
-        hid_click(tx - 20, ty + 72)
-        time.sleep(0.3)
-    if window_probe()[1] != "Kitchen":
+    if not open_project("Kitchen"):
         raise SystemExit("never reached Kitchen for project shot")
     shot("05-project-kitchen")
-    # First project todo — not exposed as AX static text
-    ix, iy = static_center("Inbox")
-    hid_click(ix + 340, iy + 110)
-    time.sleep(0.8)
+    # First todo row under the project title (avoid AX walk for the title string).
+    x, y, w, h = window_frame()
+    hid_click(x + 280, y + 130, settle=0.6)
+    time.sleep(0.4)
     shot("06-editor-checklist")
 
     try:
