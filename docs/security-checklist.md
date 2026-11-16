@@ -41,6 +41,7 @@ in code or by a named manual step — not by assumption.
 - [x] iOS privacy cover shows only while the vault is unlocked (or recovery words are on screen), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal (`DayruleApp.privacyCoverNeeded` / `setPrivacyCover`)
 - [x] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity` / `bumpIdle`)
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code
+- [x] Count-only Home Screen widget (decision 76): App Group publishes Inbox/Today open counts only; cleared on lock, sign-out, and account deletion (`WidgetCountsStore`; never titles)
 - [x] Notification titles opt-in; default body is time-only
 - [x] No third-party analytics / crash / ad SDKs
 - [x] iOS refuses third-party keyboard extensions (`DayruleAppDelegate` / PLAN §8.7) so recovery words are not delivered to a Full Access keyboard
@@ -56,6 +57,6 @@ in code or by a named manual step — not by assumption.
 - [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
 - [x] French encryption declaration / export-compliance — answered for the shipped store submissions
 - [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac store **0.1.1** approved on build **26**; TestFlight **0.1.2 (29)** on ASC for both platforms; prior **0.1.1 (27)** / **(26)**)
-- [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops:** leave env unset until deliberately cutting old builds; then set floors ≥ oldest supported `CFBundleVersion`.
+- [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops (2026-11-16):** production floors set to **26** (oldest App Store **0.1.1** `CFBundleVersion` still in use). Raise to **29** only after **0.1.2** is live on the store and you intend to retire 0.1.1 clients.
 
 **Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.

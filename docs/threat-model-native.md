@@ -68,6 +68,10 @@ synced vault.
   (`shouldAllowExtensionPointIdentifier` → `.keyboard`; UIKit has no
   per-field hook). Password fields also use `SecureField`.
 - Recovery-phrase copy uses a local-only, expiring `UIPasteboard` item.
+- **Home Screen count widget** (decision 76) — App Group `UserDefaults`
+  holds Inbox/Today **open counts only** (never titles). Cleared on lock,
+  sign-out, and account deletion so a locked device does not advertise
+  membership.
 
 ## macOS-specific
 
