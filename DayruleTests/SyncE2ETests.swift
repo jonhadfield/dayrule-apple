@@ -4,8 +4,9 @@ import Testing
 
 #if os(macOS)
 /// Live sync against local Go (`scripts/local-sync-e2e.sh`). Skipped unless config sidecar is present.
-/// macOS-only: needs `Process` for `invite` / `plaintext-check`. Uses real `macos/<build>`
-/// client header (dayrule #33 accepts it for Bearer body tokens).
+/// macOS-only: needs `Process` for `plaintext-check`. Uses real `macos/<build>`
+/// client header (dayrule #33 accepts it for Bearer body tokens). Open signup
+/// (no invite) — local API must run with `INVITE_ONLY=false` (serve-api.sh).
 @Suite("Sync e2e")
 @MainActor
 struct SyncE2ETests {
