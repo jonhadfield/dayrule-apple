@@ -47,8 +47,9 @@ enum DayruleDateFormat {
         return date.formatted(style(locale, calendar).month(.wide).year())
     }
 
-    /// Scheduled day header: the day number, with the weekday as secondary text.
-    /// Tomorrow keeps its number and reads "Tomorrow" instead, as on the web.
+    /// Scheduled day header: day-of-month plus weekday (or "Tomorrow") beside it.
+    /// Callers must keep those two adjacent — a trailing-edge Spacer on a wide
+    /// reading column leaves the number looking orphaned.
     static func dayHeader(
         _ d: LocalDate,
         today: LocalDate,

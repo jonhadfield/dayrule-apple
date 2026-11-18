@@ -78,13 +78,6 @@ fi
 cd "$ROOT"
 command -v xcodegen >/dev/null && xcodegen generate
 
-INVITE=$(DATABASE_URL_UNPOOLED="$E2E_DATABASE_URL" "$DAYRULE_E2E_OUT/invite" 1 | tr -d '[:space:]')
-if [ -z "$INVITE" ]; then
-  echo "failed to mint invite code" >&2
-  exit 1
-fi
-export INVITE
-
 python3 - <<'PY'
 import json, os
 with open("/tmp/dayrule-e2e-config.json", "w", encoding="utf-8") as f:
@@ -94,7 +87,6 @@ with open("/tmp/dayrule-e2e-config.json", "w", encoding="utf-8") as f:
         "web": os.environ["DAYRULE_WEB"],
         "out": os.environ["DAYRULE_E2E_OUT"],
         "database": os.environ["E2E_DATABASE_URL"],
-        "invite": os.environ["INVITE"],
     }, f)
 print("wrote /tmp/dayrule-e2e-config.json")
 PY
@@ -125,9 +117,6 @@ candidates.sort(reverse=True)
 print(f'platform=iOS Simulator,id={candidates[0][1]}')
 ")
 
-# Mint a fresh invite for the UI test (register consumes the previous one).
-INVITE=$(DATABASE_URL_UNPOOLED="$E2E_DATABASE_URL" "$DAYRULE_E2E_OUT/invite" 1 | tr -d '[:space:]')
-export INVITE
 python3 - <<'PY'
 import json, os
 with open("/tmp/dayrule-e2e-config.json", "w", encoding="utf-8") as f:
@@ -137,7 +126,6 @@ with open("/tmp/dayrule-e2e-config.json", "w", encoding="utf-8") as f:
         "web": os.environ["DAYRULE_WEB"],
         "out": os.environ["DAYRULE_E2E_OUT"],
         "database": os.environ["E2E_DATABASE_URL"],
-        "invite": os.environ["INVITE"],
     }, f)
 PY
 

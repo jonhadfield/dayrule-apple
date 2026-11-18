@@ -17,6 +17,8 @@ struct DayruleApp: App {
     /// AppKit active state — Mission Control / other apps resign active without
     /// using scenePhase `.inactive` (that also fires for in-app menus).
     @State private var macAppActive = true
+    /// Bumped when macOS Light/Dark changes so System appearance re-resolves.
+    @State private var macSystemAppearanceTick = 0
     #endif
     @AppStorage("dayrule.appearance") private var appearanceRaw = AppearancePreference.system.rawValue
 
@@ -28,8 +30,25 @@ struct DayruleApp: App {
         #endif
     }
 
+    private var appearancePreference: AppearancePreference {
+        AppearancePreference(rawValue: appearanceRaw) ?? .system
+    }
+
+    /// SwiftUI scheme for the main window. On Mac, System is resolved to the
+    /// current OS scheme (not `nil`) — `nil` after Light/Dark leaves the list
+    /// stuck light while sheets correctly go dark.
     private var preferredScheme: ColorScheme? {
-        AppearancePreference(rawValue: appearanceRaw)?.colorScheme
+        switch appearancePreference {
+        case .light: return .light
+        case .dark: return .dark
+        case .system:
+            #if os(macOS)
+            _ = macSystemAppearanceTick
+            return macSystemColorScheme()
+            #else
+            return nil
+            #endif
+        }
     }
 
     var body: some Scene {
@@ -66,8 +85,25 @@ struct DayruleApp: App {
                 #endif
                 #if os(macOS)
                 MacWindowCloseGate.model = model
+                // Clear any pinned aqua/darkAqua so System can follow the OS.
+                applyMacAppearance(appearancePreference)
                 #endif
             }
+            #if os(macOS)
+            .onChange(of: appearanceRaw) { _, _ in
+                applyMacAppearance(appearancePreference)
+                macSystemAppearanceTick &+= 1
+            }
+            .onReceive(
+                DistributedNotificationCenter.default()
+                    .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+            ) { _ in
+                macSystemAppearanceTick &+= 1
+                if appearancePreference == .system {
+                    applyMacAppearance(.system)
+                }
+            }
+            #endif
             .onChange(of: scenePhase) { _, phase in
                 model.scenePhaseChanged(phase)
                 refreshPrivacyCover()
@@ -248,6 +284,33 @@ private struct UserActivityMonitor: ViewModifier {
                 if let monitor { NSEvent.removeMonitor(monitor) }
                 monitor = nil
             }
+    }
+}
+
+/// OS Light/Dark, ignoring a pinned `NSApp.appearance` (so Light → System while
+/// macOS is Dark resolves dark, not the leftover aqua pin).
+@MainActor
+private func macSystemColorScheme() -> ColorScheme {
+    UserDefaults.standard.string(forKey: "AppleInterfaceStyle") == "Dark" ? .dark : .light
+}
+
+/// Keep AppKit in lockstep with Settings → Appearance. `nil` follows the OS;
+/// Light/Dark pin aqua / darkAqua. Apply to every window so the main window
+/// does not keep a pinned appearance after System is chosen.
+@MainActor
+private func applyMacAppearance(_ preference: AppearancePreference) {
+    let appearance: NSAppearance?
+    switch preference {
+    case .system:
+        appearance = nil
+    case .light:
+        appearance = NSAppearance(named: .aqua)
+    case .dark:
+        appearance = NSAppearance(named: .darkAqua)
+    }
+    NSApp.appearance = appearance
+    for window in NSApp.windows {
+        window.appearance = appearance
     }
 }
 #endif

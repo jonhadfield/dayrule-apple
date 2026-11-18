@@ -74,6 +74,12 @@ struct PaperAddRow: View {
                     .dayruleBareField(colors: colors)
                     .focused(focusBinding)
                     .dayruleClearFieldEditor(isFocused: focusBinding.wrappedValue)
+                    // Mac AppKit field editor sits a couple of points past a plain
+                    // `Text` in the same HStack — nudge so "Add" shares the to-do
+                    // title column (Impeccable layout optical pass).
+                    #if os(macOS)
+                    .padding(.leading, -2)
+                    #endif
                     .submitLabel(.done)
                     .accessibilityLabel("New to-do")
                     .accessibilityIdentifier(fieldIdentifier)

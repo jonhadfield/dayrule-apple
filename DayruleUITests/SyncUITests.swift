@@ -6,7 +6,7 @@ import UIKit
 
 /// Local API signup + Add through the Gate/lists UI (PLAN §14.2).
 /// Enabled by `/tmp/dayrule-e2e-config.json` from `scripts/local-sync-e2e.sh`
-/// (script supplies a fresh `invite`; this test reads email codes from `api.log`).
+/// (this test reads email codes from `api.log`).
 final class SyncUITests: XCTestCase {
     @MainActor
     func testSignupAddTodoAppearsInInbox() throws {
@@ -16,7 +16,6 @@ final class SyncUITests: XCTestCase {
               let data = try? Data(contentsOf: cfgURL),
               let cfg = try? JSONSerialization.jsonObject(with: data) as? [String: String],
               cfg["enabled"] == "1",
-              let invite = cfg["invite"], !invite.isEmpty,
               let outDir = cfg["out"], !outDir.isEmpty
         else {
             throw XCTSkip("e2e config missing; run scripts/local-sync-e2e.sh")
@@ -49,11 +48,10 @@ final class SyncUITests: XCTestCase {
         if advanced.waitForExistence(timeout: 2), (advanced.value as? String) == "Open" {
             advanced.tap()
         }
-        clearAndType(app.textFields["signup.invite"], invite)
         clearAndType(app.textFields["signup.email"], email)
 
         app.buttons["signup.sendCode"].tap()
-        // Fail fast if invite/API rejected.
+        // Fail fast if API rejected.
         let err = app.staticTexts["signup.error"]
         if err.waitForExistence(timeout: 2) {
             XCTFail("signup/start failed: \(err.label)")

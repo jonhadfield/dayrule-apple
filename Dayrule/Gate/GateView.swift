@@ -19,7 +19,7 @@ struct GateView: View {
 
     private enum Field: Hashable {
         case api, email, password
-        case invite, signupEmail, code, signupPassword, confirmPassword
+        case signupEmail, code, signupPassword, confirmPassword
         case recoveryEmail, phrase
     }
 
@@ -258,23 +258,10 @@ struct GateView: View {
             form(alignment: .leading, proxy: proxy) {
                 header(
                     "Create an account",
-                    intro: "Invite-only for now. We’ll email a code, then show your recovery phrase.",
+                    intro: "We’ll email a code, then show your recovery phrase.",
                     identifier: "signup.title",
                     colors: colors
                 )
-
-                TextField("Invite code", text: $model.inviteCode, prompt: prompt("Invite code", colors))
-                    .focused($focus, equals: .invite)
-                    .id(Field.invite)
-                    .accessibilityIdentifier("signup.invite")
-                    .autocorrectionDisabled()
-                    #if os(iOS)
-                    .textInputAutocapitalization(.never)
-                    #endif
-                    .submitLabel(.next)
-                    .onSubmit { focus = .signupEmail }
-                    .dayruleField(isFocused: focus == .invite, colors: colors)
-                    .disabled(busy)
 
                 TextField("Email", text: $model.email, prompt: prompt("Email", colors))
                     .focused($focus, equals: .signupEmail)
@@ -286,7 +273,7 @@ struct GateView: View {
                     .onChange(of: model.email) { codeSent = false }
 
                 #if DEBUG
-                advancedOptions(identifier: "signup.api", next: .invite, busy: busy, colors: colors)
+                advancedOptions(identifier: "signup.api", next: .signupEmail, busy: busy, colors: colors)
                 #endif
 
                 Button {
@@ -302,7 +289,7 @@ struct GateView: View {
                 }
                 .buttonStyle(.dayruleStep(isCurrent: !codeSent))
                 .accessibilityIdentifier("signup.sendCode")
-                .disabled(model.email.isEmpty || model.inviteCode.isEmpty || busy)
+                .disabled(model.email.isEmpty || busy)
 
                 if codeSent && model.errorMessage == nil {
                     GateInlineMessage(text: "Code sent to \(model.email)", kind: .info, identifier: "signup.codeSent")

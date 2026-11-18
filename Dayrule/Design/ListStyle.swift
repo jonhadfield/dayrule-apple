@@ -4,13 +4,17 @@ import AppKit
 #endif
 
 extension ListName {
-    /// Stable SF Symbol per list (Browse rows, sidebar).
+    /// SF Symbols aligned to web Lucide meanings (`web/src/ui/lists.ts`).
     var systemImage: String {
         switch self {
-        case .backlog: "sparkle"
+        // Lucide Mailbox — SF has no `mailbox`; `tray` is the inbox glyph.
+        case .inbox: "tray"
+        case .today: "sun.max"
+        case .scheduled: "calendar"
+        case .backlog: "checklist"
+        case .notNow: "hourglass"
         case .done: "checkmark.circle"
         case .trash: "trash"
-        default: "list.bullet"
         }
     }
 
@@ -101,7 +105,8 @@ struct SyncStatusView: View {
             let tip = needsServerSignIn ? "On this device only" : status.label
             Button {} label: {
                 chrome
-                    .frame(width: 28, height: 28, alignment: .center)
+                    // Trailing-biased hit target so the dot lines up with badge column.
+                    .frame(width: 28, height: 28, alignment: .trailing)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)

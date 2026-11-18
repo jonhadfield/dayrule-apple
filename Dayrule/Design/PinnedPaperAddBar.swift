@@ -6,7 +6,6 @@ import SwiftUI
 struct PinnedPaperAddBar: View {
     @Binding var title: String
     var colors: DayruleColors
-    var readingMargin: CGFloat
     var focusNonce: Int = 0
     var keepFocusAfterSubmit: Bool = true
     var fieldIdentifier: String = "list.addField"
@@ -27,9 +26,17 @@ struct PinnedPaperAddBar: View {
         ) {
             onSubmit()
         }
-        // `RuledRow.listRowInsets` are no-ops outside a List — restore rowInset
-        // so the disc lines up with checkboxes (decision 19 / 68).
-        .padding(.horizontal, readingMargin + Tokens.rowInset)
+        // `RuledRow.listRowInsets` are no-ops outside a List — restore chrome
+        // inset so the disc lines up with checkboxes (decision 19 / 68).
+        // Mac: safeAreaInset origin already includes list system leading; `s`
+        // centres the disc on the checkbox (title uses `m` for circle-left ink).
+        #if os(macOS)
+        .padding(.horizontal, Tokens.Space.s)
+        // Match sidebar New List footer so both bottom shelves share one height.
+        .frame(height: Tokens.macBottomChromeHeight)
+        #else
+        .padding(.horizontal, Tokens.listChromeInset)
+        #endif
         // Sidebar-tinted shelf — the list’s last hairline is the only rule above
         // Add (a second top hairline stacked as a double line; decision 64 / 71).
         .background(colors.sidebar)

@@ -50,8 +50,37 @@ enum Tokens {
     }
 
     static let rowInset: CGFloat = 16
+    /// Shared height for Mac sidebar footer (New List) and pinned Add shelf.
+    /// 48pt leaves a little air above/below the controls in the tinted shelf.
+    static let macBottomChromeHeight: CGFloat = 48
     /// Settings / sheet chapter titles (decision 58 Mac rail; PLAN decision 68).
     static let sheetInset: CGFloat = 20
+    /// AppKit plain `List` leading bias vs chrome drawn outside the table (Mac).
+    /// iOS lists have no extra system inset, so chrome and rows share `rowInset`.
+    #if os(macOS)
+    /// Tuned so pinned Add’s disc shares the checkbox column centre (system
+    /// table inset + `rowInset`), measured against Mac plain Lists.
+    static let macListSystemLeading: CGFloat = 30
+    #else
+    static let macListSystemLeading: CGFloat = 0
+    #endif
+    /// Horizontal inset for pinned Add / selection chrome so the leading mark
+    /// column (centre) lines up with checkboxes inside the list.
+    static var listChromeInset: CGFloat { rowInset + macListSystemLeading }
+    /// Offset from the leading-slot rail to the checkbox circle’s left edge
+    /// (20pt mark centred in `rowLeadingSlot`).
+    static var listMarkCircleLeading: CGFloat { (rowLeadingSlot - 20) / 2 }
+    /// Leading spacer width for Scheduled day numbers inside Mac plain Lists.
+    /// Those flat headers ignore `listRowInsets` / padding / `Color.clear`; a
+    /// figure-space `frame` of this width lands digit ink on the circle edge
+    /// (system table origin ≈ 30pt + row inset + mark pad).
+    #if os(macOS)
+    /// Empirically: system origin (~30) + this ≈ circle left (~50). Was 20 with
+    /// day still ~17pt right of circles; 4 lands the digit on the mark edge.
+    static let macScheduledDayLeading: CGFloat = 4
+    #else
+    static var macScheduledDayLeading: CGFloat { rowInset + listMarkCircleLeading }
+    #endif
     static let rowGlyphSpacing: CGFloat = 10
     static let rowLeadingSlot: CGFloat = 28
     /// Web `--row-height` at 900px and up.
