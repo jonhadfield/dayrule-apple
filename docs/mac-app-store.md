@@ -21,9 +21,10 @@ TestFlight upload (after the iPhone critical path).
 The 0.1.x Mac App Store release already cleared review. Use this list for
 the **next** Mac submission (keep iOS and Mac on the same
 `MARKETING_VERSION` / a `CURRENT_PROJECT_VERSION` at least as new as the
-iPhone build you care about).
+iPhone build you care about). Tree tip is **0.1.2 (31)** — Mac chrome +
+open signup — ready to archive when screenshots below are refreshed.
 
-1. **Archive + upload** a Mac build. Organizer: **Distribute App → App
+1. **Archive + upload** a Mac build (**31**). Organizer: **Distribute App → App
    Store Connect**. The local keychain may only have Apple Development +
    Developer ID; Xcode re-signs for the Mac App Store on upload if the
    team can issue **Apple Distribution**.
@@ -37,10 +38,13 @@ iPhone build you care about).
    Uses System Events + HID clicks against the **agent** vault
    (`agent-creds.txt` — see `docs/agent-test-account.md`). Needs
    **Accessibility** for Terminal/your shell (System Settings → Privacy &
-   Security → Accessibility). Handles the DEBUG gate with Advanced
-   collapsed (email + password; production API is the default), dismisses
-   password autofill, and waits for Kitchen before writing PNGs to
-   `docs/app-store-screenshots/macos/`.
+   Security → Accessibility) — Cursor’s integrated shell often lacks it.
+   Kill any hung `Dayrule` / UITest `debugserver` before re-running.
+   Handles the DEBUG gate with Advanced collapsed (email + password;
+   production API is the default), dismisses password autofill, and waits
+   for Kitchen before writing PNGs to `docs/app-store-screenshots/macos/`.
+   (Re-capture before attaching build **31**; prior PNGs are still the
+   denser seed used with build 30.)
 
    Fallbacks when the Python path is awkward: UITest via
    `CAPTURE=macos scripts/capture-app-store-screenshots.sh agent-creds.txt`
