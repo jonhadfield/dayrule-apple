@@ -47,6 +47,8 @@ enum BreachCheck {
         }
     }
 
+    /// HIBP Pwned Passwords indexes by SHA-1; only the 5-char prefix is sent
+    /// (k-anonymity). Not used for account KDF or at-rest wrapping (Argon2id).
     static func sha1Hex(_ text: String) -> String {
         let digest = Insecure.SHA1.hash(data: Data(text.utf8))
         return digest.map { String(format: "%02X", $0) }.joined()
