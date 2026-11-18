@@ -89,7 +89,9 @@ jobs:
       # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
-        timeout-minutes: 7
+        # Successful runs land around 6–7m (sim boot + rebuild + suite);
+        # 7m was clipping mid-suite on slower runners.
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           UDID=$(xcrun simctl list devices available -j | python3 -c "
