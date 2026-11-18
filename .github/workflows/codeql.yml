@@ -55,7 +55,8 @@ jobs:
   swift:
     name: Analyze (swift)
     runs-on: macos-15
-    timeout-minutes: 45
+    # Tracer + extract is much slower than a plain CI build.
+    timeout-minutes: 60
     permissions:
       contents: read
       actions: read
@@ -74,8 +75,10 @@ jobs:
         timeout-minutes: 3
         run: brew install xcodegen && xcodegen generate
 
+      # Resolve outside the tracer — under CodeQL, Resolve Package Graph alone
+      # burned most of a 10m build budget on the first run.
       - name: Resolve packages
-        timeout-minutes: 3
+        timeout-minutes: 5
         run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
 
       - name: Initialize CodeQL
@@ -85,12 +88,14 @@ jobs:
           build-mode: manual
 
       - name: Build
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: |
           xcodebuild build \
             -project Dayrule.xcodeproj \
             -scheme Dayrule \
             -destination 'platform=macOS' \
+            -disableAutomaticPackageResolution \
+            -skipPackageUpdates \
             ARCHS=arm64 \
             ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO
