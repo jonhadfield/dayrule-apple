@@ -1015,12 +1015,26 @@ def main() -> None:
         try:
             wc, name, _ = window_probe()
         except RuntimeError:
-            continue
+            wc, name = 0, "none"
+        # AX window count is 0 when Accessibility isn’t granted to the
+        # driver; CGWindowList still sees the layer-0 Dayrule window.
+        if wc < 1:
+            try:
+                wid = subprocess.run(
+                    [str(WINID)], capture_output=True, text=True, check=True
+                ).stdout.strip()
+                if wid.isdigit() and int(wid) > 0:
+                    wc, name = 1, f"cg:{wid}"
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                pass
         if wc >= 1:
             print(f"window ready ({name})")
             break
     else:
-        raise SystemExit("no Dayrule window")
+        raise SystemExit(
+            "no Dayrule window (grant Accessibility to Terminal/Cursor "
+            "if System Events never sees windows)"
+        )
 
     run_as(
         """
