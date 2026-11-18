@@ -10,7 +10,7 @@ options:
 settings:
   base:
     SWIFT_VERSION: "6.0"
-    CURRENT_PROJECT_VERSION: 30
+    CURRENT_PROJECT_VERSION: 31
     MARKETING_VERSION: "0.1.2"
     DEVELOPMENT_TEAM: VBZY8FBYR5
     CODE_SIGN_STYLE: Automatic
@@ -124,7 +124,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2"
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
         MARKETING_VERSION: "0.1.2"
-        CURRENT_PROJECT_VERSION: 30
+        CURRENT_PROJECT_VERSION: 31
   DayruleTests:
     type: bundle.unit-test
     supportedDestinations: [iOS, macOS]
