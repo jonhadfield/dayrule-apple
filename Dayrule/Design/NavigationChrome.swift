@@ -281,14 +281,12 @@ private struct DayruleEditablePageTitleModifier: ViewModifier {
 }
 
 extension ToolbarContent {
-    /// Drops the Liquid Glass shared pill behind a toolbar item (macOS 26+ / iOS 26+).
+    /// Intended to drop the Liquid Glass shared pill (macOS 26+ / iOS 26+).
+    /// No-op until CI’s Xcode SDK includes `sharedBackgroundVisibility` — the
+    /// `#available` check alone still type-checks the symbol and fails on 16.4.
     @ToolbarContentBuilder
     func dayruleHideToolbarGlass() -> some ToolbarContent {
-        if #available(macOS 26.0, iOS 26.0, *) {
-            self.sharedBackgroundVisibility(.hidden)
-        } else {
-            self
-        }
+        self
     }
 }
 
