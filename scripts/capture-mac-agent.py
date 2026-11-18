@@ -432,6 +432,26 @@ def click_static(label: str) -> None:
     hid_click(x - 40, y)
 
 
+def count_static(label: str) -> int:
+    """How many window static texts share this exact name (sidebar dupes)."""
+    lit = json.dumps(label)
+    try:
+        out = run_as(
+            f"""
+tell application "System Events"
+  tell process "Dayrule"
+    tell window 1
+      return (count of (static texts whose name is {lit})) as text
+    end tell
+  end tell
+end tell
+"""
+        )
+        return int(out)
+    except (RuntimeError, ValueError):
+        return 0
+
+
 def click_signin() -> None:
     """Click Stay unlocked (if needed) then the wide Sign in button."""
     run_as(
@@ -604,6 +624,12 @@ def click_add_field() -> None:
 
 def add_todo(title: str) -> None:
     """Focus Add, paste title, Return — uses the on-screen list's placement."""
+    # Skip when the title is already on screen (re-seeds used to stack dupes).
+    try:
+        static_center(title)
+        return
+    except RuntimeError:
+        pass
     click_add_field()
     paste_text(title)
     time.sleep(0.12)
@@ -665,14 +691,27 @@ def sidebar_project_spots() -> list[tuple[int, int]]:
     """Sidebar slots under Trash (projects/areas sit there on Mac)."""
     try:
         tx, ty = static_center("Trash")
-        return [(tx - 20, ty + dy) for dy in (56, 72, 88, 104, 120, 136, 152, 168)]
+        # More slots than before — short lists missed Garden/Holidays and the
+        # seeder created duplicates.
+        return [
+            (tx - 20, ty + dy)
+            for dy in range(48, 48 + 28 * 14, 28)
+        ]
     except RuntimeError:
         x, y, _, _ = window_frame()
-        return [(x + 36, y + 220 + i * 28) for i in range(8)]
+        return [(x + 36, y + 220 + i * 28) for i in range(14)]
 
 
 def open_project(name: str) -> bool:
-    """Click sidebar slots under Trash until window title matches."""
+    """Open a sidebar project/area by name (AX label first, then slot scan)."""
+    # Prefer AX — coordinate scans miss rows and re-seeds then duplicate names.
+    try:
+        click_static(name)
+        time.sleep(0.25)
+        if window_probe()[1] == name:
+            return True
+    except RuntimeError:
+        pass
     for sx, sy in sidebar_project_spots():
         hid_click(sx, sy, settle=0.2)
         try:
@@ -681,6 +720,33 @@ def open_project(name: str) -> bool:
         except RuntimeError:
             pass
     return False
+
+
+def dedupe_named(name: str) -> None:
+    """Keep one sidebar row named `name`; trash any later duplicates."""
+    spots = sidebar_project_spots()
+    keeper_y: float | None = None
+    for sx, sy in spots:
+        hid_click(sx, sy, settle=0.18)
+        try:
+            title = window_probe()[1]
+        except RuntimeError:
+            continue
+        if title != name:
+            continue
+        if keeper_y is None:
+            keeper_y = sy
+            continue
+        # Same title, different slot — trash this copy.
+        hid_right_click(sx, sy, settle=0.3)
+        if click_popup_menu_item("Move to Trash"):
+            time.sleep(0.35)
+            print(f"    trashed duplicate {name!r}", flush=True)
+            continue
+        key_code(53)
+        time.sleep(0.12)
+        if trash_open_untitled(title):
+            print(f"    trashed duplicate {name!r} (detail)", flush=True)
 
 
 def trash_open_untitled(title: str) -> bool:
@@ -776,8 +842,16 @@ def trash_untitled_rows() -> None:
 
 
 def ensure_named(name: str, *, area: bool = False) -> None:
-    """Open name if present; else rename an untitled row; else create."""
+    """Open name if present; else rename an untitled row; else create.
+
+    Never creates when any sidebar/static label already matches — that is how
+    Garden/Holidays multiplied across ASC re-seeds (lookup miss → create).
+    """
     if open_project(name):
+        return
+    if count_static(name) >= 1:
+        # Present but click/open failed (scroll, hit target). Do not create another.
+        print(f"    skip create {name!r} — already on screen ({count_static(name)})", flush=True)
         return
     spots = sidebar_project_spots()
     for sx, sy in spots:
@@ -864,6 +938,10 @@ def seed_dense(go) -> None:
 
     print("  org House/Kitchen/Garden/Holidays", flush=True)
     trash_untitled_rows()
+    # Clean vault leftovers from earlier non-idempotent seeds before creating.
+    print("  dedupe org names (before ensure)…", flush=True)
+    for n in ("Kitchen", "House", "Garden", "Holidays"):
+        dedupe_named(n)
 
     ensure_named("Kitchen")
     for t in (
@@ -896,6 +974,10 @@ def seed_dense(go) -> None:
         "Arrange pet sitting",
     ):
         add_todo(t)
+
+    print("  dedupe org names…", flush=True)
+    for n in ("Kitchen", "House", "Garden", "Holidays"):
+        dedupe_named(n)
 
     trash_untitled_rows()
 

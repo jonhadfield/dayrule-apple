@@ -34,12 +34,12 @@ private enum PhoneTab: Hashable, CaseIterable {
         }
     }
 
-    /// Stable SF Symbols — same on every screen; selection fills the glyph and inks it.
+    /// Same glyphs as `ListName` / web Lucide; Browse is native-only.
     var systemImage: String {
         switch self {
-        case .inbox: "tray"
-        case .today: "circle.circle"
-        case .scheduled: "calendar"
+        case .inbox: ListName.inbox.systemImage
+        case .today: ListName.today.systemImage
+        case .scheduled: ListName.scheduled.systemImage
         case .browse: "folder"
         }
     }
@@ -98,6 +98,9 @@ struct ListsBrowserView: View {
     @State private var selecting = false
     @State private var selectedIds: Set<ID> = []
     @State private var showNewList = false
+    /// Split column visibility — owned so we can replace the system sidebar
+    /// toggle (white Liquid Glass pill) with a plain paper toolbar button.
+    @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
     /// Sidebar badges / org tree — refreshed on entity/linger changes only, so a
     /// sidebar click doesn’t re-walk every to-do just to flip the selection bar.
     @State private var cachedSidebarCounts = Lists.SidebarCounts(inbox: 0, today: 0, overdue: 0)
@@ -415,7 +418,10 @@ struct ListsBrowserView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                     }
-                    .frame(maxWidth: .infinity, minHeight: Tokens.minHit)
+                    // Top-align in the 44pt hit: centred layout put empty space
+                    // under the label while icons kissed the hairline.
+                    .frame(maxWidth: .infinity, minHeight: Tokens.minHit, alignment: .top)
+                    .padding(.top, Tokens.Space.s)
                     .foregroundStyle(selected ? colors.accent : colors.textSecondary)
                     .dayruleAnimation(Motion.quick, value: selected)
                     .contentShape(Rectangle())
@@ -428,9 +434,10 @@ struct ListsBrowserView: View {
             }
         }
         .padding(.horizontal, Tokens.Space.xs)
-        .padding(.bottom, Tokens.Space.xxs)
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-        .background(colors.sidebar)
+        // Paint into the home-indicator inset so the empty band under the
+        // labels is tab chrome, not orphaned page paper.
+        .background(colors.sidebar.ignoresSafeArea(edges: .bottom))
         .overlay(alignment: .top) {
             colors.hairline.frame(height: 1)
         }
@@ -463,30 +470,68 @@ struct ListsBrowserView: View {
         didApplyDefaultList = true
     }
 
+    /// Ideal Mac sidebar width — kept in sync with `MacSidebarChrome` / columnWidth.
+    private static let macSidebarWidth: CGFloat = 270
+
     @ViewBuilder
     private func splitBrowser(colors: DayruleColors) -> some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             sidebarList(colors: colors, phoneLinks: false)
                 .navigationTitle("Dayrule")
-                .navigationSplitViewColumnWidth(min: 200, ideal: 240, max: 320)
-                // Lock / Find / Settings live on the detail column so they stay
-                // reachable when the Mac sidebar is collapsed.
+                .navigationSplitViewColumnWidth(
+                    min: 260,
+                    ideal: Self.macSidebarWidth,
+                    max: 360
+                )
+                // Drop the system sidebar toggle — its Liquid Glass pill reads as
+                // a white disc on paper. Paper chip overlays this column’s
+                // trailing edge so it tracks divider drags.
+                .toolbar(removing: .sidebarToggle)
+                #if os(macOS)
+                .overlay(alignment: .topTrailing) {
+                    if columnVisibility != .detailOnly {
+                        sidebarCollapseButton()
+                            .padding(.trailing, Tokens.rowInset)
+                            // Titlebar centre ≈ detail toolbar row (Lock / Find).
+                            .padding(.top, 10)
+                            .help("Toggle Sidebar")
+                            .ignoresSafeArea(edges: .top)
+                    }
+                }
+                #endif
         } detail: {
             NavigationStack(path: $orgPath) {
                 listDetail(list: activeList, colors: colors)
-                    .toolbar { chromeToolbar(colors: colors) }
+                    .toolbar {
+                        // When the sidebar is collapsed, keep a toggle on detail
+                        // so the rail can be opened again.
+                        chromeToolbar(
+                            colors: colors,
+                            includeSidebarToggle: columnVisibility == .detailOnly
+                        )
+                    }
                     .navigationDestination(for: OrgRoute.self) { route in
                         switch route {
                         case .project(let projectId):
                             ProjectDetailView(model: model, projectId: projectId) { id in
                                 orgPath.append(.project(id))
                             }
-                            .toolbar { chromeToolbar(colors: colors) }
+                            .toolbar {
+                                chromeToolbar(
+                                    colors: colors,
+                                    includeSidebarToggle: columnVisibility == .detailOnly
+                                )
+                            }
                         case .area(let areaId):
                             AreaDetailView(model: model, areaId: areaId) { projectId in
                                 orgPath.append(.project(projectId))
                             }
-                            .toolbar { chromeToolbar(colors: colors) }
+                            .toolbar {
+                                chromeToolbar(
+                                    colors: colors,
+                                    includeSidebarToggle: columnVisibility == .detailOnly
+                                )
+                            }
                         }
                     }
             }
@@ -496,35 +541,68 @@ struct ListsBrowserView: View {
         }
     }
 
+    /// Collapse control drawn in the sidebar column (titlebar trailing).
+    @ViewBuilder
+    private func sidebarCollapseButton() -> some View {
+        Button {
+            columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
+        } label: {
+            DayruleToolbarGlyph(systemImage: "sidebar.left")
+        }
+        .buttonStyle(.plain)
+        .help("Toggle Sidebar")
+        .accessibilityLabel("Toggle Sidebar")
+    }
+
     /// Lock · Find · Settings (Refresh lives under Settings → Sync now).
+    /// `includeSidebarToggle` is for collapsed-sidebar detail only.
     @ToolbarContentBuilder
-    private func chromeToolbar(colors: DayruleColors) -> some ToolbarContent {
+    private func chromeToolbar(
+        colors: DayruleColors,
+        includeSidebarToggle: Bool = false
+    ) -> some ToolbarContent {
+        // Paper chips (sidebar fill + hairline) — hide Liquid Glass so it does
+        // not replace them with white pills.
+        if includeSidebarToggle {
+            ToolbarItem(placement: .navigation) {
+                sidebarCollapseButton()
+            }
+            .dayruleHideToolbarGlass()
+        }
         ToolbarItem(placement: .navigation) {
             Button {
                 model.lockNow()
             } label: {
-                Label("Lock", systemImage: "lock")
-                    .labelStyle(.iconOnly)
+                DayruleToolbarGlyph(systemImage: "lock")
             }
+            .buttonStyle(.plain)
             .help("Lock (⇧⌘L)")
+            .accessibilityLabel("Lock")
         }
-        ToolbarItemGroup(placement: .primaryAction) {
+        .dayruleHideToolbarGlass()
+        ToolbarItem(placement: .primaryAction) {
             Button {
                 model.showFind = true
             } label: {
-                Label("Find", systemImage: "magnifyingglass")
-                    .labelStyle(.iconOnly)
+                DayruleToolbarGlyph(systemImage: "magnifyingglass")
             }
+            .buttonStyle(.plain)
             .help("Find (⌘F)")
+            .accessibilityLabel("Find")
             .accessibilityIdentifier("sidebar.find")
+        }
+        .dayruleHideToolbarGlass()
+        ToolbarItem(placement: .primaryAction) {
             Button {
                 model.showSettings = true
             } label: {
-                Label("Settings", systemImage: "gearshape")
-                    .labelStyle(.iconOnly)
+                DayruleToolbarGlyph(systemImage: "gearshape")
             }
+            .buttonStyle(.plain)
             .help("Settings (⌘,)")
+            .accessibilityLabel("Settings")
         }
+        .dayruleHideToolbarGlass()
     }
 
     @ViewBuilder
@@ -539,34 +617,59 @@ struct ListsBrowserView: View {
             .background(colors.bg)
             .modifier(SyncNeedsUpdateAnimationModifier(model: model))
         } else {
-            List(selection: $selection) {
-                sidebarRows(colors: colors)
+            sidebarColumnBody(colors: colors)
+        }
+    }
+
+    /// Mac / iPad sidebar list + New List footer.
+    @ViewBuilder
+    private func sidebarColumnBody(colors: DayruleColors) -> some View {
+        List(selection: $selection) {
+            sidebarRows(colors: colors)
+        }
+        .listStyle(.sidebar)
+        .dayrulePaperList()
+        .listRowSeparator(.hidden)
+        .scrollContentBackground(.hidden)
+        .background(colors.sidebar.ignoresSafeArea())
+        #if os(macOS)
+        .background(
+            MacSidebarChrome(
+                idealWidth: Self.macSidebarWidth,
+                minWidth: 260,
+                maxWidth: 360,
+                fill: colors.sidebar
+            )
+        )
+        #endif
+        .modifier(SyncNeedsUpdateAnimationModifier(model: model))
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            // One footer row: New List shares the sidebar icon/title columns;
+            // sync dot sits trailing where count badges live.
+            // Same height as pinned Add so the two shelves share one baseline.
+            HStack(alignment: .center, spacing: 0) {
+                Color.clear
+                    .frame(width: 3, height: 1)
+                    .padding(.trailing, 8)
+                newListMenu(colors: colors)
+                Spacer(minLength: 0)
+                SyncStatusChrome(model: model, compact: true)
             }
-            .listStyle(.sidebar)
-            .dayrulePaperList()
-            .listRowSeparator(.hidden)
-            .scrollContentBackground(.hidden)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            // Leading matches the selection-bar gutter; trailing matches the
+            // sidebar badge column (plain List trailing inset ≈ rowInset).
+            .padding(.leading, Tokens.Space.s)
+            .padding(.trailing, Tokens.rowInset)
+            .frame(height: Tokens.macBottomChromeHeight)
             .background(colors.sidebar)
-            .modifier(SyncNeedsUpdateAnimationModifier(model: model))
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(alignment: .leading, spacing: Tokens.Space.s) {
-                    newListMenu(colors: colors)
-                    SyncStatusChrome(model: model, compact: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, Tokens.rowInset)
-                .padding(.vertical, Tokens.Space.s)
-                .background(colors.sidebar)
-                .overlay(alignment: .top) {
-                    colors.hairline.frame(height: 1)
-                }
+            .overlay(alignment: .top) {
+                colors.hairline.frame(height: 1)
             }
         }
     }
 
-    /// Glyph per list: the tab-bar symbols for the daily three, the shared ones otherwise.
     private func listImage(_ name: ListName) -> String {
-        PhoneTab.tab(for: name)?.systemImage ?? name.systemImage
+        name.systemImage
     }
 
     /// Phone Browse: ALL-CAPS park lists with circular counts + PROJECTS / areas (PLAN §6.5).
@@ -1036,16 +1139,19 @@ struct ListsBrowserView: View {
             HStack(spacing: Tokens.Space.s) {
                 Image(systemName: "plus")
                     .dayruleRowTitle()
+                    .frame(width: 18, alignment: .center)
+                    .accessibilityHidden(true)
                 Text("New List")
                     .dayruleRowTitle()
             }
             .foregroundStyle(colors.textSecondary)
-            .padding(.horizontal, Tokens.Space.s)
             .padding(.vertical, Tokens.Space.xs)
-            .background(
+            // Hover fill expands without shifting the glyph/title columns.
+            .background {
                 RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
                     .fill(hovering ? colors.hairline.opacity(0.6) : Color.clear)
-            )
+                    .padding(.horizontal, -Tokens.Space.s)
+            }
             .contentShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
             .onHover { hovering = $0 }
         }
@@ -1078,7 +1184,6 @@ struct ListsBrowserView: View {
             drafts: addDrafts,
             list: list,
             colors: colors,
-            readingMargin: readingMargin,
             focusNonce: addFocusNonce,
             keepFocusAfterSubmit: list != .scheduled
         ) { title in
@@ -1126,9 +1231,14 @@ struct ListsBrowserView: View {
         } action: { width in
             detailWidth = width
         }
+        // Mac plain Lists ignore scroll `contentMargins`, and `.padding` on the
+        // List shifts safeAreaInset chrome (title / Add) without moving rows —
+        // that desynced the title from the checkbox column. Leave Mac lists
+        // unpadded; chrome uses `listChromeInset` alone.
+        #if !os(macOS)
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
-        .environment(\.dayruleReadingMargin, readingMargin)
-        .dayrulePageTitle(list.title)
+        #endif
+        .dayrulePageTitle(list.title, systemImage: list.systemImage, iconTint: list.tint(colors))
         .refreshable {
             await model.syncNow()
         }
@@ -1161,23 +1271,15 @@ struct ListsBrowserView: View {
             }
         }
         .dayruleAnimation(Motion.standard, value: selecting)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                if model.needsServerSignIn {
-                    syncSignInBanner(colors: colors)
-                        .padding(.horizontal, Tokens.rowInset + readingMargin)
-                        .padding(.vertical, Tokens.Space.s)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(colors.sidebar)
-                        .overlay(alignment: .bottom) {
-                            colors.hairline.frame(height: 1)
-                        }
-                        .transition(.dayruleBanner)
-                }
-            }
-            .clipped()
-            .dayruleAnimation(Motion.standard, value: model.needsServerSignIn)
-        }
+        .modifier(
+            SyncSignInBannerInset(
+                isPresented: model.needsServerSignIn,
+                colors: colors,
+                banner: { syncSignInBanner(colors: colors) }
+            )
+        )
+        // After title / Add / banner insets so they inherit the reading column.
+        .environment(\.dayruleReadingMargin, readingMargin)
         .toolbar {
             // Pushed Browse destinations replace the tab-root toolbar — repeat chrome.
             if isCompact, !phonePath.isEmpty {
@@ -1186,6 +1288,7 @@ struct ListsBrowserView: View {
             ToolbarItem(placement: .primaryAction) {
                 listActionsMenu(list: list)
             }
+            .dayruleHideToolbarGlass()
         }
         .confirmationDialog(
             "Empty Trash?",
@@ -1231,9 +1334,9 @@ struct ListsBrowserView: View {
                 .accessibilityIdentifier("list.logCompleted")
             }
         } label: {
-            Label("List actions", systemImage: "ellipsis")
-                .labelStyle(.iconOnly)
+            DayruleToolbarGlyph(systemImage: "ellipsis")
         }
+        .buttonStyle(.plain)
         .help("List actions")
         // Identifier predates the rename to List actions; UI tests may still use it.
         .accessibilityIdentifier("list.find")
@@ -1291,17 +1394,50 @@ struct ListsBrowserView: View {
         }
     }
 
-    /// Day number with the weekday (or "Tomorrow") trailing, as the web Scheduled page does.
+    /// Day number + weekday (or "Tomorrow") on one baseline — matches web
+    /// `pages.tsx` Scheduled (`text-[17px] font-bold` + secondary). Mac plain
+    /// Lists ignore `listRowInsets` on these flat headers, so a figure-space
+    /// spacer pushes the digit to the circle / title edge.
     private func scheduledDayHeader(_ date: LocalDate, colors: DayruleColors) -> some View {
         let header = DayruleDateFormat.dayHeader(date, today: ctx.today)
-        let trailing = header.secondary.map {
-            AnyView(
-                Text($0)
+        return HStack(alignment: .firstTextBaseline, spacing: Tokens.Space.s) {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                // Mac plain List ignores `listRowInsets` / padding / `Color.clear`
+                // on this flat header. A figure-space frame is the spacer that
+                // retains width; tuned so digit ink meets the title / circle edge.
+                Text(verbatim: "\u{2007}")
+                    .font(.system(size: 17, weight: .bold))
+                    .frame(width: Tokens.macScheduledDayLeading, alignment: .leading)
+                    .accessibilityHidden(true)
+                Text(header.primary)
+                    .font(.system(size: 17, weight: .bold))
+                    .monospacedDigit()
+                    .foregroundStyle(colors.accent)
+                    .accessibilityAddTraits(.isHeader)
+            }
+            if let secondary = header.secondary {
+                Text(secondary)
                     .font(DayruleType.meta)
                     .foregroundStyle(colors.textSecondary)
-            )
+            }
+            Spacer(minLength: 0)
         }
-        return DayruleSectionHeader(title: header.primary, tone: .accent, style: .caps, trailing: trailing)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.top, Tokens.Space.m)
+        .padding(.bottom, Tokens.Space.s)
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
+        .listRowBackground(
+            DayrulePaperRowBackground(
+                fill: colors.bg,
+                hairline: colors.hairline,
+                showsHairline: true
+            )
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(
+            header.secondary.map { "\(header.primary) \($0)" } ?? header.primary
+        )
     }
 
     private func scheduledRow(_ item: ListItem, progress: [ID: (done: Int, total: Int)]) -> Row {
@@ -2211,7 +2347,6 @@ private struct PinnedListAddBar: View {
     @Bindable var drafts: ListAddDrafts
     var list: ListName
     var colors: DayruleColors
-    var readingMargin: CGFloat
     var focusNonce: Int
     var keepFocusAfterSubmit: Bool
     var onSubmit: (String) -> Void
@@ -2220,7 +2355,6 @@ private struct PinnedListAddBar: View {
         PinnedPaperAddBar(
             title: drafts.binding(for: list),
             colors: colors,
-            readingMargin: readingMargin,
             focusNonce: focusNonce,
             keepFocusAfterSubmit: keepFocusAfterSubmit
         ) {

@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 /// Confirm button for a `DayruleSheet` toolbar.
 struct SheetAction {
@@ -95,8 +98,15 @@ struct DayruleSheet<Content: View>: View {
                 .safeAreaInset(edge: .top, spacing: 0) {
                     DayruleSheetHeader(title: title)
                 }
+                // Paper footer instead of the system white bottom toolbar strip.
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    macSheetActionBar(colors: colors)
+                }
+                .background(MacSheetPaperChrome(fill: colors.bg))
                 #endif
+                #if os(iOS)
                 .toolbar { toolbarContent }
+                #endif
                 .confirmationDialog(
                     "Discard changes?",
                     isPresented: $confirmingDiscard,
@@ -123,6 +133,7 @@ struct DayruleSheet<Content: View>: View {
         #endif
     }
 
+    #if os(iOS)
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: dismissPlacement ?? .cancellationAction) {
@@ -130,14 +141,37 @@ struct DayruleSheet<Content: View>: View {
         }
         if let confirm {
             ToolbarItem(placement: .confirmationAction) {
-                Button(confirm.title, action: confirm.action)
-                    .fontWeight(.semibold)
-                    .disabled(!confirm.isEnabled)
-                    .keyboardShortcut(.defaultAction)
-                    .dayruleIdentifier(confirm.identifier)
+                confirmButton(confirm)
             }
         }
     }
+    #endif
+
+    #if os(macOS)
+    /// Cancel / Done on paper — avoids the system sheet’s white bottom toolbar.
+    @ViewBuilder
+    private func macSheetActionBar(colors: DayruleColors) -> some View {
+        HStack(spacing: Tokens.Space.m) {
+            if let confirm {
+                // Cancel leading · confirm trailing (editors).
+                dismissButton
+                Spacer(minLength: 0)
+                confirmButton(confirm)
+            } else {
+                // Done-only trailing (Settings, pickers).
+                Spacer(minLength: 0)
+                dismissButton
+            }
+        }
+        .padding(.horizontal, Tokens.sheetInset)
+        .padding(.vertical, Tokens.Space.m)
+        .frame(maxWidth: .infinity)
+        .background(colors.bg)
+        .overlay(alignment: .top) {
+            colors.hairline.frame(height: 1)
+        }
+    }
+    #endif
 
     private var dismissButton: some View {
         Button(dismissTitle) {
@@ -149,6 +183,14 @@ struct DayruleSheet<Content: View>: View {
         }
         .keyboardShortcut(.cancelAction)
         .dayruleIdentifier(dismissIdentifier)
+    }
+
+    private func confirmButton(_ confirm: SheetAction) -> some View {
+        Button(confirm.title, action: confirm.action)
+            .fontWeight(.semibold)
+            .disabled(!confirm.isEnabled)
+            .keyboardShortcut(.defaultAction)
+            .dayruleIdentifier(confirm.identifier)
     }
 }
 
@@ -256,3 +298,50 @@ struct SelectionCheckmark: View {
             .accessibilityHidden(true)
     }
 }
+
+#if os(macOS)
+/// Paints the Mac sheet window + bottom toolbar strip with paper (not system white).
+struct MacSheetPaperChrome: NSViewRepresentable {
+    var fill: Color
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { apply(from: view) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { apply(from: nsView) }
+    }
+
+    private func apply(from probe: NSView) {
+        guard let window = probe.window else { return }
+        let nsFill = NSColor(fill)
+        if window.backgroundColor != nsFill {
+            window.backgroundColor = nsFill
+        }
+        if let content = window.contentView {
+            paintToolbarStrips(in: content, fill: nsFill)
+        }
+    }
+
+    private func paintToolbarStrips(in root: NSView, fill: NSColor) {
+        let name = String(describing: type(of: root))
+        // Bottom toolbar host / material views AppKit inserts under sheet buttons.
+        if name.contains("Toolbar") || name.contains("NSTitlebar") || name.contains("NSVisualEffect") {
+            root.wantsLayer = true
+            if root.layer?.backgroundColor != fill.cgColor {
+                root.layer?.backgroundColor = fill.cgColor
+            }
+            if let effect = root as? NSVisualEffectView {
+                effect.state = .followsWindowActiveState
+                effect.material = .contentBackground
+                effect.isEmphasized = false
+            }
+        }
+        for child in root.subviews {
+            paintToolbarStrips(in: child, fill: fill)
+        }
+    }
+}
+#endif

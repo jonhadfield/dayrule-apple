@@ -125,15 +125,8 @@ struct SyncE2ETests {
     }
 
     private func registerSession(cfg: E2EConfig, email: String, password: String) async throws -> Session {
-        let invite = try runTool(
-            (cfg.outDir as NSString).appendingPathComponent("invite"),
-            args: ["1"],
-            env: ["DATABASE_URL_UNPOOLED": cfg.dbURL]
-        ).trimmingCharacters(in: .whitespacesAndNewlines)
-        #expect(!invite.isEmpty)
-
         let api = APIClient(baseURL: URL(string: cfg.api)!, build: "e2e")
-        try await api.signupStart(email: email, inviteCode: invite)
+        try await api.signupStart(email: email)
         let code = try await waitForEmailCode(
             email: email,
             logPath: (cfg.outDir as NSString).appendingPathComponent("api.log")
@@ -148,7 +141,6 @@ struct SyncE2ETests {
         let registered = try await api.register(
             email: email,
             signupToken: verified.signupToken,
-            inviteCode: invite,
             userId: userId,
             saltB64: Base64Std.encode(salt),
             kdf: created.kdf,

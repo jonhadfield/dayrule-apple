@@ -65,3 +65,34 @@ struct SyncNeedsUpdateAnimationModifier: ViewModifier {
         content.dayruleAnimation(Motion.standard, value: model.syncStatus == .needsUpdate)
     }
 }
+
+/// Top sign-in banner as a `safeAreaInset` only while presented.
+///
+/// An always-on inset with an empty body still drew a Mac system rule under the
+/// page title (stacked with the title hairline as a double underline).
+struct SyncSignInBannerInset<Banner: View>: ViewModifier {
+    var isPresented: Bool
+    var colors: DayruleColors
+    @ViewBuilder var banner: () -> Banner
+
+    func body(content: Content) -> some View {
+        if isPresented {
+            content.safeAreaInset(edge: .top, spacing: 0) {
+                banner()
+                    .padding(.horizontal, Tokens.Space.m)
+                    .padding(.vertical, Tokens.Space.s)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(colors.sidebar)
+                    .overlay(alignment: .bottom) {
+                        colors.hairline.frame(height: 1)
+                    }
+                    .transition(.dayruleBanner)
+                    .clipped()
+            }
+            .dayruleAnimation(Motion.standard, value: isPresented)
+        } else {
+            content
+                .dayruleAnimation(Motion.standard, value: isPresented)
+        }
+    }
+}

@@ -24,11 +24,19 @@ struct DayruleSectionHeader: View {
         case serif
     }
 
+    enum TrailingPlacement {
+        /// Immediately after the title (Scheduled day number + weekday).
+        case adjacent
+        /// Pushed to the trailing edge of the row.
+        case edge
+    }
+
     let title: String
     var tone: Tone = .muted
     var style: Style = .sentence
-    /// Secondary text on the trailing edge (e.g. weekday on Scheduled day headers).
+    /// Secondary text beside or opposite the title (e.g. weekday on Scheduled).
     var trailing: AnyView? = nil
+    var trailingPlacement: TrailingPlacement = .edge
     var surface: Surface = .page
 
     @Environment(\.colorScheme) private var colorScheme
@@ -40,7 +48,9 @@ struct DayruleSectionHeader: View {
                 .foregroundStyle(toneColor(colors))
                 .accessibilityAddTraits(.isHeader)
             if let trailing {
-                Spacer(minLength: 0)
+                if trailingPlacement == .edge {
+                    Spacer(minLength: 0)
+                }
                 trailing
             }
         }
@@ -56,6 +66,8 @@ struct DayruleSectionHeader: View {
     }
 
     private func pageChrome(_ row: some View, colors: DayruleColors) -> some View {
+        // Mac reading margin is applied to the List container; keep header rail
+        // at `rowInset` so it matches `RuledRow`.
         chrome(row, colors: colors, inset: Tokens.rowInset)
     }
 

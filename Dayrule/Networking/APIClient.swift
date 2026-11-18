@@ -210,11 +210,11 @@ actor APIClient {
         try await decode("POST", path: "api/v1/auth/prelogin", jsonBody: ["email": email])
     }
 
-    func signupStart(email: String, inviteCode: String) async throws {
+    func signupStart(email: String) async throws {
         _ = try await raw(
             "POST",
             path: "api/v1/auth/signup/start",
-            jsonBody: ["email": email, "inviteCode": inviteCode]
+            jsonBody: ["email": email]
         )
     }
 
@@ -229,7 +229,6 @@ actor APIClient {
     func register(
         email: String,
         signupToken: String,
-        inviteCode: String,
         userId: String,
         saltB64: String,
         kdf: KdfParams,
@@ -245,7 +244,6 @@ actor APIClient {
             jsonBody: [
                 "email": email,
                 "signupToken": signupToken,
-                "inviteCode": inviteCode,
                 "userId": userId,
                 "salt": saltB64,
                 "kdf": ["v": kdf.v, "ops": Int(kdf.ops), "mem": Int(kdf.mem)],

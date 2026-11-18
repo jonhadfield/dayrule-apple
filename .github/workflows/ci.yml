@@ -89,7 +89,9 @@ jobs:
       # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
-        timeout-minutes: 7
+        # Successful runs land around 6–7m (sim boot + rebuild + suite);
+        # 7m was clipping mid-suite on slower runners.
+        timeout-minutes: 10
         run: |
           set -euo pipefail
           UDID=$(xcrun simctl list devices available -j | python3 -c "
@@ -112,11 +114,14 @@ jobs:
           print(candidates[0][1])
           ")
           echo "Using simulator $UDID"
-          xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
-          xcrun simctl erase "$UDID"
-          xcrun simctl boot "$UDID"
-          # Fail fast if the sim never becomes ready (otherwise xcodebuild stalls).
-          perl -e 'alarm shift; exec @ARGV' 120 xcrun simctl bootstatus "$UDID" -b
+          # Erase + boot can stall on shared runners; retry once before giving up.
+          boot_sim() {
+            xcrun simctl shutdown "$UDID" >/dev/null 2>&1 || true
+            xcrun simctl erase "$UDID"
+            xcrun simctl boot "$UDID"
+            perl -e 'alarm shift; exec @ARGV' 180 xcrun simctl bootstatus "$UDID" -b
+          }
+          boot_sim || boot_sim
           xcodebuild test \
             -project Dayrule.xcodeproj \
             -scheme Dayrule \

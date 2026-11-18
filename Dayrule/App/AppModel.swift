@@ -57,7 +57,6 @@ final class AppModel {
     var passkeyUnlockAvailable = false
 
     /// Create-account fields (Gate signup).
-    var inviteCode = ""
     var signupCode = ""
     var signupBusy = false
     private(set) var signupToken: String?
@@ -93,7 +92,6 @@ final class AppModel {
 
     private struct PendingSignup {
         var email: String
-        var inviteCode: String
         var signupToken: String
         var userId: String
         var salt: [UInt8]
@@ -328,16 +326,16 @@ final class AppModel {
         api = APIClient(
             baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
         )
+        // One cached-account Keychain read — each SecItem can prompt on Mac when
+        // the binary’s code signature changed (Debug vs App Store).
         if let cached = try? sessions.loadAccount() {
             email = cached.email
             accountEmail = cached.email
+            biometricUnlockAvailable = cached.biometricWrappedAK != nil
+            passkeyUnlockAvailable = cached.passkey != nil
         }
         if let token = try? sessions.loadToken() {
             Task { await api.setToken(token) }
-        }
-        if let cached = try? sessions.loadAccount() {
-            biometricUnlockAvailable = cached.biometricWrappedAK != nil
-            passkeyUnlockAvailable = cached.passkey != nil
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)
@@ -382,7 +380,7 @@ final class AppModel {
         do {
             guard let base = APIConfig.resolvedBaseURL(apiBaseURLString) else { throw APIError.offline }
             await api.setBaseURL(base)
-            try await api.signupStart(email: email, inviteCode: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines))
+            try await api.signupStart(email: email)
             signupToken = nil
         } catch {
             errorMessage = error.localizedDescription
@@ -436,7 +434,6 @@ final class AppModel {
             )
             pendingSignup = PendingSignup(
                 email: email.lowercased(),
-                inviteCode: inviteCode.trimmingCharacters(in: .whitespacesAndNewlines),
                 signupToken: token,
                 userId: userId,
                 salt: salt,
@@ -461,7 +458,6 @@ final class AppModel {
             let registered = try await api.register(
                 email: pending.email,
                 signupToken: pending.signupToken,
-                inviteCode: pending.inviteCode,
                 userId: pending.userId,
                 saltB64: Base64Std.encode(pending.salt),
                 kdf: pending.created.kdf,
@@ -1051,9 +1047,17 @@ final class AppModel {
         guard !gateBusy else { return }
         gateBusy = true
         defer { gateBusy = false }
-        await refreshBiometryLabel()
-        // Prefer biometric, then passkey, then stay-unlocked device wrap.
-        if let cached = try? sessions.loadAccount(), let wrapped = cached.biometricWrappedAK {
+        biometryLabel = await crypto.biometryName()
+        // Single Keychain read for the whole convenience path (see init).
+        guard let cached = try? sessions.loadAccount() else {
+            biometricUnlockAvailable = false
+            passkeyUnlockAvailable = false
+            return
+        }
+        biometricUnlockAvailable = cached.biometricWrappedAK != nil
+        passkeyUnlockAvailable = cached.passkey != nil
+        // Prefer biometric, then stay-unlocked device wrap.
+        if let wrapped = cached.biometricWrappedAK {
             do {
                 try await crypto.unlockFromBiometricWrap(
                     userId: cached.userId,
@@ -1066,7 +1070,6 @@ final class AppModel {
             }
         }
         guard DeviceUnlockPrefs.stayUnlocked,
-              let cached = try? sessions.loadAccount(),
               let wrapped = cached.deviceWrappedAK
         else { return }
         do {
@@ -1249,7 +1252,6 @@ final class AppModel {
         passkeyUnlockAvailable = false
         accountEmail = nil
         email = ""
-        inviteCode = ""
         signupCode = ""
         signupToken = nil
         pendingRecoveryWords = []
@@ -1393,7 +1395,6 @@ final class AppModel {
             try? AppDatabase.remove(userId: userId)
             accountEmail = nil
             email = ""
-            inviteCode = ""
             signupCode = ""
             signupToken = nil
             pendingRecoveryWords = []

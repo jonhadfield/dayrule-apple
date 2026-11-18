@@ -52,6 +52,10 @@ struct DayruleListNavChrome: ViewModifier {
             .modifier(PaperBarBackground(colors: colors))
             #elseif os(macOS)
             .toolbar(removing: .title)
+            // Clear the unified toolbar so the sidebar’s containerBackground can
+            // reach the traffic lights; detail paper fills via ignoresSafeArea.
+            .toolbarBackground(.hidden, for: .windowToolbar)
+            .background(colors.bg.ignoresSafeArea())
             #endif
     }
 }
@@ -74,23 +78,35 @@ private struct PaperBarBackground: ViewModifier {
 }
 #endif
 
-/// Mac page title: Fraunces over a 2pt ink rule (the toolbar title is removed).
+/// Page title: Fraunces over one paper hairline, optional list icon (web ListShell).
 struct DayrulePageTitle: View {
     let title: String
+    var systemImage: String? = nil
+    var iconTint: Color? = nil
     @Environment(\.colorScheme) private var colorScheme
 
-    init(_ title: String) {
+    init(_ title: String, systemImage: String? = nil, iconTint: Color? = nil) {
         self.title = title
+        self.systemImage = systemImage
+        self.iconTint = iconTint
     }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         DayrulePageTitleChrome {
-            Text(title)
-                .font(DayruleType.pageTitle)
-                .tracking(DayruleType.titleTracking)
-                .foregroundStyle(colors.text)
-                .accessibilityAddTraits(.isHeader)
+            HStack(alignment: .center, spacing: Tokens.Space.m) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.system(size: 26))
+                        .foregroundStyle(iconTint ?? colors.text)
+                        .accessibilityHidden(true)
+                }
+                Text(title)
+                    .font(DayruleType.pageTitle)
+                    .tracking(DayruleType.titleTracking)
+                    .foregroundStyle(colors.text)
+                    .accessibilityAddTraits(.isHeader)
+            }
         }
     }
 }
@@ -127,34 +143,101 @@ struct DayruleEditablePageTitle: View {
 private struct DayrulePageTitleChrome<Content: View>: View {
     @ViewBuilder var content: Content
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.dayruleReadingMargin) private var readingMargin
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        // One paper hairline under the title. Hosted via overlay (not
+        // `safeAreaInset`) so AppKit does not paint a second rule under the
+        // chrome — that stack was the Mac double underline.
         VStack(alignment: .leading, spacing: 0) {
             content
                 .padding(.bottom, Tokens.Space.s)
-            // One paper hairline — match list row rules (not a 2pt ink bar that
-            // stacked with the first section separator as a double underline).
             colors.hairline.frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, Tokens.rowInset + readingMargin)
+        // Leading edge of the title = left edge of the checkbox circles below.
+        // Overlay chrome sits in the list’s bounds; Mac plain Lists already
+        // include the system leading in that origin.
+        #if os(macOS)
+        .padding(.horizontal, Tokens.Space.m)
+        // Dense sidebar rows pad glyphs below the selection wash; match that
+        // inset so Fraunces caps line up with Inbox/Today *text*, not the bar.
+        .padding(.top, Tokens.Space.s - Tokens.Space.xxs)
+        #else
+        .padding(.horizontal, Tokens.listChromeInset + Tokens.listMarkCircleLeading)
         .padding(.top, Tokens.Space.m)
-        .padding(.bottom, Tokens.Space.s)
+        #endif
+        .background(colors.bg)
+    }
+}
+
+/// Mac page title above the list without `safeAreaInset` (avoids the system
+/// rule that stacked under our paper hairline).
+private struct DayruleMacPageTitleOverlay<Title: View>: ViewModifier {
+    @ViewBuilder var title: () -> Title
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var titleHeight: CGFloat = 56
+    func body(content: Content) -> some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        content
+            // No lift into the toolbar — cap-height should match sidebar *label*
+            // ink (Inbox), not the row wash / window chrome above it.
+            .padding(.top, titleHeight)
+            // Padding alone is clear — the translucent Mac toolbar then reads as
+            // a white bar. Paint paper through the reserved title band.
+            .background(colors.bg)
+            .overlay(alignment: .top) {
+                title()
+                    .onGeometryChange(for: CGFloat.self) { proxy in
+                        proxy.size.height
+                    } action: { height in
+                        if height > 0, abs(height - titleHeight) > 0.5 {
+                            titleHeight = height
+                        }
+                    }
+            }
+    }
+}
+
+/// Toolbar glyph on paper: sidebar fill + secondary ring (not white Liquid Glass).
+struct DayruleToolbarGlyph: View {
+    let systemImage: String
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        Image(systemName: systemImage)
+            .font(.body.weight(.medium))
+            .foregroundStyle(colors.text)
+            .frame(width: 30, height: 30)
+            // `sidebar` is a step darker than page `bg`; ring uses secondary ink
+            // so the outline stays visible on cream (hairline was too quiet).
+            .background(colors.sidebar, in: Circle())
+            .overlay {
+                Circle().strokeBorder(colors.textSecondary.opacity(0.45), lineWidth: 1)
+            }
+            .accessibilityHidden(true)
     }
 }
 
 private struct DayrulePageTitleModifier: ViewModifier {
     let title: String
-    @Environment(\.colorScheme) private var colorScheme
+    var systemImage: String?
+    var iconTint: Color?
 
     func body(content: Content) -> some View {
         #if os(macOS)
-        content.safeAreaInset(edge: .top, spacing: 0) {
-            DayrulePageTitle(title)
-                .background(DayruleColors.resolve(colorScheme: colorScheme).bg)
-        }
+        content.modifier(DayruleMacPageTitleOverlay {
+            DayrulePageTitle(title, systemImage: systemImage, iconTint: iconTint)
+        })
+        #elseif os(iOS)
+        // Match web ListShell (icon + Fraunces); replace the system large title.
+        content
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(removing: .title)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                DayrulePageTitle(title, systemImage: systemImage, iconTint: iconTint)
+            }
         #else
         content
         #endif
@@ -167,7 +250,6 @@ private struct DayruleEditablePageTitleModifier: ViewModifier {
     var accessibilityLabel: String
     var identifier: String
     var focused: FocusState<Bool>.Binding
-    @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
         content
@@ -175,7 +257,6 @@ private struct DayruleEditablePageTitleModifier: ViewModifier {
             // List chrome sets large titles; the editable heading replaces that slot.
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(removing: .title)
-            #endif
             .safeAreaInset(edge: .top, spacing: 0) {
                 DayruleEditablePageTitle(
                     text: $text,
@@ -184,8 +265,28 @@ private struct DayruleEditablePageTitleModifier: ViewModifier {
                     identifier: identifier,
                     focused: focused
                 )
-                .background(DayruleColors.resolve(colorScheme: colorScheme).bg)
             }
+            #elseif os(macOS)
+            .modifier(DayruleMacPageTitleOverlay {
+                DayruleEditablePageTitle(
+                    text: $text,
+                    prompt: prompt,
+                    accessibilityLabel: accessibilityLabel,
+                    identifier: identifier,
+                    focused: focused
+                )
+            })
+            #endif
+    }
+}
+
+extension ToolbarContent {
+    /// Intended to drop the Liquid Glass shared pill (macOS 26+ / iOS 26+).
+    /// No-op until CI’s Xcode SDK includes `sharedBackgroundVisibility` — the
+    /// `#available` check alone still type-checks the symbol and fails on 16.4.
+    @ToolbarContentBuilder
+    func dayruleHideToolbarGlass() -> some ToolbarContent {
+        self
     }
 }
 
@@ -194,9 +295,13 @@ extension View {
         modifier(DayruleListNavChrome(colors: colors))
     }
 
-    /// macOS: Fraunces page title inset above the content. iOS: no-op (nav bar shows it).
-    func dayrulePageTitle(_ title: String) -> some View {
-        modifier(DayrulePageTitleModifier(title: title))
+    /// Fraunces page title (Mac overlay / iOS top inset). Optional list icon matches web.
+    func dayrulePageTitle(
+        _ title: String,
+        systemImage: String? = nil,
+        iconTint: Color? = nil
+    ) -> some View {
+        modifier(DayrulePageTitleModifier(title: title, systemImage: systemImage, iconTint: iconTint))
     }
 
     /// Fraunces page title is the rename field (web ListShell). Suppresses the

@@ -77,6 +77,13 @@ synced vault.
 
 - Sandboxed Mac builds use network-client entitlement only; Keychain items
   stay in the app's sandbox.
+- Launch reads a few Keychain items (session, cached account, device wrap;
+  biometric wrap only when that unlock path runs). They are silent when the
+  login keychain is unlocked **and** the binary’s code signature matches the
+  one that created the items. Switching Debug ↔ App Store / Developer ID can
+  produce one “wants to use your confidential information” dialog **per
+  item**; choose Always Allow for that exact binary, or stick to one signed
+  build.
 - Recovery-phrase copy writes to `NSPasteboard` and clears after 60s when
   the content is unchanged (no iOS-style local-only / expiration API).
 - An unlocked Mac login session is a larger physical-access surface than a

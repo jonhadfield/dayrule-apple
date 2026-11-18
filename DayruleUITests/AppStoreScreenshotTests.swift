@@ -336,6 +336,28 @@ final class AppStoreScreenshotTests: XCTestCase {
             ).firstMatch
         }
 
+        func sidebarArea(named name: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(
+                NSPredicate(
+                    format: "identifier BEGINSWITH %@ AND label == %@",
+                    "list.sidebar.area.",
+                    name
+                )
+            ).firstMatch
+        }
+
+        /// Project or area sidebar row with this label (avoids duplicate creates).
+        func sidebarNamed(_ name: String) -> XCUIElement {
+            app.descendants(matching: .any).matching(
+                NSPredicate(
+                    format: "(identifier BEGINSWITH %@ OR identifier BEGINSWITH %@) AND label == %@",
+                    "list.sidebar.project.",
+                    "list.sidebar.area.",
+                    name
+                )
+            ).firstMatch
+        }
+
         func openNewListMenu() {
             let newList = app.buttons["browse.newList"]
             guard newList.waitForExistence(timeout: 4) else { return }
@@ -351,7 +373,8 @@ final class AppStoreScreenshotTests: XCTestCase {
             } else {
                 ensureSidebarVisible(app)
             }
-            let existing = sidebarProject(named: name)
+            // Prefer an existing sidebar row — never create a second Garden/Holidays.
+            let existing = sidebarNamed(name)
             if existing.waitForExistence(timeout: 1.5) {
                 existing.tap()
                 Thread.sleep(forTimeInterval: 0.5)
@@ -405,18 +428,14 @@ final class AppStoreScreenshotTests: XCTestCase {
             } else {
                 ensureSidebarVisible(app)
             }
-            if app.staticTexts[name].waitForExistence(timeout: 1) {
+            // Sidebar id only — bare staticTexts[name] matched todos and skipped
+            // creating the area, or matched the wrong surface and still duplicated.
+            let areaRow = sidebarArea(named: name)
+            if areaRow.waitForExistence(timeout: 1.5) {
                 leaveDetailToBrowse()
                 return
             }
-            let areaRow = app.descendants(matching: .any).matching(
-                NSPredicate(
-                    format: "identifier BEGINSWITH %@ AND label == %@",
-                    "list.sidebar.area.",
-                    name
-                )
-            ).firstMatch
-            if areaRow.waitForExistence(timeout: 1) {
+            if phone, app.staticTexts[name].waitForExistence(timeout: 1) {
                 leaveDetailToBrowse()
                 return
             }

@@ -46,6 +46,8 @@ struct RuledRow<Content: View>: View {
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
         // Padding sits inside the min height, so a single-line row is exactly `rowHeight`.
+        // Reading-column margin is applied outside the List on Mac (padding) /
+        // via `contentMargins` on iOS — keep row insets at `rowInset` only.
         content()
             .padding(.vertical, Tokens.Space.xs)
             .frame(

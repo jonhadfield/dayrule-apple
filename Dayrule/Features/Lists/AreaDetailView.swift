@@ -98,14 +98,14 @@ struct AreaDetailView: View {
         } action: { width in
             detailWidth = width
         }
+        #if !os(macOS)
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
-        .environment(\.dayruleReadingMargin, readingMargin)
+        #endif
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if view != nil {
                 PinnedPaperAddBar(
                     title: $draftTitle,
                     colors: colors,
-                    readingMargin: readingMargin,
                     fieldIdentifier: "area.addField",
                     buttonIdentifier: "area.addButton"
                 ) {
@@ -120,6 +120,7 @@ struct AreaDetailView: View {
             identifier: "area.title",
             focused: $titleFocused
         )
+        .environment(\.dayruleReadingMargin, readingMargin)
         .onAppear {
             if (view?.area.title ?? "").isEmpty {
                 titleFocused = true
@@ -131,7 +132,7 @@ struct AreaDetailView: View {
             }
         }
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     addProject()
                 } label: {
@@ -139,6 +140,9 @@ struct AreaDetailView: View {
                 }
                 .help("New Project")
                 .accessibilityIdentifier("area.newProject")
+            }
+            .dayruleHideToolbarGlass()
+            ToolbarItem(placement: .primaryAction) {
                 Button(role: .destructive) {
                     trashArea(title: title)
                 } label: {
@@ -147,6 +151,7 @@ struct AreaDetailView: View {
                 .help("Move area to Trash")
                 .accessibilityIdentifier("area.trash")
             }
+            .dayruleHideToolbarGlass()
         }
         .sheet(item: sheetEditTarget) { target in
             ItemEditorSheet(model: model, id: target.id)

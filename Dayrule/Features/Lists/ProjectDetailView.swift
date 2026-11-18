@@ -138,14 +138,14 @@ struct ProjectDetailView: View {
         } action: { width in
             detailWidth = width
         }
+        #if !os(macOS)
         .contentMargins(.horizontal, readingMargin, for: .scrollContent)
-        .environment(\.dayruleReadingMargin, readingMargin)
+        #endif
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if view != nil {
                 PinnedPaperAddBar(
                     title: $draftTitle,
                     colors: colors,
-                    readingMargin: readingMargin,
                     fieldIdentifier: "project.addField",
                     buttonIdentifier: "project.addButton"
                 ) {
@@ -160,6 +160,7 @@ struct ProjectDetailView: View {
             identifier: "project.title",
             focused: $titleFocused
         )
+        .environment(\.dayruleReadingMargin, readingMargin)
         .onAppear {
             if (view?.project.title ?? "").isEmpty {
                 titleFocused = true
@@ -223,12 +224,14 @@ struct ProjectDetailView: View {
                     }
                     .accessibilityIdentifier("project.trash")
                 } label: {
-                    Label("Project actions", systemImage: "ellipsis")
-                        .labelStyle(.iconOnly)
+                    DayruleToolbarGlyph(systemImage: "ellipsis")
                 }
+                .buttonStyle(.plain)
                 .help("Project actions")
+                .accessibilityLabel("Project actions")
                 .accessibilityIdentifier("project.actions")
             }
+            .dayruleHideToolbarGlass()
         }
         .sheet(item: sheetEditTarget) { target in
             ItemEditorSheet(model: model, id: target.id)

@@ -74,5 +74,5 @@ Contributor conventions: [`AGENTS.md`](AGENTS.md).
 
 ## Licence
 
-Source is published for transparency alongside the web app. Dayrule the
-product remains invite-only at [dayrule.app](https://dayrule.app).
+Source is published for transparency alongside the web app. The product is
+at [dayrule.app](https://dayrule.app).
