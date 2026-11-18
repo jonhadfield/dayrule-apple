@@ -1,0 +1,106 @@
+name: CodeQL
+
+# Advanced setup: Swift needs a real Xcode build (xcodegen + resolve), which
+# default setup’s autobuild will miss. Actions YAML is scanned on Ubuntu so
+# macOS minutes stay on the Swift job only. Pin Xcode ≤26 for traced extract.
+on:
+  pull_request:
+    paths:
+      - "Dayrule/**"
+      - "DayruleTests/**"
+      - "project.yml"
+      - ".github/workflows/**"
+  push:
+    branches: [main]
+    paths:
+      - "Dayrule/**"
+      - "DayruleTests/**"
+      - "project.yml"
+      - ".github/workflows/**"
+  schedule:
+    # Weekly baseline for the Security tab (Sunday 06:17 UTC).
+    - cron: "17 6 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codeql-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  actions:
+    name: Analyze (actions)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: actions
+          build-mode: none
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:actions"
+
+  swift:
+    name: Analyze (swift)
+    runs-on: macos-15
+    # Tracer + extract is much slower than a plain CI build.
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - name: Select Xcode
+        timeout-minutes: 1
+        run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Generate project
+        timeout-minutes: 3
+        run: brew install xcodegen && xcodegen generate
+
+      # Resolve outside the tracer — under CodeQL, Resolve Package Graph alone
+      # burned most of a 10m build budget on the first run.
+      - name: Resolve packages
+        timeout-minutes: 5
+        run: xcodebuild -resolvePackageDependencies -project Dayrule.xcodeproj -scheme Dayrule
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: swift
+          build-mode: manual
+
+      - name: Build
+        timeout-minutes: 25
+        run: |
+          xcodebuild build \
+            -project Dayrule.xcodeproj \
+            -scheme Dayrule \
+            -destination 'platform=macOS' \
+            -disableAutomaticPackageResolution \
+            -skipPackageUpdates \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=YES \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: "/language:swift"
