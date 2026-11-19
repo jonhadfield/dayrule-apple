@@ -34,6 +34,11 @@ AuthKey_*.p8
 # IDE
 .idea/
 
+# Local capture / script scratch (never commit)
+.tmp-align-shots/
+scripts/__pycache__/
+**/__pycache__/
+
 # SPM checkouts (Package.resolved is committed)
 Dayrule.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved.bak
 todo.txt
