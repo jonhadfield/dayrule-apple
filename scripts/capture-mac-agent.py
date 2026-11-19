@@ -4,10 +4,19 @@
 Uses System Events + HID clicks + screencapture. Project rows are not in the
 AX tree — gate is selecting Kitchen via coordinates under Trash (seeded
 agent vault). Never uses App Review creds.
+
+Env:
+  SKIP_SEED=1 — skip dense re-seed/dedupe when the agent vault is already
+  populated (avoids hangs on org dedupe during ASC refresh).
+  KEEP_SHOTS=1 — do not delete existing PNGs at start (retry Kitchen etc.).
+  ONLY_SHOTS=05,06 — comma list of shot stems to capture (implies KEEP_SHOTS).
+  DAYRULE_APP — path to Debug Dayrule.app (else newest DerivedData Debug).
+  SCREENSHOT_DIR — output directory (default docs/app-store-screenshots/macos).
 """
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import time
@@ -24,6 +33,8 @@ WINID = Path("/tmp/dayrule-winid")
 CLICK = Path("/tmp/dayrule-click")
 RCLICK = Path("/tmp/dayrule-rclick")
 AXFOCUS = Path("/tmp/dayrule-axfocus")
+AXPRESS = Path("/tmp/dayrule-axpress")
+AXHAS = Path("/tmp/dayrule-axhas")
 API = "https://dayrule.app"
 
 
@@ -200,6 +211,154 @@ exit(0)
             "-framework",
             "ApplicationServices",
         )
+    if not (AXPRESS.exists() and AXPRESS.stat().st_mode & 0o111):
+        src = Path("/tmp/dayrule-axpress.swift")
+        src.write_text(
+            r"""
+import ApplicationServices
+import Cocoa
+import Foundation
+
+let args = CommandLine.arguments
+guard args.count >= 2 else {
+  fputs("usage: axpress <titlePrefix>\n", stderr); exit(1)
+}
+let want = args[1]
+let trust = AXIsProcessTrustedWithOptions(
+  [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+)
+guard trust else { fputs("accessibility not trusted\n", stderr); exit(2) }
+
+func children(_ el: AXUIElement) -> [AXUIElement] {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &raw) == .success,
+        let arr = raw as? [AXUIElement] else { return [] }
+  return arr
+}
+
+func str(_ el: AXUIElement, _ attr: String) -> String? {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, attr as CFString, &raw) == .success else { return nil }
+  return raw as? String
+}
+
+func find(_ root: AXUIElement, depth: Int = 0) -> AXUIElement? {
+  if depth > 50 { return nil }
+  let desc = str(root, kAXDescriptionAttribute as String) ?? ""
+  let title = str(root, kAXTitleAttribute as String) ?? ""
+  let id = str(root, "AXIdentifier") ?? ""
+  if desc.hasPrefix(want) || title.hasPrefix(want)
+      || (id.contains(".todo.") && desc.hasPrefix(want)) {
+    return root
+  }
+  for c in children(root) {
+    if let hit = find(c, depth: depth + 1) { return hit }
+  }
+  return nil
+}
+
+let apps = NSRunningApplication.runningApplications(withBundleIdentifier: "uk.co.lessknown.dayrule")
+guard let app = apps.first else { fputs("Dayrule not running\n", stderr); exit(3) }
+_ = app.activate()
+usleep(80_000)
+let appEl = AXUIElementCreateApplication(app.processIdentifier)
+guard let target = find(appEl) else {
+  fputs("missing desc \(want)\n", stderr); exit(4)
+}
+// Default / press opens the editor (OpenAccessibility on DayruleTodoRow).
+AXUIElementPerformAction(target, kAXPressAction as CFString)
+exit(0)
+"""
+        )
+        sh(
+            "swiftc",
+            str(src),
+            "-o",
+            str(AXPRESS),
+            "-framework",
+            "Cocoa",
+            "-framework",
+            "ApplicationServices",
+        )
+    if not (AXHAS.exists() and AXHAS.stat().st_mode & 0o111):
+        src = Path("/tmp/dayrule-axhas.swift")
+        src.write_text(
+            r"""
+import ApplicationServices
+import Cocoa
+import Foundation
+
+let args = CommandLine.arguments
+guard args.count >= 2 else {
+  fputs("usage: axhas <AXIdentifier>\n", stderr); exit(1)
+}
+let want = args[1]
+let trust = AXIsProcessTrustedWithOptions(
+  [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+)
+guard trust else { fputs("accessibility not trusted\n", stderr); exit(2) }
+
+func children(_ el: AXUIElement) -> [AXUIElement] {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &raw) == .success,
+        let arr = raw as? [AXUIElement] else { return [] }
+  return arr
+}
+
+func identifier(of el: AXUIElement) -> String? {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, "AXIdentifier" as CFString, &raw) == .success else {
+    return nil
+  }
+  return raw as? String
+}
+
+func find(_ root: AXUIElement, depth: Int = 0) -> Bool {
+  if depth > 50 { return false }
+  if identifier(of: root) == want { return true }
+  return children(root).contains { find($0, depth: depth + 1) }
+}
+
+guard let app = NSRunningApplication.runningApplications(
+  withBundleIdentifier: "uk.co.lessknown.dayrule"
+).first else {
+  fputs("Dayrule not running\n", stderr); exit(3)
+}
+exit(find(AXUIElementCreateApplication(app.processIdentifier)) ? 0 : 4)
+"""
+        )
+        sh(
+            "swiftc",
+            str(src),
+            "-o",
+            str(AXHAS),
+            "-framework",
+            "Cocoa",
+            "-framework",
+            "ApplicationServices",
+        )
+
+
+def ax_press_title(title: str, timeout: float = 4.0) -> bool:
+    """AXPress a todo row whose description/title starts with `title`."""
+    ensure_helpers()
+    run_as('tell application "Dayrule" to activate\ndelay 0.05')
+    try:
+        r = subprocess.run(
+            [str(AXPRESS), title],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return False
+    if r.returncode != 0:
+        err = (r.stderr or r.stdout or "").strip()
+        if err:
+            print(f"  axpress failed: {err}", flush=True)
+        return False
+    time.sleep(0.45)
+    return True
 
 
 def hid_click(x: float, y: float, settle: float = 0.35) -> None:
@@ -426,10 +585,152 @@ end tell
     return int(x), int(y)
 
 
-def click_static(label: str) -> None:
-    """Select a sidebar list. Hit the icon column — label center alone often misses."""
+def click_static(label: str, *, icon_column: bool = True) -> None:
+    """Click a labelled control. Sidebar rows need the icon column (x-40);
+    content rows (todos) should hit the label center so the checkbox is spared."""
     x, y = static_center(label)
-    hid_click(x - 40, y)
+    hid_click(x - 40 if icon_column else x, y)
+
+
+def ax_todo_frame(title: str) -> tuple[int, int, int, int] | None:
+    """Screen frame of a todo row whose AXDescription starts with `title`."""
+    ensure_helpers()
+    src = Path("/tmp/dayrule-axframe.swift")
+    bin_path = Path("/tmp/dayrule-axframe")
+    if not (bin_path.exists() and bin_path.stat().st_mode & 0o111):
+        src.write_text(
+            r"""
+import ApplicationServices
+import Cocoa
+import Foundation
+let want = CommandLine.arguments[1]
+func kids(_ el: AXUIElement) -> [AXUIElement] {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, kAXChildrenAttribute as CFString, &raw) == .success,
+        let a = raw as? [AXUIElement] else { return [] }
+  return a
+}
+func str(_ el: AXUIElement, _ attr: String) -> String? {
+  var raw: CFTypeRef?
+  guard AXUIElementCopyAttributeValue(el, attr as CFString, &raw) == .success else { return nil }
+  return raw as? String
+}
+func find(_ el: AXUIElement, depth: Int = 0) -> AXUIElement? {
+  if depth > 50 { return nil }
+  let desc = str(el, kAXDescriptionAttribute as String) ?? ""
+  if desc.hasPrefix(want) { return el }
+  for c in kids(el) { if let h = find(c, depth: depth + 1) { return h } }
+  return nil
+}
+guard let app = NSRunningApplication.runningApplications(
+  withBundleIdentifier: "uk.co.lessknown.dayrule"
+).first else { exit(3) }
+guard let el = find(AXUIElementCreateApplication(app.processIdentifier)) else { exit(4) }
+var raw: CFTypeRef?; var p = CGPoint.zero; var s = CGSize.zero
+if AXUIElementCopyAttributeValue(el, kAXPositionAttribute as CFString, &raw) == .success,
+   let v = raw { AXValueGetValue(v as! AXValue, .cgPoint, &p) }
+raw = nil
+if AXUIElementCopyAttributeValue(el, kAXSizeAttribute as CFString, &raw) == .success,
+   let v = raw { AXValueGetValue(v as! AXValue, .cgSize, &s) }
+print("\(Int(p.x)),\(Int(p.y)),\(Int(s.width)),\(Int(s.height))")
+"""
+        )
+        sh(
+            "swiftc",
+            str(src),
+            "-o",
+            str(bin_path),
+            "-framework",
+            "Cocoa",
+            "-framework",
+            "ApplicationServices",
+        )
+    try:
+        out = subprocess.check_output(
+            [str(bin_path), title], text=True, timeout=5
+        ).strip()
+        x, y, w, h = (int(p) for p in out.split(","))
+        return x, y, w, h
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError):
+        return None
+
+
+def ensure_paint_open_on_kitchen() -> None:
+    """Paint may sit in Done after a mistaken checkbox hit during capture."""
+    title = "Paint the cupboards"
+    if ax_press_title(title) and editor_sheet_open():
+        # Already visible on Kitchen — dismiss so the shot path re-opens cleanly.
+        key_code(53)
+        time.sleep(0.25)
+        return
+    print("  Paint missing on Kitchen — checking Done…", flush=True)
+    try:
+        click_static("Done")
+    except RuntimeError as e:
+        raise SystemExit(f"cannot open Done to reopen {title}: {e}") from e
+    time.sleep(0.6)
+    frame = ax_todo_frame(title)
+    if frame is None:
+        raise SystemExit(f"{title} not in Done either — re-seed the agent vault")
+    x, y, w, h = frame
+    # Leading checkbox reopens a completed to-do.
+    hid_click(x + 18, y + h // 2, settle=0.5)
+    time.sleep(0.4)
+    print("  reopened from Done; returning to Kitchen…", flush=True)
+    # Project rows are AXButtons (description), not static texts.
+    if not ax_press_title("Kitchen"):
+        raise SystemExit("could not AXPress Kitchen in the sidebar")
+    time.sleep(0.55)
+    try:
+        if window_probe()[1] != "Kitchen":
+            raise RuntimeError(f"landed on {window_probe()[1]!r}")
+    except RuntimeError as e:
+        raise SystemExit(f"Kitchen not open after reopen: {e}") from e
+
+
+def open_todo_editor(title: str) -> bool:
+    """Open the to-do sheet for `title` (AXPress on the row; geometry fallback)."""
+    # SwiftUI rows expose AXDescription = accessibility label; AXPress runs onOpen.
+    print(f"  AXPress {title!r}…", flush=True)
+    if ax_press_title(title):
+        for _ in range(8):
+            if editor_sheet_open():
+                return True
+            time.sleep(0.25)
+    frame = ax_todo_frame(title)
+    if frame is not None:
+        x, y, w, h = frame
+        cx, cy = x + min(120, w // 3), y + h // 2
+        print(f"  context-click todo @{(cx, cy)}", flush=True)
+        hid_right_click(cx, cy, settle=0.35)
+        if click_popup_menu_item("Edit"):
+            time.sleep(0.55)
+            if editor_sheet_open():
+                return True
+        key_code(53)
+        time.sleep(0.1)
+        hid_click(cx, cy, settle=0.45)
+        if editor_sheet_open():
+            return True
+    return False
+
+
+def editor_sheet_open() -> bool:
+    """True when the ItemEditorSheet is up (AX id; no press — Save would dismiss)."""
+    ensure_helpers()
+    for ident in ("editor.title", "editor.save"):
+        try:
+            r = subprocess.run(
+                [str(AXHAS), ident],
+                capture_output=True,
+                text=True,
+                timeout=3,
+            )
+            if r.returncode == 0:
+                return True
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+    return has_static("To-do") and (has_static("Notes") or has_static("Checklist"))
 
 
 def count_static(label: str) -> int:
@@ -695,11 +996,11 @@ def sidebar_project_spots() -> list[tuple[int, int]]:
         # seeder created duplicates.
         return [
             (tx - 20, ty + dy)
-            for dy in range(48, 48 + 28 * 14, 28)
+            for dy in range(40, 40 + 28 * 22, 28)
         ]
     except RuntimeError:
         x, y, _, _ = window_frame()
-        return [(x + 36, y + 220 + i * 28) for i in range(14)]
+        return [(x + 36, y + 220 + i * 28) for i in range(22)]
 
 
 def open_project(name: str) -> bool:
@@ -1001,8 +1302,27 @@ def main() -> None:
     print(f"Mac agent capture as {email}")
     ensure_helpers()
     OUT.mkdir(parents=True, exist_ok=True)
-    for p in OUT.glob("*.png"):
-        p.unlink()
+    only_raw = os.environ.get("ONLY_SHOTS", "").strip()
+    only_shots = (
+        {s.strip() for s in only_raw.split(",") if s.strip()} if only_raw else None
+    )
+    keep_shots = os.environ.get("KEEP_SHOTS", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    ) or bool(only_shots)
+    if keep_shots:
+        print(
+            f"KEEP_SHOTS — leaving existing PNGs"
+            + (f" (ONLY_SHOTS={sorted(only_shots)})" if only_shots else ""),
+            flush=True,
+        )
+    else:
+        for p in OUT.glob("*.png"):
+            p.unlink()
+
+    def want(stem: str) -> bool:
+        return only_shots is None or stem in only_shots
 
     subprocess.run(["killall", "Dayrule"], check=False, capture_output=True)
     time.sleep(1)
@@ -1195,26 +1515,71 @@ end tell
             time.sleep(0.35)
         raise SystemExit(f"never reached list {list_name!r}")
 
-    # Leave Kitchen (probe used project coords) via Inbox so Today lands.
-    go("Inbox")
-    seed_dense(go)
+    skip_seed = os.environ.get("SKIP_SEED", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    need_lists = any(
+        want(s)
+        for s in (
+            "01-today",
+            "02-inbox",
+            "03-scheduled",
+            "04-backlog",
+        )
+    )
+    # Leave Kitchen (probe used project coords) via Inbox so Today lands —
+    # skip when we only need Kitchen / editor shots (avoids a costly rescan).
+    if need_lists or not skip_seed:
+        go("Inbox")
+    if skip_seed:
+        print("SKIP_SEED set — skipping dense seed/dedupe", flush=True)
+    else:
+        seed_dense(go)
 
-    go("Today")
-    shot("01-today")
-    go("Inbox")
-    shot("02-inbox")
-    go("Scheduled")
-    shot("03-scheduled")
-    go("Backlog")
-    shot("04-backlog")
-    if not open_project("Kitchen"):
-        raise SystemExit("never reached Kitchen for project shot")
-    shot("05-project-kitchen")
-    # First todo row under the project title (avoid AX walk for the title string).
-    x, y, w, h = window_frame()
-    hid_click(x + 280, y + 130, settle=0.6)
-    time.sleep(0.4)
-    shot("06-editor-checklist")
+    if want("01-today"):
+        go("Today")
+        shot("01-today")
+    if want("02-inbox"):
+        go("Inbox")
+        shot("02-inbox")
+    if want("03-scheduled"):
+        go("Scheduled")
+        shot("03-scheduled")
+    if want("04-backlog"):
+        go("Backlog")
+        shot("04-backlog")
+    if want("05-project-kitchen") or want("06-editor-checklist"):
+        # Prefer staying on Kitchen from the vault probe when list shots were skipped.
+        on_kitchen = False
+        try:
+            on_kitchen = window_probe()[1] == "Kitchen"
+        except RuntimeError:
+            pass
+        if not on_kitchen:
+            go("Inbox")
+            try:
+                click_static("Trash")
+                time.sleep(0.35)
+            except RuntimeError:
+                pass
+            if not open_project("Kitchen"):
+                raise SystemExit("never reached Kitchen for project shot")
+        if want("05-project-kitchen"):
+            # Escape any focused title field so the shot isn't a rename caret.
+            key_code(53)
+            time.sleep(0.3)
+            shot("05-project-kitchen")
+        if want("06-editor-checklist"):
+            ensure_paint_open_on_kitchen()
+            print("opening Paint the cupboards editor…", flush=True)
+            if not open_todo_editor("Paint the cupboards"):
+                raise SystemExit(
+                    "todo editor sheet did not open for 06-editor-checklist"
+                )
+            time.sleep(0.35)
+            shot("06-editor-checklist")
 
     try:
         run_as(
@@ -1223,10 +1588,19 @@ end tell
     except RuntimeError:
         pass
 
+    expected = only_shots if only_shots else {
+        "01-today",
+        "02-inbox",
+        "03-scheduled",
+        "04-backlog",
+        "05-project-kitchen",
+        "06-editor-checklist",
+    }
+    missing = [s for s in sorted(expected) if not (OUT / f"{s}.png").is_file()]
     n = len(list(OUT.glob("*.png")))
     print(f"wrote {n} pngs in {OUT} (agent account only)")
-    if n < 6:
-        raise SystemExit("expected 6 screenshots")
+    if missing:
+        raise SystemExit(f"missing screenshots: {missing}")
 
 
 if __name__ == "__main__":

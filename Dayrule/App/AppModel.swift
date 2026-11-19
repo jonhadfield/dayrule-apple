@@ -326,16 +326,18 @@ final class AppModel {
         api = APIClient(
             baseURL: URL(string: defaultAPI) ?? URL(string: APIConfig.production)!
         )
-        // One cached-account Keychain read — each SecItem can prompt on Mac when
-        // the binary’s code signature changed (Debug vs App Store).
-        if let cached = try? sessions.loadAccount() {
-            email = cached.email
-            accountEmail = cached.email
-            biometricUnlockAvailable = cached.biometricWrappedAK != nil
-            passkeyUnlockAvailable = cached.passkey != nil
-        }
-        if let token = try? sessions.loadToken() {
-            Task { await api.setToken(token) }
+        // One SecItem for token + cached account — a Mac code-signature change
+        // (Debug ↔ App Store) prompts once per item; split keys used to ask twice.
+        if let session = try? sessions.loadSession() {
+            if let cached = session.account {
+                email = cached.email
+                accountEmail = cached.email
+                biometricUnlockAvailable = cached.biometricWrappedAK != nil
+                passkeyUnlockAvailable = cached.passkey != nil
+            }
+            if let token = session.token {
+                Task { await api.setToken(token) }
+            }
         }
         store.onChanges = { [weak self] changes, source in
             await self?.persist(changes, source: source)

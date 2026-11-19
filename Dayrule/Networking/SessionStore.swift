@@ -2,8 +2,17 @@ import Foundation
 import Security
 
 /// Session token + cached unlock material in the Keychain (M2).
+///
+/// Token and cached account share **one** SecItem (`account: "session"`) so a
+/// Mac code-signature change prompts once at launch, not twice (legacy split
+/// `token` + `cached` items each asked separately).
 struct SessionStore: Sendable {
     private let service = "uk.co.lessknown.dayrule.session"
+    /// Combined blob (current).
+    private let sessionAccount = "session"
+    /// Pre-coalesce Keychain account keys — migrated away on first read/write.
+    private let legacyTokenAccount = "token"
+    private let legacyCachedAccount = "cached"
 
     struct CachedAccount: Codable, Sendable {
         var userId: String
@@ -24,40 +33,104 @@ struct SessionStore: Sendable {
         var wrapped: WrappedB64
     }
 
+    /// One Keychain round-trip for launch (email prefill + Bearer).
+    struct SessionSnapshot: Sendable {
+        var token: String?
+        var account: CachedAccount?
+    }
+
+    private struct SessionBlob: Codable, Sendable {
+        var token: String?
+        var account: CachedAccount?
+    }
+
+    func loadSession() throws -> SessionSnapshot {
+        let blob = try loadBlob()
+        return SessionSnapshot(token: blob.token, account: blob.account)
+    }
+
     func saveToken(_ token: String) throws {
-        try save(account: "token", data: Data(token.utf8))
+        var blob = try loadBlob()
+        blob.token = token
+        try saveBlob(blob)
     }
 
     func loadToken() throws -> String? {
-        guard let data = try load(account: "token") else { return nil }
-        return String(data: data, encoding: .utf8)
+        try loadBlob().token
     }
 
     func deleteToken() throws {
-        try delete(account: "token")
+        var blob = try loadBlob()
+        guard blob.token != nil else { return }
+        blob.token = nil
+        try saveBlob(blob)
     }
 
     func saveAccount(_ account: CachedAccount) throws {
-        let data = try JSONEncoder().encode(account)
-        try save(account: "cached", data: data)
+        var blob = try loadBlob()
+        blob.account = account
+        try saveBlob(blob)
     }
 
     func loadAccount() throws -> CachedAccount? {
-        guard let data = try load(account: "cached") else { return nil }
-        return try JSONDecoder().decode(CachedAccount.self, from: data)
+        try loadBlob().account
     }
 
     func clear() throws {
-        try delete(account: "token")
-        try delete(account: "cached")
+        try deleteRaw(account: sessionAccount)
+        try deleteRaw(account: legacyTokenAccount)
+        try deleteRaw(account: legacyCachedAccount)
     }
 
-    private func save(account: String, data: Data) throws {
+    // MARK: - Combined blob + legacy migration
+
+    private func loadBlob() throws -> SessionBlob {
+        if let data = try loadRaw(account: sessionAccount) {
+            return try JSONDecoder().decode(SessionBlob.self, from: data)
+        }
+        // Migrate split items written by older builds (two Mac Keychain prompts).
+        let legacyToken: String?
+        if let data = try loadRaw(account: legacyTokenAccount) {
+            legacyToken = String(data: data, encoding: .utf8)
+        } else {
+            legacyToken = nil
+        }
+        let legacyAccount: CachedAccount?
+        if let data = try loadRaw(account: legacyCachedAccount) {
+            legacyAccount = try JSONDecoder().decode(CachedAccount.self, from: data)
+        } else {
+            legacyAccount = nil
+        }
+        let blob = SessionBlob(token: legacyToken, account: legacyAccount)
+        if blob.token != nil || blob.account != nil {
+            try saveBlob(blob)
+            try deleteRaw(account: legacyTokenAccount)
+            try deleteRaw(account: legacyCachedAccount)
+        }
+        return blob
+    }
+
+    private func saveBlob(_ blob: SessionBlob) throws {
+        // Drop the item entirely when empty so clear() and empty state match.
+        if blob.token == nil, blob.account == nil {
+            try deleteRaw(account: sessionAccount)
+            try deleteRaw(account: legacyTokenAccount)
+            try deleteRaw(account: legacyCachedAccount)
+            return
+        }
+        let data = try JSONEncoder().encode(blob)
+        try saveRaw(account: sessionAccount, data: data)
+        // Ensure legacy keys cannot prompt again on the next launch.
+        try deleteRaw(account: legacyTokenAccount)
+        try deleteRaw(account: legacyCachedAccount)
+    }
+
+    private func saveRaw(account: String, data: Data) throws {
         if MemoryKeychain.enabled {
             MemoryKeychain.save(service: service, account: account, data: data)
             return
         }
-        try delete(account: account)
+        try deleteRaw(account: account)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -69,7 +142,7 @@ struct SessionStore: Sendable {
         guard status == errSecSuccess else { throw CryptoError.keychain("save \(status)") }
     }
 
-    private func load(account: String) throws -> Data? {
+    private func loadRaw(account: String) throws -> Data? {
         if MemoryKeychain.enabled {
             return MemoryKeychain.load(service: service, account: account)
         }
@@ -89,7 +162,7 @@ struct SessionStore: Sendable {
         return data
     }
 
-    private func delete(account: String) throws {
+    private func deleteRaw(account: String) throws {
         if MemoryKeychain.enabled {
             MemoryKeychain.delete(service: service, account: account)
             return
