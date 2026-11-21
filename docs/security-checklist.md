@@ -48,15 +48,15 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.2 (30)** iOS+Mac uploaded 2026-11-16 — chrome/widget-clear; prior **(29)** Mac single hairline; **(28)** SyncEngine/hairline; **0.1.1 (27)** AutoFill / spacing / Equatable; **(26)** store review binary; `0.1.1` train closed for new submissions). **Next cut:** `CURRENT_PROJECT_VERSION` **31** on `main` (Mac chrome, open signup, e2e/SHARED.lock, CodeQL) — archive + upload when ready.
-- [x] App Store **0.1.1** submitted for review 2026-11-11 — iOS + Mac build **26** (approved / train closed); **0.1.2** prepare-for-submission had build **30** attached (iOS+Mac); replace with **31** (+ refreshed screenshots) before the next Add for Review.
+- [x] Internal TestFlight build uploaded (signing + entitlements; **0.1.2 (30)** iOS+Mac uploaded 2026-11-16 — chrome/widget-clear; prior **(29)** Mac single hairline; **(28)** SyncEngine/hairline; **0.1.1 (27)** AutoFill / spacing / Equatable; **(26)** store review binary). **0.1.2** train closed / approved. **Next cut:** **0.1.3** / `CURRENT_PROJECT_VERSION` **32** on `main` (Mac wake remount + Gate Passwords AutoFill) — archive + upload.
+- [x] App Store **0.1.1** submitted for review 2026-11-11 — iOS + Mac build **26** (approved / train closed); **0.1.2** approved (train closed). Next submission is **0.1.3** build **32** (+ refreshed screenshots as needed).
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
 - [x] App Review demo account — runbook `docs/app-review-demo.md` (no second step; credentials only in App Store Connect; maintained for resubmits)
 - [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
 - [x] French encryption declaration / export-compliance — answered for the shipped store submissions
-- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac store **0.1.1** approved on build **26**; **0.1.2** prepare-for-submission was build **30**; next attach **31** for both platforms; prior TF **(29)** / **0.1.1 (27)** / **(26)**)
-- [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops (2026-11-16):** production floors set to **26** (oldest App Store **0.1.1** `CFBundleVersion` still in use). Raise to **29** only after **0.1.2** is live on the store and you intend to retire 0.1.1 clients.
+- [x] Mac App Store packaging — `docs/mac-app-store.md` (iOS + Mac store **0.1.1** / **0.1.2** trains closed; next attach **0.1.3 (32)** for both platforms)
+- [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops (2026-11-16):** production floors set to **26**. Raise after **0.1.3** (or current live train) is on the store when retiring older clients.
 
 **Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.
