@@ -21,14 +21,14 @@ TestFlight upload (after the iPhone critical path).
 The 0.1.x Mac App Store release already cleared review. Use this list for
 the **next** Mac submission (keep iOS and Mac on the same
 `MARKETING_VERSION` / a `CURRENT_PROJECT_VERSION` at least as new as the
-iPhone build you care about). Tree tip is **0.1.3 (32)** — wake remount +
-Mac Gate Passwords AutoFill — ready to archive when screenshots below are
-refreshed. (**0.1.2** train is closed / approved.)
+iPhone build you care about). **0.1.3 (32)** (wake remount + Mac Gate
+Passwords AutoFill) was archived, uploaded, and **submitted for review**
+2026-11-21 with iOS. (**0.1.2** train is closed / approved.)
 
-1. **Archive + upload** a Mac build (**32**). Organizer: **Distribute App → App
-   Store Connect**. The local keychain may only have Apple Development +
-   Developer ID; Xcode re-signs for the Mac App Store on upload if the
-   team can issue **Apple Distribution**.
+1. **Archive + upload** the next Mac build when cutting again. Organizer:
+   **Distribute App → App Store Connect**. The local keychain may only have
+   Apple Development + Developer ID; Xcode re-signs for the Mac App Store on
+   upload if the team can issue **Apple Distribution**.
 2. **Screenshots** — prefer the Mac agent driver (not App Review creds):
 
    ```bash
@@ -44,8 +44,8 @@ refreshed. (**0.1.2** train is closed / approved.)
    Handles the DEBUG gate with Advanced collapsed (email + password;
    production API is the default), dismisses password autofill, and waits
    for Kitchen before writing PNGs to `docs/app-store-screenshots/macos/`.
-   (Re-capture before attaching build **32**; prior PNGs are still the
-   denser seed used with 0.1.2.)
+   (Re-capture when the chrome changes enough to matter for ASC; 0.1.3 kept
+   the prior shot set.)
 
    Fallbacks when the Python path is awkward: UITest via
    `CAPTURE=macos scripts/capture-app-store-screenshots.sh agent-creds.txt`
