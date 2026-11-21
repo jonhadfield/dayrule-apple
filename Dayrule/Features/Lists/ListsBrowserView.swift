@@ -2,6 +2,9 @@ import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
+#if os(macOS)
+import AppKit
+#endif
 
 private struct WhenTarget: Identifiable {
     var id: String { ids.joined(separator: ",") }
@@ -101,6 +104,13 @@ struct ListsBrowserView: View {
     /// Split column visibility — owned so we can replace the system sidebar
     /// toggle (white Liquid Glass pill) with a plain paper toolbar button.
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
+    #if os(macOS)
+    /// Bumped after system/display wake so `NavigationSplitView` remounts.
+    /// AppKit can leave List/sidebar content scrolled under the titlebar after
+    /// sleep (clipped rows, toolbar glyphs over the list, sidebar under traffic lights).
+    @State private var splitLayoutEpoch = 0
+    @State private var splitLayoutRecoveryTask: Task<Void, Never>?
+    #endif
     /// Sidebar badges / org tree — refreshed on entity/linger changes only, so a
     /// sidebar click doesn’t re-walk every to-do just to flip the selection bar.
     @State private var cachedSidebarCounts = Lists.SidebarCounts(inbox: 0, today: 0, overdue: 0)
@@ -539,7 +549,35 @@ struct ListsBrowserView: View {
                 NoticeBar(center: model.notices)
             }
         }
+        #if os(macOS)
+        // Remount after wake — keeps selection/path state on this view.
+        .id(splitLayoutEpoch)
+        .onReceive(
+            NSWorkspace.shared.notificationCenter
+                .publisher(for: NSWorkspace.didWakeNotification)
+        ) { _ in
+            scheduleMacSplitLayoutRecovery()
+        }
+        .onReceive(
+            NSWorkspace.shared.notificationCenter
+                .publisher(for: NSWorkspace.screensDidWakeNotification)
+        ) { _ in
+            scheduleMacSplitLayoutRecovery()
+        }
+        #endif
     }
+
+    #if os(macOS)
+    /// Remount the split after AppKit finishes its own wake layout pass.
+    private func scheduleMacSplitLayoutRecovery() {
+        splitLayoutRecoveryTask?.cancel()
+        splitLayoutRecoveryTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            splitLayoutEpoch &+= 1
+        }
+    }
+    #endif
 
     /// Collapse control drawn in the sidebar column (titlebar trailing).
     @ViewBuilder
