@@ -3,6 +3,10 @@ import SwiftUI
 struct GateView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
+    /// Sign-in email stays in local `@State` (not `model.email`) so Password
+    /// AutoFill writing the username does not rebuild this view via Observation
+    /// and remount `SecureField` before the password is inserted (Mac Passwords).
+    @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var recoveryPhrase = ""
@@ -113,6 +117,7 @@ struct GateView: View {
     }
 
     private func clearSensitiveGateFields() {
+        email = model.email
         password = ""
         confirmPassword = ""
         recoveryPhrase = ""
@@ -120,11 +125,18 @@ struct GateView: View {
         pending = nil
     }
 
+    /// Prefill from Keychain-cached account when the sign-in screen appears.
+    private func seedSignInEmailIfNeeded() {
+        if email.isEmpty, !model.email.isEmpty {
+            email = model.email
+        }
+    }
+
     // MARK: - Sign in
 
     @ViewBuilder
     private func lockedForm(colors: DayruleColors, busy: Bool) -> some View {
-        let canSignIn = !password.isEmpty && !model.email.isEmpty && !busy
+        let canSignIn = !password.isEmpty && !email.isEmpty && !busy
         GateScaffold(alignment: .center) { proxy in
             form(alignment: .center, proxy: proxy) {
                 header(
@@ -136,31 +148,20 @@ struct GateView: View {
                     colors: colors
                 )
 
-                // Adjacent username + password so AutoFill / Bitwarden / Keychain
-                // can detect a login form (PLAN decision 67). Keep Advanced / toggles
-                // outside this pair.
-                TextField("Email", text: $model.email, prompt: prompt("Email", colors))
-                    .focused($focus, equals: .email)
-                    .id(Field.email)
-                    .accessibilityIdentifier("gate.email")
-                    .dayruleAutofillUsername()
-                    .submitLabel(.next)
-                    .onSubmit { focus = .password }
-                    .dayruleField(isFocused: focus == .email, colors: colors)
-                    .disabled(busy)
-
-                SecureField("Password", text: $password, prompt: prompt("Password", colors))
-                    .focused($focus, equals: .password)
-                    .id(Field.password)
-                    .accessibilityIdentifier("gate.password")
-                    .dayruleAutofillPassword()
-                    .submitLabel(.go)
-                    .onSubmit {
+                // Isolated pair: local bindings only — see `email` docs above.
+                // Keep Advanced / toggles outside so managers detect a login form
+                // (PLAN decision 67).
+                GateSignInCredentialFields(
+                    email: $email,
+                    password: $password,
+                    focus: $focus,
+                    busy: busy,
+                    colors: colors,
+                    onSubmitPassword: {
                         guard canSignIn else { return }
                         signIn()
                     }
-                    .dayruleField(isFocused: focus == .password, colors: colors)
-                    .disabled(busy)
+                )
 
                 #if DEBUG
                 advancedOptions(identifier: "gate.api", next: .email, busy: busy, colors: colors)
@@ -218,6 +219,7 @@ struct GateView: View {
                 message("gate.error", alignment: .center)
 
                 Button("Create an account") {
+                    model.email = email
                     model.beginSignup()
                 }
                 .buttonStyle(.dayruleLink)
@@ -225,6 +227,7 @@ struct GateView: View {
                 .disabled(busy)
 
                 Button("Use recovery phrase") {
+                    model.email = email
                     model.phase = .needsRecovery
                     model.errorMessage = nil
                 }
@@ -232,17 +235,20 @@ struct GateView: View {
                 .disabled(busy)
             }
         }
+        .onAppear { seedSignInEmailIfNeeded() }
         #if os(macOS)
         // Mac: ready to type. iOS keeps the keyboard down until a field is tapped,
         // so the sign-in screen isn't half covered at launch.
         .task {
-            focus = model.email.isEmpty ? .email : .password
+            seedSignInEmailIfNeeded()
+            focus = email.isEmpty ? .email : .password
         }
         #endif
     }
 
     private func signIn() {
         run(.signIn) {
+            model.email = email
             await model.unlock(password: password)
             password = ""
         }
@@ -659,5 +665,94 @@ struct GateView: View {
                 proxy.scrollTo(field, anchor: .center)
             }
         }
+    }
+
+    /// Username + password only — kept as its own view so `@Observable` AppModel
+    /// updates (biometrics availability, errors, stay-unlocked) do not remount
+    /// the password field while AutoFill is inserting.
+    private struct GateSignInCredentialFields: View {
+        @Binding var email: String
+        @Binding var password: String
+        var focus: FocusState<Field?>.Binding
+        var busy: Bool
+        var colors: DayruleColors
+        var onSubmitPassword: () -> Void
+        @State private var passwordsBusy = false
+
+        var body: some View {
+            VStack(spacing: Tokens.Space.l) {
+                #if os(macOS)
+                // One AppKit form owns both fields so AutoFill’s password write is
+                // not wiped when the email binding refreshes the representable.
+                MacAutofillCredentialFields(
+                    email: $email,
+                    password: $password,
+                    colors: colors,
+                    isEnabled: !busy,
+                    onSubmitPassword: onSubmitPassword
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    fillFromPasswords()
+                } label: {
+                    DayruleBusyLabel(
+                        title: "Fill from Passwords…",
+                        busyTitle: "Opening Passwords…",
+                        busy: passwordsBusy
+                    )
+                }
+                .buttonStyle(.dayruleSecondary)
+                .accessibilityIdentifier("gate.fillPasswords")
+                .disabled(busy || passwordsBusy)
+                .help("Use iCloud Keychain / Passwords without relying on field AutoFill")
+                #else
+                TextField(
+                    "Email",
+                    text: $email,
+                    prompt: Text("Email").foregroundStyle(colors.textSecondary)
+                )
+                .focused(focus, equals: .email)
+                .accessibilityIdentifier("gate.email")
+                .dayruleAutofillUsername()
+                .submitLabel(.next)
+                .onSubmit { focus.wrappedValue = .password }
+                .dayruleField(isFocused: focus.wrappedValue == .email, colors: colors)
+                .disabled(busy)
+
+                SecureField(
+                    "Password",
+                    text: $password,
+                    prompt: Text("Password").foregroundStyle(colors.textSecondary)
+                )
+                .focused(focus, equals: .password)
+                .accessibilityIdentifier("gate.password")
+                .dayruleAutofillPassword()
+                .submitLabel(.go)
+                .onSubmit(onSubmitPassword)
+                .dayruleField(isFocused: focus.wrappedValue == .password, colors: colors)
+                .disabled(busy)
+                #endif
+            }
+        }
+
+        #if os(macOS)
+        private func fillFromPasswords() {
+            passwordsBusy = true
+            Task { @MainActor in
+                defer { passwordsBusy = false }
+                do {
+                    let cred = try await PasswordAuthorization.requestSavedPassword()
+                    email = cred.user
+                    password = cred.password
+                    focus.wrappedValue = .password
+                } catch PasskeyPRF.Error.cancelled, PasswordAuthorization.Error.cancelled {
+                    // User dismissed the sheet.
+                } catch {
+                    // Leave fields as-is; Sign in error path is for unlock failures.
+                }
+            }
+        }
+        #endif
     }
 }

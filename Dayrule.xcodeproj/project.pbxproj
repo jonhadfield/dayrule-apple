@@ -96,6 +96,7 @@
 		72DF698BFC2789D563A8D443 /* CipherStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E767FC5D7B9C015AD0AF761 /* CipherStore.swift */; };
 		74D504A712940E1EDF9D4FE1 /* HLC.swift in Sources */ = {isa = PBXBuildFile; fileRef = F47D18259248FBC451348D37 /* HLC.swift */; };
 		76E7BE693BD7BDC45E624C19 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0EDF3660BA35915F0DF1E2 /* Motion.swift */; };
+		786427658AE45B76B1C520C9 /* PasswordAuthorization.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE255883B9DFCE1E9D238E92 /* PasswordAuthorization.swift */; };
 		7C55FEF2A877C6CC61ECD4AC /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B47D6F2B18C56FC075A3633 /* ReminderScheduler.swift */; };
 		7D40FF4BF0CA7584E20463BE /* RuledRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = B27CFCD5837AFEF92ECFFEAD /* RuledRow.swift */; };
 		7DEA075203A077F67516A39F /* ListReorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D6A4BB3350BDCCCB3CEE258 /* ListReorder.swift */; };
@@ -127,6 +128,7 @@
 		A6F39760ED287B256E9BD8FE /* DayruleUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DE21753A05A35B9730B40C7 /* DayruleUITests.swift */; };
 		A7642620481BCDB6C5051300 /* SectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C2F8FC1ACA025108C7461E2 /* SectionHeader.swift */; };
 		A779C0BB09146FCA6959FD83 /* MoveProjectSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F059402C1EB2400D5B39BA66 /* MoveProjectSheetView.swift */; };
+		A7A833317FBD2B83193DFD13 /* MacAutofillSecureField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 285666089973C60B8D44B306 /* MacAutofillSecureField.swift */; };
 		A8CAA6049E9471C7A1087E9D /* HeadingSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B53788BB5B0576D260AC5F /* HeadingSheetView.swift */; };
 		A95AE9FF4C4A82DBCD25D8CE /* PaperAddRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 620BD0386281AA2BD1755C4F /* PaperAddRow.swift */; };
 		AA554C553310463AD0D2FD75 /* Commands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19069DB52AC6606DCAFA09FC /* Commands.swift */; };
@@ -274,6 +276,7 @@
 		24A6D8DB11402268708E999A /* LingerStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LingerStore.swift; sourceTree = "<group>"; };
 		2615E69994B9E14732EB74AC /* DayruleUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = DayruleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		27CAF46F7EBC5CEC5D22EBC3 /* Labels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Labels.swift; sourceTree = "<group>"; };
+		285666089973C60B8D44B306 /* MacAutofillSecureField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAutofillSecureField.swift; sourceTree = "<group>"; };
 		28F2D0BBD25CD2A1F10E0046 /* ListsBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListsBrowserView.swift; sourceTree = "<group>"; };
 		2926027C49B5BEDF339EC385 /* EnvelopeB64.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnvelopeB64.swift; sourceTree = "<group>"; };
 		29C225964995BA55648E51D5 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
@@ -396,6 +399,7 @@
 		CB911AE709808CB54EF488C0 /* DeviceKeyStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceKeyStore.swift; sourceTree = "<group>"; };
 		CD1D7D219429FAD1F65665F1 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		CDA8099CD51FDF8947583529 /* SecureBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecureBuffer.swift; sourceTree = "<group>"; };
+		CE255883B9DFCE1E9D238E92 /* PasswordAuthorization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordAuthorization.swift; sourceTree = "<group>"; };
 		CFF7B27C792AA9376304425B /* ProjectDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDetailView.swift; sourceTree = "<group>"; };
 		D027C69C0928AE7335F6869E /* ShareInboxSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareInboxSupport.swift; sourceTree = "<group>"; };
 		D290020145AAD6D0ED81B565 /* Fraunces-Variable.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Fraunces-Variable.ttf"; sourceTree = "<group>"; };
@@ -594,6 +598,7 @@
 			children = (
 				57AF130657190E4861550019 /* BuildInfo.swift */,
 				92823AC8CF1D01C3B9227872 /* ClientPlatform.swift */,
+				285666089973C60B8D44B306 /* MacAutofillSecureField.swift */,
 				E3AAC84046AC0375D1A8CCC8 /* MacListSeparators.swift */,
 				6C2E91EF5C081EF755681B85 /* MacWindowCloseGate.swift */,
 			);
@@ -743,6 +748,7 @@
 				469597EA7B31D99308F3E943 /* PasskeyAuthorization.swift */,
 				EAC88A10168259EFE3885170 /* PasskeyPRF.swift */,
 				6FCEB0603F98391154252BCD /* PasskeySignIn.swift */,
+				CE255883B9DFCE1E9D238E92 /* PasswordAuthorization.swift */,
 				374E24148DE7D295BFAC4296 /* Primitives.swift */,
 				B6A9CCB3D751BB5F83672A3E /* Recovery.swift */,
 				CDA8099CD51FDF8947583529 /* SecureBuffer.swift */,
@@ -1105,6 +1111,7 @@
 				52DAE6F37E4412EE939E3F4D /* ListStyle.swift in Sources */,
 				BACDBC180DF1DD4AD49FCA60 /* Lists.swift in Sources */,
 				4C4E0A198B4141767C26545A /* ListsBrowserView.swift in Sources */,
+				A7A833317FBD2B83193DFD13 /* MacAutofillSecureField.swift in Sources */,
 				341646CED60B82B3BEC546BD /* MacListSeparators.swift in Sources */,
 				ACF8159F23C478954024AF44 /* MacWindowCloseGate.swift in Sources */,
 				C101DC9998218243A45C5932 /* MemoryKeychain.swift in Sources */,
@@ -1119,6 +1126,7 @@
 				FD5DAC4BCC18FBD39E4375BB /* PasskeyAuthorization.swift in Sources */,
 				E8C0E0A1FF6492E22ABCF59A /* PasskeyPRF.swift in Sources */,
 				ACF2654EC3B929966026460E /* PasskeySignIn.swift in Sources */,
+				786427658AE45B76B1C520C9 /* PasswordAuthorization.swift in Sources */,
 				372B27D99B0DDB1039654C5F /* PasswordValidation.swift in Sources */,
 				3BEF58DEB560F032C06DA013 /* PinnedPaperAddBar.swift in Sources */,
 				E76666C1596505A09D0DC5AF /* Primitives.swift in Sources */,
