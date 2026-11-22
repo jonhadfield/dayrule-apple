@@ -33,9 +33,9 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       !contains(github.event.pull_request.labels.*.name, 'ci-skip')
     runs-on: macos-15
-    # Healthy serial run ~5–8m (one setup + Mac build + iOS tests). Cap under
-    # the old parallel pair’s combined bill; hung simctl must not run long.
-    timeout-minutes: 18
+    # Healthy serial run ~5–8m. Budget = capped earlier steps (~14m) + Test iOS
+    # (15m) so the step can use its full timeout after setup/build.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
@@ -44,6 +44,7 @@ jobs:
         run: sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
 
       - name: Show Xcode version
+        timeout-minutes: 1
         run: xcodebuild -version
 
       - name: Verify shared fixture lock
@@ -90,8 +91,8 @@ jobs:
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
         # Successful runs land around 6–7m (sim boot + rebuild + suite).
-        # 10m still timed out once after TEST SUCCEEDED (hung teardown);
-        # keep headroom under the job budget without failing green suites.
+        # 10m timed out once after TEST SUCCEEDED (hung teardown). Step may use
+        # the full 15m; job timeout (30m) covers earlier capped steps + this.
         timeout-minutes: 15
         run: |
           set -euo pipefail

@@ -5,12 +5,13 @@ struct AreaDetailView: View {
     @Bindable var model: AppModel
     let areaId: ID
     var onOpenProject: (ID) -> Void
+    /// Owned by the list shell so Mac wake remount does not clear Add drafts.
+    @Bindable var orgDrafts: OrgDetailDrafts
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
-    @State private var draftTitle = ""
     @State private var editTarget: EditTarget?
     @State private var whenTarget: WhenTarget?
     @State private var deadlineTarget: WhenTarget?
@@ -104,12 +105,12 @@ struct AreaDetailView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if view != nil {
                 PinnedPaperAddBar(
-                    title: $draftTitle,
+                    title: orgDrafts.areaTitleBinding(for: areaId),
                     colors: colors,
                     fieldIdentifier: "area.addField",
                     buttonIdentifier: "area.addButton"
                 ) {
-                    addTodo(draft: $draftTitle)
+                    addTodo(draft: orgDrafts.areaTitleBinding(for: areaId))
                 }
             }
         }

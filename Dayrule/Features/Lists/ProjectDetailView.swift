@@ -6,13 +6,13 @@ struct ProjectDetailView: View {
     let projectId: ID
     /// Opens a newly converted project (list shell owns navigation).
     var onOpenProject: ((ID) -> Void)? = nil
+    /// Owned by the list shell so Mac wake remount does not clear Add drafts.
+    @Bindable var orgDrafts: OrgDetailDrafts
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     #endif
-    @State private var draftTitle = ""
-    @State private var headingDrafts: [ID: String] = [:]
     @State private var editTarget: EditTarget?
     @State private var headingTarget: EditTarget?
     @State private var whenTarget: WhenTarget?
@@ -97,9 +97,9 @@ struct ProjectDetailView: View {
                         }
                         addRow(
                             headingId: group.heading.id,
-                            draft: Binding(
-                                get: { headingDrafts[group.heading.id] ?? "" },
-                                set: { headingDrafts[group.heading.id] = $0 }
+                            draft: orgDrafts.headingTitleBinding(
+                                projectId: projectId,
+                                headingId: group.heading.id
                             )
                         )
                     } header: {
@@ -144,12 +144,15 @@ struct ProjectDetailView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if view != nil {
                 PinnedPaperAddBar(
-                    title: $draftTitle,
+                    title: orgDrafts.projectTitleBinding(for: projectId),
                     colors: colors,
                     fieldIdentifier: "project.addField",
                     buttonIdentifier: "project.addButton"
                 ) {
-                    addTodo(headingId: nil, draft: $draftTitle)
+                    addTodo(
+                        headingId: nil,
+                        draft: orgDrafts.projectTitleBinding(for: projectId)
+                    )
                 }
             }
         }

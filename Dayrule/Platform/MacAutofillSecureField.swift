@@ -2,17 +2,28 @@
 import AppKit
 import SwiftUI
 
+/// Which AppKit credential field should become first responder.
+enum MacAutofillFocusTarget: Equatable {
+    case email
+    case password
+}
+
 /// AppKit username + password so macOS Passwords AutoFill can write both values.
 /// SwiftUI `SecureField` often never receives the password; a lone
 /// `NSSecureTextField` representable also loses it when email’s binding update
 /// re-enters `updateNSView` and pushes the still-empty password binding back
 /// into the field (wiping AutoFill). One representable owns both fields and
-/// never clobbers a non-empty field with an empty binding.
+/// never clobbers a non-empty field with an empty binding — except intentional
+/// clears after a failed unlock.
 struct MacAutofillCredentialFields: NSViewRepresentable {
     @Binding var email: String
     @Binding var password: String
     var colors: DayruleColors
     var isEnabled: Bool = true
+    /// Bumped when Fill from Passwords (or similar) writes both bindings so
+    /// reconcile treats that pair as authoritative even with an active editor.
+    var credentialsApplyNonce: Int = 0
+    var focusTarget: MacAutofillFocusTarget? = nil
     var onSubmitPassword: (() -> Void)?
 
     @MainActor
@@ -21,6 +32,10 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
         weak var emailField: NSTextField?
         weak var passwordField: NSSecureTextField?
         private var harvestTask: Task<Void, Never>?
+        /// Last password binding we pushed to / accepted from the field.
+        var lastPasswordBinding: String = ""
+        var appliedCredentialsNonce: Int = 0
+        var lastFocusTarget: MacAutofillFocusTarget?
 
         init(_ parent: MacAutofillCredentialFields) {
             self.parent = parent
@@ -32,11 +47,11 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
                 if parent.email != field.stringValue {
                     parent.email = field.stringValue
                 }
-                // Passwords often writes the secure field just after the username.
                 schedulePasswordHarvest()
             } else if field === passwordField {
                 if parent.password != field.stringValue {
                     parent.password = field.stringValue
+                    lastPasswordBinding = field.stringValue
                 }
             }
         }
@@ -65,7 +80,6 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
 
         func schedulePasswordHarvest() {
             harvestTask?.cancel()
-            // AutoFill may set the secure field after the username binding update.
             harvestTask = Task { [weak self] in
                 self?.harvestPasswordFromField()
                 try? await Task.sleep(for: .milliseconds(50))
@@ -80,6 +94,7 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
             let value = field.stringValue
             if !value.isEmpty, parent.password != value {
                 parent.password = value
+                lastPasswordBinding = value
             }
         }
     }
@@ -115,6 +130,7 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
         context.coordinator.emailField = emailTF
         context.coordinator.passwordField = passwordTF
         context.coordinator.parent = self
+        context.coordinator.lastPasswordBinding = password
 
         let stack = NSStackView(views: [emailField.container, passwordField.container])
         stack.orientation = .vertical
@@ -130,36 +146,88 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
               let passwordField = context.coordinator.passwordField
         else { return }
 
-        reconcile(emailField, binding: email) { email = $0 }
-        reconcile(passwordField, binding: password) { password = $0 }
-        // If AutoFill landed in the secure field during this turn, lift it now.
-        context.coordinator.harvestPasswordFromField()
+        if credentialsApplyNonce != context.coordinator.appliedCredentialsNonce {
+            emailField.stringValue = email
+            passwordField.stringValue = password
+            context.coordinator.lastPasswordBinding = password
+            context.coordinator.appliedCredentialsNonce = credentialsApplyNonce
+            if emailField.currentEditor() != nil || passwordField.currentEditor() != nil {
+                stack.window?.makeFirstResponder(nil)
+            }
+        } else {
+            reconcileEmail(emailField, coordinator: context.coordinator)
+            reconcilePassword(passwordField, coordinator: context.coordinator)
+            context.coordinator.harvestPasswordFromField()
+        }
+
         applyEnabled(emailField, passwordField)
         emailField.contentType = .username
         passwordField.contentType = .password
         restyleContainers(in: stack, colors: colors)
+        applyFocusIfNeeded(coordinator: context.coordinator, emailField: emailField, passwordField: passwordField)
     }
 
-    /// Push binding → field only when safe. Never replace a non-empty field with
-    /// an empty binding (that is the AutoFill wipe). Prefer lifting field → binding.
-    private func reconcile(
-        _ field: NSTextField,
-        binding: String,
-        setBinding: (String) -> Void
-    ) {
-        if field.stringValue == binding { return }
-        if binding.isEmpty, !field.stringValue.isEmpty {
-            setBinding(field.stringValue)
-            return
-        }
-        // Don't fight the field editor / AutoFill mid-insert.
+    private func reconcileEmail(_ field: NSTextField, coordinator: Coordinator) {
+        if field.stringValue == email { return }
         if field.currentEditor() != nil {
-            if field.stringValue != binding {
-                setBinding(field.stringValue)
+            // Prefer an external non-empty binding (Fill from Passwords) over
+            // stale editor text so email/password stay a matched pair.
+            if !email.isEmpty, email != field.stringValue {
+                field.stringValue = email
+                return
+            }
+            if field.stringValue != email {
+                email = field.stringValue
             }
             return
         }
-        field.stringValue = binding
+        field.stringValue = email
+    }
+
+    private func reconcilePassword(_ field: NSTextField, coordinator: Coordinator) {
+        if field.stringValue == password {
+            coordinator.lastPasswordBinding = password
+            return
+        }
+        if password.isEmpty, !field.stringValue.isEmpty {
+            // Explicit clear after unlock failure: binding had a value, now "".
+            if !coordinator.lastPasswordBinding.isEmpty {
+                field.stringValue = ""
+                coordinator.lastPasswordBinding = ""
+                return
+            }
+            // AutoFill wrote to the field before the binding caught up.
+            password = field.stringValue
+            coordinator.lastPasswordBinding = field.stringValue
+            return
+        }
+        if field.currentEditor() != nil {
+            if !password.isEmpty, password != field.stringValue {
+                field.stringValue = password
+                coordinator.lastPasswordBinding = password
+                return
+            }
+            if field.stringValue != password {
+                password = field.stringValue
+                coordinator.lastPasswordBinding = field.stringValue
+            }
+            return
+        }
+        field.stringValue = password
+        coordinator.lastPasswordBinding = password
+    }
+
+    private func applyFocusIfNeeded(
+        coordinator: Coordinator,
+        emailField: NSTextField,
+        passwordField: NSSecureTextField
+    ) {
+        guard let target = focusTarget, target != coordinator.lastFocusTarget else { return }
+        coordinator.lastFocusTarget = target
+        let field: NSTextField = target == .email ? emailField : passwordField
+        DispatchQueue.main.async {
+            field.window?.makeFirstResponder(field)
+        }
     }
 
     private func applyEnabled(_ emailField: NSTextField, _ passwordField: NSTextField) {

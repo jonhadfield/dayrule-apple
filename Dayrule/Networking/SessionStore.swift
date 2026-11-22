@@ -103,9 +103,13 @@ struct SessionStore: Sendable {
         }
         let blob = SessionBlob(token: legacyToken, account: legacyAccount)
         if blob.token != nil || blob.account != nil {
-            try saveBlob(blob)
-            try deleteRaw(account: legacyTokenAccount)
-            try deleteRaw(account: legacyCachedAccount)
+            // Prefer coalesced item, but never fail the read if migration write
+            // fails — unlock still needs the legacy snapshot in memory.
+            do {
+                try saveBlob(blob)
+            } catch {
+                return blob
+            }
         }
         return blob
     }
@@ -120,7 +124,7 @@ struct SessionStore: Sendable {
         }
         let data = try JSONEncoder().encode(blob)
         try saveRaw(account: sessionAccount, data: data)
-        // Ensure legacy keys cannot prompt again on the next launch.
+        // Only drop legacy keys after the combined item is persisted.
         try deleteRaw(account: legacyTokenAccount)
         try deleteRaw(account: legacyCachedAccount)
     }
@@ -130,15 +134,24 @@ struct SessionStore: Sendable {
             MemoryKeychain.save(service: service, account: account, data: data)
             return
         }
-        try deleteRaw(account: account)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
             kSecAttrAccount as String: account,
+        ]
+        let attributes: [String: Any] = [
             kSecValueData as String: data,
             kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
         ]
-        let status = SecItemAdd(query as CFDictionary, nil)
+        // Update in place when possible — delete-then-add can lose the session
+        // if Add fails after Delete.
+        var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add[kSecValueData as String] = data
+            add[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+            status = SecItemAdd(add as CFDictionary, nil)
+        }
         guard status == errSecSuccess else { throw CryptoError.keychain("save \(status)") }
     }
 
