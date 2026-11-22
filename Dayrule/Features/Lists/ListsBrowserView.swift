@@ -82,6 +82,8 @@ struct ListsBrowserView: View {
     /// Add drafts live in an `@Observable` store observed only by the pinned
     /// Add bar — typing must not invalidate this shell (and re-walk lists).
     @State private var addDrafts = ListAddDrafts()
+    /// Survives Mac sleep/wake `splitLayoutEpoch` remount (project/area Add drafts).
+    @State private var orgDrafts = OrgDetailDrafts()
     /// Bumped to ask the Add bar to focus (Home Screen / ⌘N).
     @State private var addFocusNonce = 0
     @State private var whenTarget: WhenTarget?
@@ -361,14 +363,20 @@ struct ListsBrowserView: View {
                         case .list(let name):
                             listDetail(list: name, colors: colors)
                         case .project(let projectId):
-                            ProjectDetailView(model: model, projectId: projectId) { id in
-                                phonePath.append(.project(id))
-                            }
+                            ProjectDetailView(
+                                model: model,
+                                projectId: projectId,
+                                onOpenProject: { id in phonePath.append(.project(id)) },
+                                orgDrafts: orgDrafts
+                            )
                             .toolbar { chromeToolbar(colors: colors) }
                         case .area(let areaId):
-                            AreaDetailView(model: model, areaId: areaId) { projectId in
-                                phonePath.append(.project(projectId))
-                            }
+                            AreaDetailView(
+                                model: model,
+                                areaId: areaId,
+                                onOpenProject: { projectId in phonePath.append(.project(projectId)) },
+                                orgDrafts: orgDrafts
+                            )
                             .toolbar { chromeToolbar(colors: colors) }
                         }
                     }
@@ -523,9 +531,12 @@ struct ListsBrowserView: View {
                     .navigationDestination(for: OrgRoute.self) { route in
                         switch route {
                         case .project(let projectId):
-                            ProjectDetailView(model: model, projectId: projectId) { id in
-                                orgPath.append(.project(id))
-                            }
+                            ProjectDetailView(
+                                model: model,
+                                projectId: projectId,
+                                onOpenProject: { id in orgPath.append(.project(id)) },
+                                orgDrafts: orgDrafts
+                            )
                             .toolbar {
                                 chromeToolbar(
                                     colors: colors,
@@ -533,9 +544,12 @@ struct ListsBrowserView: View {
                                 )
                             }
                         case .area(let areaId):
-                            AreaDetailView(model: model, areaId: areaId) { projectId in
-                                orgPath.append(.project(projectId))
-                            }
+                            AreaDetailView(
+                                model: model,
+                                areaId: areaId,
+                                onOpenProject: { projectId in orgPath.append(.project(projectId)) },
+                                orgDrafts: orgDrafts
+                            )
                             .toolbar {
                                 chromeToolbar(
                                     colors: colors,
@@ -2346,6 +2360,86 @@ struct ListsBrowserView: View {
         var hasNotes: Bool = false
         var checklist: (done: Int, total: Int)?
         var trailing: TrailingChip?
+    }
+}
+
+/// Project / area Add (+ heading) drafts owned outside Mac wake remount.
+@Observable
+@MainActor
+final class OrgDetailDrafts {
+    private var projectTitles: [ID: String] = [:]
+    private var projectHeadingTitles: [ID: [ID: String]] = [:]
+    private var areaTitles: [ID: String] = [:]
+
+    func projectTitle(for id: ID) -> String {
+        projectTitles[id] ?? ""
+    }
+
+    func setProjectTitle(_ value: String, for id: ID) {
+        if value.isEmpty {
+            projectTitles[id] = nil
+        } else {
+            projectTitles[id] = value
+        }
+    }
+
+    func clearProjectTitle(_ id: ID) {
+        projectTitles[id] = nil
+    }
+
+    func projectTitleBinding(for id: ID) -> Binding<String> {
+        Binding(
+            get: { self.projectTitle(for: id) },
+            set: { self.setProjectTitle($0, for: id) }
+        )
+    }
+
+    func headingTitle(projectId: ID, headingId: ID) -> String {
+        projectHeadingTitles[projectId]?[headingId] ?? ""
+    }
+
+    func setHeadingTitle(_ value: String, projectId: ID, headingId: ID) {
+        var nested = projectHeadingTitles[projectId] ?? [:]
+        if value.isEmpty {
+            nested[headingId] = nil
+        } else {
+            nested[headingId] = value
+        }
+        if nested.isEmpty {
+            projectHeadingTitles[projectId] = nil
+        } else {
+            projectHeadingTitles[projectId] = nested
+        }
+    }
+
+    func headingTitleBinding(projectId: ID, headingId: ID) -> Binding<String> {
+        Binding(
+            get: { self.headingTitle(projectId: projectId, headingId: headingId) },
+            set: { self.setHeadingTitle($0, projectId: projectId, headingId: headingId) }
+        )
+    }
+
+    func areaTitle(for id: ID) -> String {
+        areaTitles[id] ?? ""
+    }
+
+    func setAreaTitle(_ value: String, for id: ID) {
+        if value.isEmpty {
+            areaTitles[id] = nil
+        } else {
+            areaTitles[id] = value
+        }
+    }
+
+    func clearAreaTitle(_ id: ID) {
+        areaTitles[id] = nil
+    }
+
+    func areaTitleBinding(for id: ID) -> Binding<String> {
+        Binding(
+            get: { self.areaTitle(for: id) },
+            set: { self.setAreaTitle($0, for: id) }
+        )
     }
 }
 

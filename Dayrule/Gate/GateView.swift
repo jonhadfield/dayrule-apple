@@ -500,6 +500,8 @@ struct GateView: View {
                 message("gate.recoverySignIn.error")
 
                 Button("Back") {
+                    // Recovery edits `model.email`; local sign-in email must follow.
+                    email = model.email
                     model.phase = .locked
                     model.errorMessage = nil
                 }
@@ -678,6 +680,7 @@ struct GateView: View {
         var colors: DayruleColors
         var onSubmitPassword: () -> Void
         @State private var passwordsBusy = false
+        @State private var credentialsApplyNonce = 0
 
         var body: some View {
             VStack(spacing: Tokens.Space.l) {
@@ -689,6 +692,8 @@ struct GateView: View {
                     password: $password,
                     colors: colors,
                     isEnabled: !busy,
+                    credentialsApplyNonce: credentialsApplyNonce,
+                    focusTarget: macFocusTarget,
                     onSubmitPassword: onSubmitPassword
                 )
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -737,6 +742,14 @@ struct GateView: View {
         }
 
         #if os(macOS)
+        private var macFocusTarget: MacAutofillFocusTarget? {
+            switch focus.wrappedValue {
+            case .email: .email
+            case .password: .password
+            default: nil
+            }
+        }
+
         private func fillFromPasswords() {
             passwordsBusy = true
             Task { @MainActor in
@@ -745,6 +758,7 @@ struct GateView: View {
                     let cred = try await PasswordAuthorization.requestSavedPassword()
                     email = cred.user
                     password = cred.password
+                    credentialsApplyNonce += 1
                     focus.wrappedValue = .password
                 } catch PasskeyPRF.Error.cancelled, PasswordAuthorization.Error.cancelled {
                     // User dismissed the sheet.
