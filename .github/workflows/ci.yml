@@ -33,11 +33,12 @@ jobs:
       github.event_name == 'workflow_dispatch' ||
       !contains(github.event.pull_request.labels.*.name, 'ci-skip')
     runs-on: macos-15
-    # Healthy serial run ~5–8m. Budget = capped earlier steps (~14m) + Test iOS
-    # (15m) so the step can use its full timeout after setup/build.
-    timeout-minutes: 30
+    # Healthy serial run ~5–8m. Worst-case budget: checkout (3) + six capped
+    # steps (1+1+1+3+3+4=13) + Test iOS (15) ≈ 31m, plus a little runner slack.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        timeout-minutes: 3
 
       - name: Select Xcode
         timeout-minutes: 1
@@ -90,9 +91,8 @@ jobs:
       # Hung simctl/xcodebuild must fail well under the job budget. bootstatus
       # gets its own wall clock via perl alarm (macOS has no GNU timeout).
       - name: Test iOS
-        # Successful runs land around 6–7m (sim boot + rebuild + suite).
-        # 10m timed out once after TEST SUCCEEDED (hung teardown). Step may use
-        # the full 15m; job timeout (30m) covers earlier capped steps + this.
+        # Successful runs land around 6–7m. Step may use the full 15m; job
+        # timeout (35m) = checkout + earlier capped steps + this step.
         timeout-minutes: 15
         run: |
           set -euo pipefail
