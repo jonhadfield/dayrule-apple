@@ -151,6 +151,8 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
             passwordField.stringValue = password
             context.coordinator.lastPasswordBinding = password
             context.coordinator.appliedCredentialsNonce = credentialsApplyNonce
+            // Setting stringValue aborts editing; allow a fresh .password focus.
+            context.coordinator.lastFocusTarget = nil
             if emailField.currentEditor() != nil || passwordField.currentEditor() != nil {
                 stack.window?.makeFirstResponder(nil)
             }
@@ -222,7 +224,12 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
         emailField: NSTextField,
         passwordField: NSSecureTextField
     ) {
-        guard let target = focusTarget, target != coordinator.lastFocusTarget else { return }
+        guard let target = focusTarget else {
+            // Clear so returning to .email / .password is not suppressed.
+            coordinator.lastFocusTarget = nil
+            return
+        }
+        guard target != coordinator.lastFocusTarget else { return }
         coordinator.lastFocusTarget = target
         let field: NSTextField = target == .email ? emailField : passwordField
         DispatchQueue.main.async {
