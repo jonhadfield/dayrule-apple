@@ -76,6 +76,7 @@
 		5A048A85A6C0638C7B943561 /* ReorderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39249F4D8A3C33FC891105E8 /* ReorderTests.swift */; };
 		5AB7B1A1573F2E7076748582 /* ShareInboxTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB493133287A151825B301F3 /* ShareInboxTests.swift */; };
 		5E0920F2191716FAD5F98F26 /* DayruleAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E55B98A401C2DDA581BCB05 /* DayruleAppDelegate.swift */; };
+		5F8FEFAA2AA24393BB62A826 /* MacAutofillPasswordReconcileTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F741A6B0A4AAD8E929276CD7 /* MacAutofillPasswordReconcileTests.swift */; };
 		60B142A450813BC7E3EB9533 /* ActorRecordCipherTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF20AE08BE769257EF340816 /* ActorRecordCipherTests.swift */; };
 		61A3DD52D1351E333A1C0364 /* SyncChromeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88D09FDA8D23E4CBDDF36EC /* SyncChromeViews.swift */; };
 		61B5465FA18F398B4823248C /* ATSLocalNetworkingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C69D04C04D0D3C77D0C2A384 /* ATSLocalNetworkingTests.swift */; };
@@ -437,6 +438,7 @@
 		F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginResponseTests.swift; sourceTree = "<group>"; };
 		F47D18259248FBC451348D37 /* HLC.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HLC.swift; sourceTree = "<group>"; };
 		F641AD31AFDBF3DF36510A8E /* PlaintextOnDiskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaintextOnDiskTests.swift; sourceTree = "<group>"; };
+		F741A6B0A4AAD8E929276CD7 /* MacAutofillPasswordReconcileTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacAutofillPasswordReconcileTests.swift; sourceTree = "<group>"; };
 		F8FBBE6074D5BF8574216899 /* DayruleShare.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DayruleShare.entitlements; sourceTree = "<group>"; };
 		FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryKeychainTests.swift; sourceTree = "<group>"; };
 		FC97C4DD616C0DD3AC537AC8 /* FoldLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoldLayout.swift; sourceTree = "<group>"; };
@@ -660,6 +662,7 @@
 				D52A19DBDF17A81143BBB2BD /* ListReorderTests.swift */,
 				39F13541F8210D40139B57E9 /* ListsTests.swift */,
 				F43C7FCDF02A14FECE3BD3EF /* LoginResponseTests.swift */,
+				F741A6B0A4AAD8E929276CD7 /* MacAutofillPasswordReconcileTests.swift */,
 				FAE7CD7B38362938E1DF6840 /* MemoryKeychainTests.swift */,
 				DC1B2CA1506B0A94695FE1E4 /* PasskeySignInTests.swift */,
 				9A0C453B4052F92FAAACA142 /* PerformanceBudgetTests.swift */,
@@ -1232,6 +1235,7 @@
 				5918594B0FBFE10D41E83D91 /* ListReorderTests.swift in Sources */,
 				EC3D8FA5CA9E901B62FAB086 /* ListsTests.swift in Sources */,
 				BCFB497B7A371B0AC5C4DDF3 /* LoginResponseTests.swift in Sources */,
+				5F8FEFAA2AA24393BB62A826 /* MacAutofillPasswordReconcileTests.swift in Sources */,
 				D2322E69D0E9F477501B47F1 /* MemoryKeychainTests.swift in Sources */,
 				3471F9DBE5ED78CB6353B971 /* PasskeySignInTests.swift in Sources */,
 				50661964BA28F97AE381D140 /* PerformanceBudgetTests.swift in Sources */,
