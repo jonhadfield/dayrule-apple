@@ -769,6 +769,7 @@ final class AppModel {
             await openUnlockedVault()
         } catch {
             if phase != .needsRecovery && phase != .needsSecondStep {
+                await wipeCryptoAfterFailedUnlock()
                 phase = .locked
             }
             errorMessage = error.localizedDescription
@@ -836,9 +837,11 @@ final class AppModel {
             clearPendingSecondStep()
             await openUnlockedVault()
         } catch PasskeySignIn.Error.cancelled {
+            await wipeCryptoAfterFailedUnlock()
             phase = .needsSecondStep
             errorMessage = "Confirm with your sign-in passkey, or use your recovery phrase."
         } catch {
+            await wipeCryptoAfterFailedUnlock()
             phase = .needsSecondStep
             errorMessage = error.localizedDescription
         }
@@ -858,10 +861,20 @@ final class AppModel {
     }
 
     private func clearPendingSecondStep() {
-        if var pending = pendingSecondStep {
-            Primitives.wipe(&pending.kek)
-            pendingSecondStep = nil
-        }
+        // Nil first so `pending.kek` uniquely owns the buffer; wiping before
+        // release CoW-copied and zeroed the copy (audit run-4).
+        guard var pending = pendingSecondStep else { return }
+        pendingSecondStep = nil
+        Primitives.wipe(&pending.kek)
+    }
+
+    /// Wipe AK / vault handles after an unlock path that may have called `hold`
+    /// while the UI is returning to a locked or recovery gate (audit run-4).
+    private func wipeCryptoAfterFailedUnlock() async {
+        vault = nil
+        cipherStore = nil
+        syncEngine = nil
+        await crypto.lock()
     }
 
     private func finishOnlineSession(_ sessionLogin: LoginResponse, kek: [UInt8]) async throws {
@@ -974,6 +987,7 @@ final class AppModel {
             try openPersistence(userId: recoveredId)
             await openUnlockedVault()
         } catch {
+            await wipeCryptoAfterFailedUnlock()
             phase = .needsRecovery
             errorMessage = error.localizedDescription
         }
@@ -1068,7 +1082,8 @@ final class AppModel {
                 try await finishConvenienceUnlock(cached: cached)
                 return
             } catch {
-                // User cancelled or biometry failed — stay on the password gate.
+                // Cancel / fail may have held the AK already — wipe before fallback.
+                await wipeCryptoAfterFailedUnlock()
             }
         }
         guard DeviceUnlockPrefs.stayUnlocked,
@@ -1081,6 +1096,7 @@ final class AppModel {
             )
             try await finishConvenienceUnlock(cached: cached)
         } catch {
+            await wipeCryptoAfterFailedUnlock()
             errorMessage = error.localizedDescription
             phase = .locked
         }
@@ -1102,6 +1118,7 @@ final class AppModel {
             )
             try await finishConvenienceUnlock(cached: cached)
         } catch {
+            await wipeCryptoAfterFailedUnlock()
             phase = .locked
             errorMessage = error.localizedDescription
         }
@@ -1127,6 +1144,7 @@ final class AppModel {
             )
             try await finishConvenienceUnlock(cached: cached)
         } catch {
+            await wipeCryptoAfterFailedUnlock()
             phase = .locked
             errorMessage = error.localizedDescription
         }
@@ -1341,6 +1359,18 @@ final class AppModel {
     func testingSaveCachedAccount(_ account: SessionStore.CachedAccount) throws {
         try sessions.saveAccount(account)
     }
+
+    /// Audit run-4: failed-unlock teardown must wipe a held AK.
+    func testingWipeCryptoAfterFailedUnlock() async {
+        await wipeCryptoAfterFailedUnlock()
+    }
+
+    /// Plant second-step KEK so `cancelSecondStep` exercises the wipe path.
+    func testingPlantSecondStepKek(_ kek: [UInt8]) {
+        pendingSecondStep = PendingSecondStep(token: "test-second-step", kek: kek)
+    }
+
+    var testingHasPendingSecondStep: Bool { pendingSecondStep != nil }
     #endif
 
     /// Delete the account on the server and wipe this device (PLAN §9.5).
@@ -1360,13 +1390,15 @@ final class AppModel {
             let kdf = cached.kdf.params
             try kdf.meetFloor()
             let salt = try Base64Std.decode(cached.saltB64)
-            let (authKey, kek) = try await crypto.beginLogin(
+            var (authKey, kek) = try await crypto.beginLogin(
                 password: password,
                 salt: salt,
                 kdf: kdf
             )
-            var wipeKek = kek
-            Primitives.wipe(&wipeKek)
+            defer {
+                Primitives.wipe(&kek)
+                Primitives.wipe(&authKey)
+            }
             try await api.deleteAccount(authKeyB64: Base64Std.encode(authKey))
             let userId = cached.userId
             try? await crypto.forgetDevice(userId: userId)

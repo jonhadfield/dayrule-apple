@@ -150,6 +150,47 @@ struct AppModelLockTests {
     #endif
 
     @MainActor
+    @Test("wipeCryptoAfterFailedUnlock clears a held AK while Gate stays locked")
+    func failedUnlockWipeClearsHeldAK() async throws {
+        try await withMemoryKeychain {
+            Primitives.ready()
+            let model = AppModel()
+            let salt = Primitives.randomBytes(CryptoConstants.saltBytes)
+            _ = try await model.crypto.createLocalDemo(
+                password: "password-ok-12",
+                userId: "user-failed-unlock-wipe-0001",
+                salt: salt
+            )
+            #expect(await model.crypto.isUnlocked == true)
+            #expect(model.phase == .locked)
+
+            await model.testingWipeCryptoAfterFailedUnlock()
+
+            #expect(await model.crypto.isUnlocked == false)
+            #expect(model.phase == .locked)
+        }
+    }
+
+    @MainActor
+    @Test("cancelSecondStep drops planted KEK pending state")
+    func cancelSecondStepClearsPendingKek() async throws {
+        try await withMemoryKeychain {
+            Primitives.ready()
+            let model = AppModel()
+            var kek = Primitives.randomBytes(32)
+            model.testingPlantSecondStepKek(kek)
+            Primitives.wipe(&kek)
+            #expect(model.testingHasPendingSecondStep)
+            model.testingSetPhase(.needsSecondStep)
+
+            model.cancelSecondStep()
+
+            #expect(!model.testingHasPendingSecondStep)
+            #expect(model.phase == .locked)
+        }
+    }
+
+    @MainActor
     private func withMemoryKeychain(_ body: () async throws -> Void) async throws {
         let prev = ProcessInfo.processInfo.environment["DAYRULE_MEMORY_KEYCHAIN"]
         setenv("DAYRULE_MEMORY_KEYCHAIN", "1", 1)

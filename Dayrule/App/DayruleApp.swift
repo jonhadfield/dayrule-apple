@@ -11,8 +11,6 @@ struct DayruleApp: App {
     @NSApplicationDelegateAdaptor(DayruleAppDelegate.self) private var appDelegate
     #endif
     @State private var model = AppModel()
-    @Environment(\.scenePhase) private var scenePhase
-    @State private var showPrivacyCover = false
     #if os(macOS)
     /// AppKit active state — Mission Control / other apps resign active without
     /// using scenePhase `.inactive` (that also fires for in-app menus).
@@ -53,75 +51,24 @@ struct DayruleApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootTint {
-                ZStack {
-                    GateView(model: model)
-                    if showPrivacyCover {
-                        PrivacyCover()
-                            .transition(.opacity)
-                    }
-                }
-            }
-            #if os(iOS)
-            .sensoryFeedback(.impact(weight: .light), trigger: model.haptics.add)
-            .sensoryFeedback(.impact(weight: .medium), trigger: model.haptics.trash)
-            .sensoryFeedback(.success, trigger: model.haptics.unlock)
-            .sensoryFeedback(.selection, trigger: model.haptics.chip)
-            .sensoryFeedback(.error, trigger: model.haptics.error)
-            .sensoryFeedback(.error, trigger: model.notices.errorPulse)
-            #endif
+            // Per-window root so each scene owns its `scenePhase` + privacy cover
+            // (App-level phase stays `.active` if any Dayrule window is foreground).
             #if os(macOS)
-            // ASC Mac screenshots start at 1280×800; keep a usable smaller minimum.
-            .frame(minWidth: 800, minHeight: 500)
-            // Dense desktop body (web 15px at ≥900px); explicit role fonts still win.
-            .environment(\.font, Font.system(size: 15))
-            .modifier(UserActivityMonitor(model: model))
-            #endif
-            .preferredColorScheme(preferredScheme)
-            .onAppear {
-                #if os(iOS)
-                ReminderBackgroundRefresh.bind(model)
-                QuickActions.bind(model)
-                #endif
-                #if os(macOS)
-                MacWindowCloseGate.model = model
-                // Clear any pinned aqua/darkAqua so System can follow the OS.
-                applyMacAppearance(appearancePreference)
-                #endif
-            }
-            #if os(macOS)
-            .onChange(of: appearanceRaw) { _, _ in
-                applyMacAppearance(appearancePreference)
-                macSystemAppearanceTick &+= 1
-            }
-            .onReceive(
-                DistributedNotificationCenter.default()
-                    .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
-            ) { _ in
-                macSystemAppearanceTick &+= 1
-                if appearancePreference == .system {
-                    applyMacAppearance(.system)
-                }
-            }
-            #endif
-            .onChange(of: scenePhase) { _, phase in
-                model.scenePhaseChanged(phase)
-                refreshPrivacyCover()
-            }
-            .onChange(of: model.phase) { _, _ in
-                // Unlock can finish while the scene is already inactive (app switcher).
-                refreshPrivacyCover()
-            }
-            #if os(macOS)
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-                macAppActive = true
-                model.applicationBecameActive()
-                refreshPrivacyCover()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
-                macAppActive = false
-                refreshPrivacyCover()
-            }
+            DayruleWindowRoot(
+                model: model,
+                preferredScheme: preferredScheme,
+                appearancePreference: appearancePreference,
+                appearanceRaw: $appearanceRaw,
+                macAppActive: $macAppActive,
+                macSystemAppearanceTick: $macSystemAppearanceTick
+            )
+            #else
+            DayruleWindowRoot(
+                model: model,
+                preferredScheme: preferredScheme,
+                appearancePreference: appearancePreference,
+                appearanceRaw: $appearanceRaw
+            )
             #endif
         }
         #if os(macOS)
@@ -204,21 +151,7 @@ struct DayruleApp: App {
         }
     }
 
-    private func refreshPrivacyCover() {
-        #if os(macOS)
-        setPrivacyCover(privacyCoverNeeded(macAppActive: macAppActive, appPhase: model.phase))
-        #else
-        setPrivacyCover(privacyCoverNeeded(scenePhase: scenePhase, appPhase: model.phase))
-        #endif
-    }
-
     #if os(macOS)
-    /// Cover when the app resigns active (Mission Control / another app). Do not
-    /// use scenePhase `.inactive` — that fires for ordinary menu use (§8.7).
-    private func privacyCoverNeeded(macAppActive: Bool, appPhase: AppModel.Phase) -> Bool {
-        PrivacyCoverPolicy.needed(macAppActive: macAppActive, phase: appPhase)
-    }
-
     private func showAboutPanel() {
         var credits = "Build \(BuildInfo.build)"
         if BuildInfo.gitCommit != "unknown" {
@@ -230,14 +163,105 @@ struct DayruleApp: App {
         ]
         NSApplication.shared.orderFrontStandardAboutPanel(options: opts)
     }
-    #else
-    /// Cover whenever the scene isn't active and the screen holds something
-    /// sensitive. The gate's sign-in and biometric prompt stay uncovered so
-    /// Face ID doesn't flash the cover.
-    private func privacyCoverNeeded(scenePhase: ScenePhase, appPhase: AppModel.Phase) -> Bool {
-        PrivacyCoverPolicy.needed(sceneActive: scenePhase == .active, phase: appPhase)
-    }
     #endif
+}
+
+/// One window/scene: owns `scenePhase` + privacy cover so Duo / Stage Manager
+/// sibling windows cover independently (audit run-4).
+private struct DayruleWindowRoot: View {
+    var model: AppModel
+    var preferredScheme: ColorScheme?
+    var appearancePreference: AppearancePreference
+    @Binding var appearanceRaw: String
+    #if os(macOS)
+    @Binding var macAppActive: Bool
+    @Binding var macSystemAppearanceTick: Int
+    #endif
+
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var showPrivacyCover = false
+
+    var body: some View {
+        RootTint {
+            ZStack {
+                GateView(model: model)
+                if showPrivacyCover {
+                    PrivacyCover()
+                        .transition(.opacity)
+                }
+            }
+        }
+        #if os(iOS)
+        .sensoryFeedback(.impact(weight: .light), trigger: model.haptics.add)
+        .sensoryFeedback(.impact(weight: .medium), trigger: model.haptics.trash)
+        .sensoryFeedback(.success, trigger: model.haptics.unlock)
+        .sensoryFeedback(.selection, trigger: model.haptics.chip)
+        .sensoryFeedback(.error, trigger: model.haptics.error)
+        .sensoryFeedback(.error, trigger: model.notices.errorPulse)
+        #endif
+        #if os(macOS)
+        // ASC Mac screenshots start at 1280×800; keep a usable smaller minimum.
+        .frame(minWidth: 800, minHeight: 500)
+        // Dense desktop body (web 15px at ≥900px); explicit role fonts still win.
+        .environment(\.font, Font.system(size: 15))
+        .modifier(UserActivityMonitor(model: model))
+        #endif
+        .preferredColorScheme(preferredScheme)
+        .onAppear {
+            #if os(iOS)
+            ReminderBackgroundRefresh.bind(model)
+            QuickActions.bind(model)
+            #endif
+            #if os(macOS)
+            MacWindowCloseGate.model = model
+            // Clear any pinned aqua/darkAqua so System can follow the OS.
+            applyMacAppearance(appearancePreference)
+            #endif
+            refreshPrivacyCover()
+        }
+        #if os(macOS)
+        .onChange(of: appearanceRaw) { _, _ in
+            applyMacAppearance(appearancePreference)
+            macSystemAppearanceTick &+= 1
+        }
+        .onReceive(
+            DistributedNotificationCenter.default()
+                .publisher(for: Notification.Name("AppleInterfaceThemeChangedNotification"))
+        ) { _ in
+            macSystemAppearanceTick &+= 1
+            if appearancePreference == .system {
+                applyMacAppearance(.system)
+            }
+        }
+        #endif
+        .onChange(of: scenePhase) { _, phase in
+            model.scenePhaseChanged(phase)
+            refreshPrivacyCover()
+        }
+        .onChange(of: model.phase) { _, _ in
+            // Unlock can finish while the scene is already inactive (app switcher).
+            refreshPrivacyCover()
+        }
+        #if os(macOS)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            macAppActive = true
+            model.applicationBecameActive()
+            refreshPrivacyCover()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didResignActiveNotification)) { _ in
+            macAppActive = false
+            refreshPrivacyCover()
+        }
+        #endif
+    }
+
+    private func refreshPrivacyCover() {
+        #if os(macOS)
+        setPrivacyCover(PrivacyCoverPolicy.needed(macAppActive: macAppActive, phase: model.phase))
+        #else
+        setPrivacyCover(PrivacyCoverPolicy.needed(sceneActive: scenePhase == .active, phase: model.phase))
+        #endif
+    }
 
     /// The cover appears in the same frame (no fade) so the app-switcher snapshot
     /// never catches vault contents (PLAN §8.7); only the reveal fades.

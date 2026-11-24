@@ -12,7 +12,9 @@ enum PrivacyCoverPolicy {
         }
     }
 
-    /// iOS: cover when the scene is not active and the screen is sensitive.
+    /// iOS: cover when *this* scene is not active and the screen is sensitive.
+    /// Call from a per-window root (`DayruleWindowRoot`) — App-level
+    /// `scenePhase` stays `.active` if any Dayrule window is foreground.
     static func needed(sceneActive: Bool, phase: AppModel.Phase) -> Bool {
         isSensitivePhase(phase) && !sceneActive
     }
