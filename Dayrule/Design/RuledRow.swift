@@ -18,8 +18,8 @@ struct DayrulePaperRowBackground: View {
     }
 }
 
-/// Paper ruled row: one hairline under content; min height 46 phone compact /
-/// 36 dense (Mac and iPad regular — PLAN §6.2).
+/// Paper ruled row: one hairline under content; min height from
+/// `Tokens.rowMinHeight` (phone compact / dense Mac and iPad — PLAN §6.2).
 ///
 /// System list separators stay hidden; we draw one paper hairline in the row
 /// background. On macOS, AppKit grid lines are also cleared via
@@ -49,7 +49,8 @@ struct RuledRow<Content: View>: View {
         // Reading-column margin is applied outside the List on Mac (padding) /
         // via `contentMargins` on iOS — keep row insets at `rowInset` only.
         content()
-            .padding(.vertical, Tokens.Space.xs)
+            // A few points tighter to the paper hairlines (was `Space.xs`).
+            .padding(.vertical, Tokens.Space.xxs)
             .frame(
                 maxWidth: .infinity,
                 minHeight: Tokens.rowMinHeight(dense: denseLayout),
@@ -83,8 +84,12 @@ extension View {
     }
 
     /// One drawn hairline under a non-`RuledRow` list row (Browse links).
+    /// Zero vertical insets so NavigationLink does not pad past the dense row height.
     func dayruleDrawnRowRule(colors: DayruleColors) -> some View {
         listRowSeparator(.hidden)
+            .listRowInsets(
+                EdgeInsets(top: 0, leading: Tokens.rowInset, bottom: 0, trailing: Tokens.rowInset)
+            )
             .listRowBackground(
                 DayrulePaperRowBackground(
                     fill: colors.bg,

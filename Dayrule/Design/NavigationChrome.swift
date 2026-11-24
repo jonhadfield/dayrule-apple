@@ -41,14 +41,15 @@ enum DayruleNavAppearance {
 #endif
 
 /// Paper nav chrome for list screens. The bar appearance itself is set once via
-/// `DayruleNavAppearance.configure()`; on macOS the title is drawn by `dayrulePageTitle`.
+/// `DayruleNavAppearance.configure()`; titles are drawn by `dayrulePageTitle`
+/// (system large titles scroll with the list and must not be enabled here).
 struct DayruleListNavChrome: ViewModifier {
     var colors: DayruleColors
 
     func body(content: Content) -> some View {
         content
             #if os(iOS)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
             .modifier(PaperBarBackground(colors: colors))
             #elseif os(macOS)
             .toolbar(removing: .title)
@@ -61,8 +62,8 @@ struct DayruleListNavChrome: ViewModifier {
 }
 
 #if os(iOS)
-/// iOS 18 keeps the opaque paper bar. On iOS 26 a forced bar background hides
-/// the large title, so the bar stays clear there.
+/// iOS 18 keeps the opaque paper bar. On iOS 26 a forced bar background can
+/// fight the scroll edge, so the bar stays clear there.
 private struct PaperBarBackground: ViewModifier {
     var colors: DayruleColors
 
@@ -151,7 +152,8 @@ private struct DayrulePageTitleChrome<Content: View>: View {
         // chrome — that stack was the Mac double underline.
         VStack(alignment: .leading, spacing: 0) {
             content
-                .padding(.bottom, Tokens.Space.s)
+                // A few points tighter to the paper hairline (was `Space.s`).
+                .padding(.bottom, Tokens.Space.xs)
             colors.hairline.frame(height: 1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -164,8 +166,10 @@ private struct DayrulePageTitleChrome<Content: View>: View {
         // inset so Fraunces caps line up with Inbox/Today *text*, not the bar.
         .padding(.top, Tokens.Space.s - Tokens.Space.xxs)
         #else
+        // Same leading as checkbox column (mark circle left edge).
         .padding(.horizontal, Tokens.listChromeInset + Tokens.listMarkCircleLeading)
-        .padding(.top, Tokens.Space.m)
+        // A few points under the compact toolbar (was `s − xxs`).
+        .padding(.top, Tokens.Space.xs)
         #endif
         .background(colors.bg)
     }
@@ -231,8 +235,10 @@ private struct DayrulePageTitleModifier: ViewModifier {
             DayrulePageTitle(title, systemImage: systemImage, iconTint: iconTint)
         })
         #elseif os(iOS)
-        // Match web ListShell (icon + Fraunces); replace the system large title.
+        // Match web ListShell (icon + Fraunces). Clear the system title so it
+        // cannot scroll/collapse under the pinned Fraunces chrome.
         content
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(removing: .title)
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -254,7 +260,8 @@ private struct DayruleEditablePageTitleModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             #if os(iOS)
-            // List chrome sets large titles; the editable heading replaces that slot.
+            // Editable Fraunces heading replaces the system title slot.
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(removing: .title)
             .safeAreaInset(edge: .top, spacing: 0) {

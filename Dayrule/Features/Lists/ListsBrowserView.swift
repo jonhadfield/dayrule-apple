@@ -410,6 +410,9 @@ struct ListsBrowserView: View {
             sidebarList(colors: colors, phoneLinks: true)
                 .navigationTitle("Browse")
                 .dayruleListNavChrome(colors: colors)
+                // Same Fraunces inset as Inbox / Today / Scheduled so tab
+                // switches do not swap system large title ↔ custom chrome.
+                .dayrulePageTitle("Browse")
         case .inbox:
             listDetail(list: .inbox, colors: colors)
         case .today:
@@ -665,6 +668,8 @@ struct ListsBrowserView: View {
             }
             .listStyle(.plain)
             .dayrulePaperList()
+            // Dense 36 felt tight; +4pt between Browse links.
+            .environment(\.defaultMinListRowHeight, Tokens.rowHeightDesktop + Tokens.Space.xs)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .modifier(SyncNeedsUpdateAnimationModifier(model: model))
@@ -755,7 +760,7 @@ struct ListsBrowserView: View {
                         DayruleCountBadge(count: count, style: .ring)
                     }
                 }
-                .frame(minHeight: Tokens.rowMinHeight(dense: false))
+                .frame(minHeight: Tokens.rowHeightDesktop + Tokens.Space.xs)
             }
             .accessibilityIdentifier("list.sidebar.\(name.rawValue)")
             .listRowBackground(colors.bg)
@@ -824,7 +829,7 @@ struct ListsBrowserView: View {
                 .foregroundStyle(colors.text)
             Spacer(minLength: 0)
         }
-        .frame(minHeight: Tokens.rowMinHeight(dense: !isCompact))
+        .frame(minHeight: Tokens.rowHeightDesktop + Tokens.Space.xs)
     }
 
     @ViewBuilder
@@ -1105,7 +1110,7 @@ struct ListsBrowserView: View {
                         .foregroundStyle(colors.textSecondary)
                     Spacer(minLength: 0)
                 }
-                .frame(minHeight: Tokens.rowMinHeight(dense: !isCompact))
+                .frame(minHeight: Tokens.rowHeightDesktop + Tokens.Space.xs)
             case .sidebarFooter:
                 NewListFooterLabel(colors: colors)
             }
