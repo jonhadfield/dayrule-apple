@@ -62,6 +62,54 @@ final class DayruleUITests: XCTestCase {
         #endif
     }
 
+    /// Phone tabs: Fraunces page title stays pinned; no second system title on pull.
+    @MainActor
+    func testPhoneTabTitleChromeNoDuplicateSystemTitle() throws {
+        #if !DEBUG
+        throw XCTSkip("DAYRULE_UI_TEST_UNLOCKED is Debug-only")
+        #else
+        #if os(iOS)
+        let app = XCUIApplication()
+        app.launchEnvironment["DAYRULE_MEMORY_KEYCHAIN"] = "1"
+        app.launchEnvironment["DAYRULE_UI_TEST_UNLOCKED"] = "1"
+        app.launch()
+
+        let addField = app.textFields["list.addField"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 30), "empty unlocked Inbox should appear")
+
+        let inboxHeaders = app.staticTexts.matching(NSPredicate(format: "label == %@", "Inbox"))
+        XCTAssertGreaterThanOrEqual(inboxHeaders.count, 1)
+
+        app.buttons["phone.tab.browse"].tap()
+        XCTAssertTrue(
+            app.staticTexts["Browse"].waitForExistence(timeout: 5),
+            "Browse Fraunces title should appear"
+        )
+
+        app.buttons["phone.tab.inbox"].tap()
+        XCTAssertTrue(addField.waitForExistence(timeout: 5))
+
+        // Pull down: a scrolling system large title would add a second "Inbox".
+        // Fraunces chrome may already sit in the nav-bar AX tree — compare counts.
+        let inboxLabels = app.staticTexts.matching(NSPredicate(format: "label == %@", "Inbox"))
+        let beforePull = inboxLabels.count
+        let list = app.collectionViews.firstMatch
+        if list.exists {
+            list.swipeDown()
+        } else {
+            app.swipeDown()
+        }
+        XCTAssertEqual(
+            inboxLabels.count,
+            beforePull,
+            "pull must not reveal a second system Inbox under Fraunces chrome"
+        )
+        #else
+        throw XCTSkip("phone tabs are iOS-only")
+        #endif
+        #endif
+    }
+
     #if os(macOS)
     /// Issues macOS raises on elements that AppKit and SwiftUI own, not the app.
     /// Apple's own SwiftUI apps (Calculator, Passwords) fail the audit on the same

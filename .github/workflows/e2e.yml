@@ -24,9 +24,9 @@ concurrency:
 jobs:
   sync-e2e:
     runs-on: macos-15
-    # Healthy e2e finishes in ~5–8m; hung runs previously billed the full 60m job
-    # timeout. Cap hard so a stuck sim/xcodebuild cannot.
-    timeout-minutes: 18
+    # Healthy e2e finishes in ~5–12m (cold compile); hung runs previously billed
+    # the full 60m job timeout. Cap hard so a stuck sim/xcodebuild cannot.
+    timeout-minutes: 22
     permissions:
       contents: read
     steps:
@@ -105,8 +105,9 @@ jobs:
           psql -h 127.0.0.1 -d dayrule_e2e -c 'SELECT 1'
 
       - name: Run local sync e2e
-        # 2026-11-16 weekly run clipped mid-SyncUITests at 8m; leave headroom.
-        timeout-minutes: 12
+        # 2026-11-16 weekly clipped mid-SyncUITests at 8m; 2026-11-24 cold
+        # compile + SyncUI finished at ~12m then step timeout killed teardown.
+        timeout-minutes: 16
         env:
           DAYRULE_WEB: ${{ github.workspace }}/dayrule-web
           E2E_DATABASE_URL: postgres://127.0.0.1/dayrule_e2e?sslmode=disable
