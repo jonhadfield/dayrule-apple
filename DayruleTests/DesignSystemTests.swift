@@ -56,12 +56,12 @@ struct DesignSystemTests {
         return (hi + 0.05) / (lo + 0.05)
     }
 
-    @Test("dense layout uses desktop row height; phone keeps 46pt minimum")
+    @Test("dense layout uses desktop row height; phone keeps compact minimum")
     func denseRowMinHeight() {
         #expect(Tokens.rowMinHeight(dense: true) == Tokens.rowHeightDesktop)
         #expect(Tokens.rowMinHeight(dense: false) == Tokens.rowHeightPhone)
         #expect(Tokens.rowHeightDesktop == 36)
-        #expect(Tokens.rowHeightPhone == 46)
+        #expect(Tokens.rowHeightPhone == 42)
     }
 
     @Test("text colours reach 4.5:1 on every background", arguments: [ColorScheme.light, .dark])

@@ -35,7 +35,8 @@ enum Tokens {
     static let radiusRow: CGFloat = 4
     static let radiusCard: CGFloat = 6
     static let radiusPopover: CGFloat = 8
-    static let rowHeightPhone: CGFloat = 46
+    /// Phone to-do rows; a touch under the old 46 so text sits closer to hairlines.
+    static let rowHeightPhone: CGFloat = 42
 
     // MARK: Native-only layout (not mirrored from tokens.css; see PLAN §6.1)
 
@@ -93,7 +94,7 @@ enum Tokens {
     static let rowHeight: CGFloat = rowHeightPhone
     #endif
 
-    /// Dense (Mac / iPad regular): 36. Phone compact: 46 minimum.
+    /// Dense (Mac / iPad regular): 36. Phone compact: `rowHeightPhone`.
     static func rowMinHeight(dense: Bool) -> CGFloat {
         dense ? rowHeightDesktop : rowHeightPhone
     }
