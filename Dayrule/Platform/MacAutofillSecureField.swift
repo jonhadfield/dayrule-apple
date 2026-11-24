@@ -187,36 +187,27 @@ struct MacAutofillCredentialFields: NSViewRepresentable {
     }
 
     private func reconcilePassword(_ field: NSTextField, coordinator: Coordinator) {
-        if field.stringValue == password {
+        switch MacAutofillPasswordReconcile.decide(
+            binding: password,
+            field: field.stringValue,
+            lastBinding: coordinator.lastPasswordBinding,
+            editing: field.currentEditor() != nil
+        ) {
+        case .synced:
             coordinator.lastPasswordBinding = password
-            return
+        case .clearField:
+            field.stringValue = ""
+            coordinator.lastPasswordBinding = ""
+        case .harvest(let value):
+            password = value
+            coordinator.lastPasswordBinding = value
+        case .pushToField(let value):
+            field.stringValue = value
+            coordinator.lastPasswordBinding = value
+        case .acceptFromEditor(let value):
+            password = value
+            coordinator.lastPasswordBinding = value
         }
-        if password.isEmpty, !field.stringValue.isEmpty {
-            // Explicit clear after unlock failure: binding had a value, now "".
-            if !coordinator.lastPasswordBinding.isEmpty {
-                field.stringValue = ""
-                coordinator.lastPasswordBinding = ""
-                return
-            }
-            // AutoFill wrote to the field before the binding caught up.
-            password = field.stringValue
-            coordinator.lastPasswordBinding = field.stringValue
-            return
-        }
-        if field.currentEditor() != nil {
-            if !password.isEmpty, password != field.stringValue {
-                field.stringValue = password
-                coordinator.lastPasswordBinding = password
-                return
-            }
-            if field.stringValue != password {
-                password = field.stringValue
-                coordinator.lastPasswordBinding = field.stringValue
-            }
-            return
-        }
-        field.stringValue = password
-        coordinator.lastPasswordBinding = password
     }
 
     private func applyFocusIfNeeded(
@@ -326,6 +317,45 @@ private final class PaperFieldBox: NSView {
         borderLayer.borderColor = NSColor(colors.fieldBorder).cgColor
         borderLayer.backgroundColor = NSColor.clear.cgColor
         needsLayout = true
+    }
+}
+
+/// Pure password reconcile for Mac AutoFill vs explicit clear (audit run-4).
+enum MacAutofillPasswordReconcile {
+    enum Decision: Equatable {
+        case synced
+        case clearField
+        case harvest(String)
+        case pushToField(String)
+        case acceptFromEditor(String)
+    }
+
+    /// Decide how to reconcile the SwiftUI password binding with the AppKit field.
+    /// Explicit clear (`binding == ""`) only blanks the field when it still shows
+    /// `lastBinding`; a newer AutoFill value is harvested instead.
+    static func decide(
+        binding: String,
+        field: String,
+        lastBinding: String,
+        editing: Bool
+    ) -> Decision {
+        if field == binding { return .synced }
+        if binding.isEmpty, !field.isEmpty {
+            if !lastBinding.isEmpty, field == lastBinding {
+                return .clearField
+            }
+            return .harvest(field)
+        }
+        if editing {
+            if !binding.isEmpty, binding != field {
+                return .pushToField(binding)
+            }
+            if field != binding {
+                return .acceptFromEditor(field)
+            }
+            return .synced
+        }
+        return .pushToField(binding)
     }
 }
 #endif
