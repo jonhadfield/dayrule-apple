@@ -103,6 +103,9 @@ struct ListsBrowserView: View {
     @State private var selecting = false
     @State private var selectedIds: Set<ID> = []
     @State private var showNewList = false
+    /// VoiceOver focus restore after Settings / Find / list sheets dismiss.
+    @AccessibilityFocusState private var a11yFocus: DayruleA11yFocus?
+    @State private var restoreA11yTo: DayruleA11yFocus?
     /// Split column visibility — owned so we can replace the system sidebar
     /// toggle (white Liquid Glass pill) with a plain paper toolbar button.
     @State private var columnVisibility: NavigationSplitViewVisibility = .automatic
@@ -189,41 +192,61 @@ struct ListsBrowserView: View {
         browserWithSidebarLifecycle
             .sheet(isPresented: $model.showSettings, onDismiss: {
                 model.endSettingsPresentation()
+                flushA11yRestore()
             }) {
                 SettingsView(model: model)
                     .onAppear { model.beginSettingsPresentation() }
             }
-            .sheet(item: $whenTarget) { target in
+            .sheet(item: $whenTarget, onDismiss: flushA11yRestore) { target in
                 WhenSheetView(model: model, ids: target.ids)
             }
-            .sheet(item: $deadlineTarget) { target in
+            .sheet(item: $deadlineTarget, onDismiss: flushA11yRestore) { target in
                 DeadlineSheetView(model: model, ids: target.ids)
             }
-            .sheet(item: $tagTarget) { target in
+            .sheet(item: $tagTarget, onDismiss: flushA11yRestore) { target in
                 TagSheetView(model: model, ids: target.ids)
             }
-            .sheet(item: $moveTarget) { target in
+            .sheet(item: $moveTarget, onDismiss: flushA11yRestore) { target in
                 MoveSheetView(model: model, ids: target.ids)
             }
-            .sheet(item: $repeatTarget) { target in
+            .sheet(item: $repeatTarget, onDismiss: flushA11yRestore) { target in
                 RepeatSheetView(model: model, todoId: target.id)
             }
-            .sheet(item: $reminderTarget) { target in
+            .sheet(item: $reminderTarget, onDismiss: flushA11yRestore) { target in
                 ReminderSheetView(model: model, todoId: target.id)
             }
             // PLAN §6.5: the editor is full screen on a phone, a sheet elsewhere.
-            .sheet(item: editorSheetTarget) { target in
+            .sheet(item: editorSheetTarget, onDismiss: flushA11yRestore) { target in
                 ItemEditorSheet(model: model, id: target.id)
             }
             #if os(iOS)
-            .fullScreenCover(item: editorCoverTarget) { target in
+            .fullScreenCover(item: editorCoverTarget, onDismiss: flushA11yRestore) { target in
                 ItemEditorSheet(model: model, id: target.id)
             }
             #endif
-            .sheet(isPresented: $model.showFind, onDismiss: applyPendingFind) {
+            .sheet(isPresented: $model.showFind, onDismiss: {
+                applyPendingFind()
+                // Selecting a to-do opens the editor next — keep restore on that
+                // row for the editor’s dismiss instead of jumping back to Find.
+                if let id = editTarget?.id {
+                    restoreA11yTo = .todo(id)
+                } else {
+                    flushA11yRestore()
+                }
+            }) {
                 QuickFindView(model: model) { result in
                     pendingFind = result
                 }
+            }
+            .onChange(of: model.showSettings) { _, on in
+                if on { noteA11yRestoreIfNeeded(.settings) }
+            }
+            .onChange(of: model.showFind) { _, on in
+                if on { noteA11yRestoreIfNeeded(.find) }
+            }
+            .onChange(of: showNewList) { was, on in
+                if was, !on { flushA11yRestore() }
+                if on { noteA11yRestoreIfNeeded(.newList) }
             }
     }
 
@@ -287,6 +310,67 @@ struct ListsBrowserView: View {
         editTarget = nil
         showNewList = false
         model.macLocalSheetPresented = false
+    }
+
+    private func noteA11yRestore(_ target: DayruleA11yFocus) {
+        restoreA11yTo = target
+    }
+
+    /// Menu / system shortcuts may open Settings or Find without going through
+    /// the toolbar button — keep a sensible restore target if none was noted.
+    private func noteA11yRestoreIfNeeded(_ target: DayruleA11yFocus) {
+        if restoreA11yTo == nil {
+            restoreA11yTo = target
+        }
+    }
+
+    private func noteA11yRestore(todoIds ids: [ID]) {
+        if let id = ids.first {
+            restoreA11yTo = .todo(id)
+        }
+    }
+
+    private func flushA11yRestore() {
+        let target = restoreA11yTo
+        restoreA11yTo = nil
+        AccessibilityFocusRestore.afterDismiss {
+            a11yFocus = target
+        }
+    }
+
+    private func presentWhen(ids: [ID]) {
+        noteA11yRestore(todoIds: ids)
+        whenTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentDeadline(ids: [ID]) {
+        noteA11yRestore(todoIds: ids)
+        deadlineTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentTags(ids: [ID]) {
+        noteA11yRestore(todoIds: ids)
+        tagTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentMove(ids: [ID]) {
+        noteA11yRestore(todoIds: ids)
+        moveTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentRepeat(todoId: ID) {
+        noteA11yRestore(.todo(todoId))
+        repeatTarget = EditTarget(id: todoId)
+    }
+
+    private func presentReminder(todoId: ID) {
+        noteA11yRestore(.todo(todoId))
+        reminderTarget = EditTarget(id: todoId)
+    }
+
+    private func presentEditor(id: ID) {
+        noteA11yRestore(.todo(id))
+        editTarget = EditTarget(id: id)
     }
 
     private func handleMacChromeAction(_ action: AppModel.MacChromeAction) {
@@ -637,6 +721,7 @@ struct ListsBrowserView: View {
         .dayruleHideToolbarGlass()
         ToolbarItem(placement: .primaryAction) {
             Button {
+                noteA11yRestore(.find)
                 model.showFind = true
             } label: {
                 DayruleToolbarGlyph(systemImage: "magnifyingglass")
@@ -645,10 +730,12 @@ struct ListsBrowserView: View {
             .help("Find (⌘F)")
             .accessibilityLabel("Find")
             .accessibilityIdentifier("sidebar.find")
+            .accessibilityFocused($a11yFocus, equals: .find)
         }
         .dayruleHideToolbarGlass()
         ToolbarItem(placement: .primaryAction) {
             Button {
+                noteA11yRestore(.settings)
                 model.showSettings = true
             } label: {
                 DayruleToolbarGlyph(systemImage: "gearshape")
@@ -656,6 +743,7 @@ struct ListsBrowserView: View {
             .buttonStyle(.plain)
             .help("Settings (⌘,)")
             .accessibilityLabel("Settings")
+            .accessibilityFocused($a11yFocus, equals: .settings)
         }
         .dayruleHideToolbarGlass()
     }
@@ -1096,6 +1184,7 @@ struct ListsBrowserView: View {
 
     private func newListTrigger(colors: DayruleColors, style: NewListTriggerStyle) -> some View {
         Button {
+            noteA11yRestore(.newList)
             showNewList = true
         } label: {
             switch style {
@@ -1118,7 +1207,9 @@ struct ListsBrowserView: View {
         }
         .buttonStyle(.plain)
         .controlSize(.regular)
+        .accessibilityLabel("New List")
         .accessibilityIdentifier("browse.newList")
+        .accessibilityFocused($a11yFocus, equals: .newList)
         .popover(isPresented: $showNewList, arrowEdge: style == .sidebarFooter ? .top : .bottom) {
             newListPicker(colors: colors)
                 .presentationCompactAdaptation(.popover)
@@ -1310,15 +1401,15 @@ struct ListsBrowserView: View {
                     count: selectedIds.count,
                     onCancel: exitSelecting,
                     onWhen: {
-                        whenTarget = WhenTarget(ids: Array(selectedIds))
+                        presentWhen(ids: Array(selectedIds))
                         exitSelecting()
                     },
                     onDeadline: {
-                        deadlineTarget = WhenTarget(ids: Array(selectedIds))
+                        presentDeadline(ids: Array(selectedIds))
                         exitSelecting()
                     },
                     onMove: {
-                        moveTarget = WhenTarget(ids: Array(selectedIds))
+                        presentMove(ids: Array(selectedIds))
                         exitSelecting()
                     },
                     onComplete: completeSelection,
@@ -1623,15 +1714,15 @@ struct ListsBrowserView: View {
             actions.append(RowAction(name: "Select") { beginSelecting(row.id) })
         }
         actions += [
-            RowAction(name: "When…") { whenTarget = WhenTarget(ids: [row.id]) },
-            RowAction(name: "Deadline…") { deadlineTarget = WhenTarget(ids: [row.id]) },
-            RowAction(name: "Tags…") { tagTarget = WhenTarget(ids: [row.id]) },
+            RowAction(name: "When…") { presentWhen(ids: [row.id]) },
+            RowAction(name: "Deadline…") { presentDeadline(ids: [row.id]) },
+            RowAction(name: "Tags…") { presentTags(ids: [row.id]) },
         ]
         if row.isTodo {
             actions += [
-                RowAction(name: "Move…") { moveTarget = WhenTarget(ids: [row.id]) },
-                RowAction(name: "Repeat…") { repeatTarget = EditTarget(id: row.id) },
-                RowAction(name: "Reminder…") { reminderTarget = EditTarget(id: row.id) },
+                RowAction(name: "Move…") { presentMove(ids: [row.id]) },
+                RowAction(name: "Repeat…") { presentRepeat(todoId: row.id) },
+                RowAction(name: "Reminder…") { presentReminder(todoId: row.id) },
                 RowAction(name: "Move up") { moveTodo(row.id, dir: -1, in: list) },
                 RowAction(name: "Move down") { moveTodo(row.id, dir: 1, in: list) },
             ]
@@ -1650,7 +1741,7 @@ struct ListsBrowserView: View {
         if !row.isTodo, model.entities.projects[row.id] != nil {
             openProject(row.id)
         } else {
-            editTarget = EditTarget(id: row.id)
+            presentEditor(id: row.id)
         }
     }
 
@@ -1696,10 +1787,12 @@ struct ListsBrowserView: View {
                 }
             },
             onOpen: { openRow(row, list: list) },
-            onChip: row.trailing == nil ? nil : { whenTarget = WhenTarget(ids: [row.id]) },
+            onChip: row.trailing == nil ? nil : { presentWhen(ids: [row.id]) },
             isSelected: selecting && selectedIds.contains(row.id),
             selecting: selecting,
-            accessibilityActions: rowActions(row, list: list)
+            accessibilityActions: rowActions(row, list: list),
+            a11yFocus: $a11yFocus,
+            a11yFocusValue: a11yFocus
         )
         .equatable()
         .opacity(model.linger.fading.contains(row.id) ? 0 : 1)
@@ -1713,7 +1806,7 @@ struct ListsBrowserView: View {
                 .tint(colors.ready)
             } else if row.isTodo {
                 Button {
-                    whenTarget = WhenTarget(ids: [row.id])
+                    presentWhen(ids: [row.id])
                 } label: {
                     Label("When", systemImage: "calendar")
                 }
@@ -1760,7 +1853,7 @@ struct ListsBrowserView: View {
                     }
                 }
                 Button {
-                    editTarget = EditTarget(id: row.id)
+                    presentEditor(id: row.id)
                 } label: {
                     Label("Edit", systemImage: "pencil")
                 }
@@ -1774,33 +1867,33 @@ struct ListsBrowserView: View {
             }
             Section {
                 Button {
-                    whenTarget = WhenTarget(ids: [row.id])
+                    presentWhen(ids: [row.id])
                 } label: {
                     Label("When…", systemImage: "calendar")
                 }
                 Button {
-                    deadlineTarget = WhenTarget(ids: [row.id])
+                    presentDeadline(ids: [row.id])
                 } label: {
                     Label("Deadline…", systemImage: "flag")
                 }
                 Button {
-                    tagTarget = WhenTarget(ids: [row.id])
+                    presentTags(ids: [row.id])
                 } label: {
                     Label("Tags…", systemImage: "tag")
                 }
                 if row.isTodo {
                     Button {
-                        moveTarget = WhenTarget(ids: [row.id])
+                        presentMove(ids: [row.id])
                     } label: {
                         Label("Move…", systemImage: "arrow.right.square")
                     }
                     Button {
-                        repeatTarget = EditTarget(id: row.id)
+                        presentRepeat(todoId: row.id)
                     } label: {
                         Label("Repeat…", systemImage: "repeat")
                     }
                     Button {
-                        reminderTarget = EditTarget(id: row.id)
+                        presentReminder(todoId: row.id)
                     } label: {
                         Label("Reminder…", systemImage: "bell")
                     }
@@ -2123,7 +2216,7 @@ struct ListsBrowserView: View {
             if list == .scheduled {
                 let id = todo.id
                 Task { @MainActor in
-                    whenTarget = WhenTarget(ids: [id])
+                    presentWhen(ids: [id])
                 }
             }
         } catch {
@@ -2319,7 +2412,7 @@ struct ListsBrowserView: View {
             selection = home
             orgPath = []
             if isCompact { navigatePhone(to: home) }
-            editTarget = EditTarget(id: id)
+            presentEditor(id: id)
         case .project(let id):
             orgPath = isCompact ? [] : [.project(id)]
             if isCompact {

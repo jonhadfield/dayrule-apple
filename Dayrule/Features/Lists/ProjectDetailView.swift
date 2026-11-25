@@ -24,6 +24,8 @@ struct ProjectDetailView: View {
     @State private var reminderTarget: EditTarget?
     @FocusState private var titleFocused: Bool
     @State private var detailWidth: CGFloat = 0
+    @AccessibilityFocusState private var a11yFocus: DayruleA11yFocus?
+    @State private var restoreA11yTo: DayruleA11yFocus?
 
     private struct EditTarget: Identifiable {
         var id: ID
@@ -104,6 +106,7 @@ struct ProjectDetailView: View {
                         )
                     } header: {
                         Button {
+                            noteA11yRestore(.detailActions)
                             headingTarget = EditTarget(id: group.heading.id)
                         } label: {
                             DayruleSectionHeader(title: group.heading.title, tone: .accent, style: .serif)
@@ -202,6 +205,8 @@ struct ProjectDetailView: View {
                     }
                     .accessibilityIdentifier("project.convertToTodo")
                     Button {
+                        noteA11yRestore(.detailActions)
+
                         moveProjectPresented = true
                     } label: {
                         Label("Move…", systemImage: "arrow.right.square")
@@ -233,43 +238,95 @@ struct ProjectDetailView: View {
                 .help("Project actions")
                 .accessibilityLabel("Project actions")
                 .accessibilityIdentifier("project.actions")
+                .accessibilityFocused($a11yFocus, equals: .detailActions)
             }
             .dayruleHideToolbarGlass()
         }
-        .sheet(item: sheetEditTarget) { target in
+        .sheet(item: sheetEditTarget, onDismiss: flushA11yRestore) { target in
             ItemEditorSheet(model: model, id: target.id)
         }
         #if os(iOS)
-        .fullScreenCover(item: coverEditTarget) { target in
+        .fullScreenCover(item: coverEditTarget, onDismiss: flushA11yRestore) { target in
             ItemEditorSheet(model: model, id: target.id)
         }
         #endif
-        .sheet(item: $headingTarget) { target in
+        .sheet(item: $headingTarget, onDismiss: flushA11yRestore) { target in
             HeadingSheetView(model: model, headingId: target.id) { id in
                 onOpenProject?(id)
             }
         }
-        .sheet(item: $whenTarget) { target in
+        .sheet(item: $whenTarget, onDismiss: flushA11yRestore) { target in
             WhenSheetView(model: model, ids: target.ids)
         }
-        .sheet(item: $deadlineTarget) { target in
+        .sheet(item: $deadlineTarget, onDismiss: flushA11yRestore) { target in
             DeadlineSheetView(model: model, ids: target.ids)
         }
-        .sheet(item: $tagTarget) { target in
+        .sheet(item: $tagTarget, onDismiss: flushA11yRestore) { target in
             TagSheetView(model: model, ids: target.ids)
         }
-        .sheet(item: $moveTarget) { target in
+        .sheet(item: $moveTarget, onDismiss: flushA11yRestore) { target in
             MoveSheetView(model: model, ids: target.ids)
         }
-        .sheet(isPresented: $moveProjectPresented) {
+        .sheet(isPresented: $moveProjectPresented, onDismiss: flushA11yRestore) {
             MoveProjectSheetView(model: model, projectId: projectId)
         }
-        .sheet(item: $repeatTarget) { target in
+        .sheet(item: $repeatTarget, onDismiss: flushA11yRestore) { target in
             RepeatSheetView(model: model, todoId: target.id)
         }
-        .sheet(item: $reminderTarget) { target in
+        .sheet(item: $reminderTarget, onDismiss: flushA11yRestore) { target in
             ReminderSheetView(model: model, todoId: target.id)
         }
+    }
+
+    private func noteA11yRestore(_ target: DayruleA11yFocus) {
+        restoreA11yTo = target
+    }
+
+    private func noteA11yRestore(todoId: ID) {
+        restoreA11yTo = .todo(todoId)
+    }
+
+    private func flushA11yRestore() {
+        let target = restoreA11yTo
+        restoreA11yTo = nil
+        AccessibilityFocusRestore.afterDismiss {
+            a11yFocus = target
+        }
+    }
+
+    private func presentEditor(id: ID) {
+        noteA11yRestore(todoId: id)
+        editTarget = EditTarget(id: id)
+    }
+
+    private func presentWhen(ids: [ID]) {
+        if let id = ids.first { noteA11yRestore(todoId: id) }
+        whenTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentDeadline(ids: [ID]) {
+        if let id = ids.first { noteA11yRestore(todoId: id) }
+        deadlineTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentTags(ids: [ID]) {
+        if let id = ids.first { noteA11yRestore(todoId: id) }
+        tagTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentMove(ids: [ID]) {
+        if let id = ids.first { noteA11yRestore(todoId: id) }
+        moveTarget = WhenTarget(ids: ids)
+    }
+
+    private func presentRepeat(todoId: ID) {
+        noteA11yRestore(todoId: todoId)
+        repeatTarget = EditTarget(id: todoId)
+    }
+
+    private func presentReminder(todoId: ID) {
+        noteA11yRestore(todoId: todoId)
+        reminderTarget = EditTarget(id: todoId)
     }
 
     private var ctx: Lists.Context {
@@ -348,24 +405,26 @@ struct ProjectDetailView: View {
             model: rowModel(todo, title: title, ctx: ctx),
             identifier: "project.todo.\(todo.id)",
             onToggle: { toggleComplete(todo.id, title: title) },
-            onOpen: { editTarget = EditTarget(id: todo.id) },
+            onOpen: { presentEditor(id: todo.id) },
             accessibilityActions: [
-                RowAction(name: "When…") { whenTarget = WhenTarget(ids: [todo.id]) },
-                RowAction(name: "Deadline…") { deadlineTarget = WhenTarget(ids: [todo.id]) },
-                RowAction(name: "Tags…") { tagTarget = WhenTarget(ids: [todo.id]) },
-                RowAction(name: "Move…") { moveTarget = WhenTarget(ids: [todo.id]) },
-                RowAction(name: "Repeat…") { repeatTarget = EditTarget(id: todo.id) },
-                RowAction(name: "Reminder…") { reminderTarget = EditTarget(id: todo.id) },
+                RowAction(name: "When…") { presentWhen(ids: [todo.id]) },
+                RowAction(name: "Deadline…") { presentDeadline(ids: [todo.id]) },
+                RowAction(name: "Tags…") { presentTags(ids: [todo.id]) },
+                RowAction(name: "Move…") { presentMove(ids: [todo.id]) },
+                RowAction(name: "Repeat…") { presentRepeat(todoId: todo.id) },
+                RowAction(name: "Reminder…") { presentReminder(todoId: todo.id) },
                 RowAction(name: "Move up") { moveTodo(todo.id, dir: -1, peers: peersForTodo(todo.id)) },
                 RowAction(name: "Move down") { moveTodo(todo.id, dir: 1, peers: peersForTodo(todo.id)) },
                 RowAction(name: "Trash") { trash(todo.id, title: title) },
-            ]
+            ],
+            a11yFocus: $a11yFocus,
+            a11yFocusValue: a11yFocus
         )
         .equatable()
         .opacity(model.linger.fading.contains(todo.id) ? 0 : 1)
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                whenTarget = WhenTarget(ids: [todo.id])
+                presentWhen(ids: [todo.id])
             } label: {
                 Label("When…", systemImage: "calendar")
             }
@@ -373,27 +432,27 @@ struct ProjectDetailView: View {
         }
         .contextMenu {
             Section {
-                Button { editTarget = EditTarget(id: todo.id) } label: {
+                Button { presentEditor(id: todo.id) } label: {
                     Label("Edit", systemImage: "pencil")
                 }
             }
             Section {
-                Button { whenTarget = WhenTarget(ids: [todo.id]) } label: {
+                Button { presentWhen(ids: [todo.id]) } label: {
                     Label("When…", systemImage: "calendar")
                 }
-                Button { deadlineTarget = WhenTarget(ids: [todo.id]) } label: {
+                Button { presentDeadline(ids: [todo.id]) } label: {
                     Label("Deadline…", systemImage: "flag")
                 }
-                Button { tagTarget = WhenTarget(ids: [todo.id]) } label: {
+                Button { presentTags(ids: [todo.id]) } label: {
                     Label("Tags…", systemImage: "tag")
                 }
-                Button { moveTarget = WhenTarget(ids: [todo.id]) } label: {
+                Button { presentMove(ids: [todo.id]) } label: {
                     Label("Move…", systemImage: "arrow.right.square")
                 }
-                Button { repeatTarget = EditTarget(id: todo.id) } label: {
+                Button { presentRepeat(todoId: todo.id) } label: {
                     Label("Repeat…", systemImage: "repeat")
                 }
-                Button { reminderTarget = EditTarget(id: todo.id) } label: {
+                Button { presentReminder(todoId: todo.id) } label: {
                     Label("Reminder…", systemImage: "bell")
                 }
             }
@@ -551,6 +610,7 @@ struct ProjectDetailView: View {
             }
             model.noteEntitiesChanged()
             // Straight into rename, so "New Heading" never lingers as a placeholder.
+            noteA11yRestore(.detailActions)
             headingTarget = EditTarget(id: heading.id)
         } catch {
             model.notices.post(Notice(kind: .error, message: error.localizedDescription))
