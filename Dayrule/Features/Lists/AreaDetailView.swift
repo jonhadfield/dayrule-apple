@@ -89,7 +89,7 @@ struct AreaDetailView: View {
             }
         }
         .listStyle(.plain)
-        .dayrulePaperList()
+        .dayrulePaperList(macScrollFill: colors.sidebar)
         .scrollContentBackground(.hidden)
         .background(colors.bg)
         .navigationTitle(title)

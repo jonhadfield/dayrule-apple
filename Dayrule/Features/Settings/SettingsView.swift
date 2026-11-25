@@ -65,7 +65,7 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.plain)
-            .dayrulePaperList()
+            .dayrulePaperList(macScrollFill: colors.bg)
             #if os(iOS)
             // Chapter breathing room once system double rules are gone (decision 53 / 71).
             .listSectionSpacing(Tokens.Space.m)

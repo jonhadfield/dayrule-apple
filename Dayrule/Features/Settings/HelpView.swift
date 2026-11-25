@@ -70,7 +70,7 @@ struct HelpView: View {
             .dayruleSheetRow(colors: colors)
         }
         .listStyle(.plain)
-        .dayrulePaperList()
+        .dayrulePaperList(macScrollFill: colors.bg)
         #if os(iOS)
         .listSectionSpacing(Tokens.Space.m)
         #endif
