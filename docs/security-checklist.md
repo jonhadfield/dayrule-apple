@@ -48,15 +48,15 @@ in code or by a named manual step — not by assumption.
 
 ## Manual / release gates
 
-- [x] Internal TestFlight / ASC upload history: **0.1.2 (30)** iOS+Mac (2026-11-16); prior **(29)** / **(28)** / **0.1.1 (27)** / **(26)**. **0.1.3 (32)** archived + uploaded 2026-11-21 (Mac wake remount + Gate Passwords AutoFill).
-- [x] App Store **0.1.1** / **0.1.2** approved (trains closed). **0.1.3** build **32** approved and set to release ASAP (Ready for Distribution 2026-11-22) — iOS + Mac.
+- [x] Internal TestFlight / ASC upload history: **0.1.2 (30)** iOS+Mac (2026-11-16); prior **(29)** / **(28)** / **0.1.1 (27)** / **(26)**. **0.1.3 (32)** archived + uploaded 2026-11-21 (Mac wake remount + Gate Passwords AutoFill). **0.1.4 (33)** cut for Today deadline/When chip parity + shared lock refresh (archive/upload pending).
+- [x] App Store **0.1.1** / **0.1.2** approved (trains closed). **0.1.3** build **32** approved and set to release ASAP (Ready for Distribution 2026-11-22) — iOS + Mac. **0.1.4** build **33** not yet submitted.
 - [x] AASA served for `webcredentials:dayrule.app` (passkey QA; live `application/json` on dayrule.app)
 - [x] Native passkey second-step sign-in (platform assertion after password; recovery still both factors)
 - [x] In-app account deletion (`DELETE /api/v1/account` + wipe local DB / Keychain wraps)
 - [x] App Review demo account — runbook `docs/app-review-demo.md` (no second step; credentials only in App Store Connect; maintained for resubmits)
 - [x] Privacy nutrition label (App Store Connect) — filled for the shipped iOS + Mac store apps
 - [x] French encryption declaration / export-compliance — answered for the shipped store submissions
-- [x] Mac App Store packaging — `docs/mac-app-store.md` (**0.1.3 (32)** with iOS)
+- [x] Mac App Store packaging — `docs/mac-app-store.md` (**0.1.3 (32)** with iOS; next cut **0.1.4 (33)**)
 - [x] Server `MIN_IOS_BUILD` / `MIN_MACOS_BUILD` → `426` / `upgrade_required` middleware (web decision 37; client maps to needsUpdate in `AppModel`). **Ops (2026-11-23):** production floors raised to **32** (retire builds below **0.1.3**).
 
 **Signed off:** M7 code items and the 0.1.x App Store / Mac App Store release gates above. Revisit nutrition / encryption / demo-account ASC fields only when submitting a new store version.

@@ -209,6 +209,21 @@ struct DesignSystemTests {
         #expect(later.secondary == "Friday")
     }
 
+    @Test("past-date chips use day granularity with overdue vs late")
+    func daysPastChip() {
+        let cal = Self.calendar
+        #expect(
+            DayruleDateFormat.daysPast(
+                "2026-10-12", today: "2026-10-13", word: .overdue, calendar: cal
+            ) == "1d overdue"
+        )
+        #expect(
+            DayruleDateFormat.daysPast(
+                "2026-10-10", today: "2026-10-13", word: .late, calendar: cal
+            ) == "3d late"
+        )
+    }
+
     // MARK: Completion linger
 
     /// Short injected linger so the suite stays fast; sleeps are fractions of it.

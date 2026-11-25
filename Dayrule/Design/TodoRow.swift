@@ -212,7 +212,8 @@ struct DayruleTodoRow: View {
             parts.append("\(checklist.done) of \(checklist.total) checklist items")
         }
         if let chip = model.chip {
-            parts.append(chip.isOverdue ? "Overdue, \(chip.label)" : chip.label)
+            // Label already carries “overdue” / “late” / “Today” — don’t prefix.
+            parts.append(chip.label)
         }
         return parts.joined(separator: ", ")
     }
