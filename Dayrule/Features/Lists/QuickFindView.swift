@@ -31,7 +31,7 @@ struct QuickFindView: View {
                 }
             }
             .listStyle(.plain)
-            .dayrulePaperList()
+            .dayrulePaperList(macScrollFill: colors.bg)
             #if os(iOS)
             .searchable(
                 text: $query,

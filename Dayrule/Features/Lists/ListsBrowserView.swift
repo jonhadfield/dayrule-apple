@@ -667,7 +667,7 @@ struct ListsBrowserView: View {
                 phoneBrowseRows(colors: colors)
             }
             .listStyle(.plain)
-            .dayrulePaperList()
+            .dayrulePaperList(macScrollFill: colors.bg)
             // Dense 36 felt tight; +4pt between Browse links.
             .environment(\.defaultMinListRowHeight, Tokens.rowHeightDesktop + Tokens.Space.xs)
             .scrollContentBackground(.hidden)
@@ -685,6 +685,7 @@ struct ListsBrowserView: View {
             sidebarRows(colors: colors)
         }
         .listStyle(.sidebar)
+        // No macScrollFill — keep the system sidebar’s muted taupe overlay knobs.
         .dayrulePaperList()
         .listRowSeparator(.hidden)
         .scrollContentBackground(.hidden)
@@ -1277,7 +1278,9 @@ struct ListsBrowserView: View {
             }
         }
         .listStyle(.plain)
-        .dayrulePaperList()
+        // Sidebar-tinted knobs (not page `bg`) so the detail rail matches the
+        // left column’s light-brown overlay instead of cool system grey.
+        .dayrulePaperList(macScrollFill: colors.sidebar)
         .scrollDismissesKeyboard(.interactively)
         .navigationTitle(list.title)
         .dayruleListNavChrome(colors: colors)

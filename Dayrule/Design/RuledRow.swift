@@ -75,12 +75,12 @@ extension View {
     /// stay single (decisions 53 / 71 / 73 / 74). Scheduled day headers are
     /// flat rows (not `Section`s) so a top section rule cannot stack under the
     /// page-title hairline.
-    func dayrulePaperList() -> some View {
-        listSectionSeparator(.hidden)
-            .listRowSeparator(.hidden)
-            #if os(macOS)
-            .background(MacListHideSystemSeparators())
-            #endif
+    /// - Parameter macScrollFill: When non-`nil` on macOS, install warm
+    ///   paper-tinted scrollers (light brown on dark paper). Pass `sidebar`
+    ///   for split detail so knobs match the left rail; omit for `.sidebar`
+    ///   lists (native taupe). Ignored on iOS.
+    func dayrulePaperList(macScrollFill: Color? = nil) -> some View {
+        modifier(DayrulePaperListModifier(macScrollFill: macScrollFill))
     }
 
     /// One drawn hairline under a non-`RuledRow` list row (Browse links).
@@ -97,6 +97,19 @@ extension View {
                     showsHairline: true
                 )
             )
+    }
+}
+
+private struct DayrulePaperListModifier: ViewModifier {
+    var macScrollFill: Color?
+
+    func body(content: Content) -> some View {
+        content
+            .listSectionSeparator(.hidden)
+            .listRowSeparator(.hidden)
+            #if os(macOS)
+            .background(MacListHideSystemSeparators(scrollFill: macScrollFill))
+            #endif
     }
 }
 

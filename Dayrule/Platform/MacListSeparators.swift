@@ -9,16 +9,31 @@ import SwiftUI
 /// (decision 74). Sidebar `List(selection:)` also paints the **system** accent
 /// selection (often purple from System Settings), which fights our terracotta
 /// `selectedRow` + leading accent bar — so selection highlight is cleared too.
+///
+/// When `scrollFill` is set (plain / detail lists), install paper-tinted
+/// `NSScroller`s. Sidebar `.listStyle(.sidebar)` already composites a warm
+/// taupe knob against the rail; plain lists get cool system grey instead —
+/// AppKit will not warm them from `backgroundColor` alone.
 struct MacListHideSystemSeparators: NSViewRepresentable {
+    /// `nil` = separator/selection strip only (sidebar). Non-nil = also
+    /// replace plain-list scrollers with warm paper knobs.
+    var scrollFill: Color? = nil
+
     func makeNSView(context: Context) -> NSView {
-        Inspector()
+        let view = Inspector()
+        view.scrollFill = scrollFill.map(NSColor.init)
+        return view
     }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        (nsView as? Inspector)?.stripSoon()
+        guard let inspector = nsView as? Inspector else { return }
+        inspector.scrollFill = scrollFill.map(NSColor.init)
+        inspector.stripSoon()
     }
 
     private final class Inspector: NSView {
+        var scrollFill: NSColor?
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             stripSoon()
@@ -67,7 +82,81 @@ struct MacListHideSystemSeparators: NSViewRepresentable {
             if table.selectionHighlightStyle != .none {
                 table.selectionHighlightStyle = .none
             }
+            guard let fill = scrollFill, let scroll = table.enclosingScrollView else { return }
+            DayrulePaperScroller.install(on: scroll, paperFill: fill)
         }
+    }
+}
+
+/// Overlay / Always-show knobs tinted from Dayrule paper (light brown on dark
+/// brown), matching the sidebar rail instead of system cool grey.
+private final class DayrulePaperScroller: NSScroller {
+    var paperFill: NSColor = .windowBackgroundColor
+
+    static func install(on scroll: NSScrollView, paperFill: NSColor) {
+        func adopt(_ existing: NSScroller?) -> DayrulePaperScroller {
+            if let current = existing as? DayrulePaperScroller {
+                current.paperFill = paperFill
+                return current
+            }
+            let next = DayrulePaperScroller(frame: existing?.frame ?? .zero)
+            next.paperFill = paperFill
+            if let existing {
+                next.controlSize = existing.controlSize
+                next.scrollerStyle = existing.scrollerStyle
+                next.knobStyle = .default
+                next.doubleValue = existing.doubleValue
+                next.knobProportion = existing.knobProportion
+                next.isEnabled = existing.isEnabled
+                next.alphaValue = existing.alphaValue
+            }
+            return next
+        }
+        let vertical = adopt(scroll.verticalScroller)
+        if scroll.verticalScroller !== vertical {
+            scroll.verticalScroller = vertical
+        }
+        let horizontal = adopt(scroll.horizontalScroller)
+        if scroll.horizontalScroller !== horizontal {
+            scroll.horizontalScroller = horizontal
+        }
+    }
+
+    override func drawKnob() {
+        let knobRect = rect(for: .knob)
+        guard !knobRect.isEmpty else { return }
+        let inset = knobRect.insetBy(dx: 3, dy: 3)
+        guard inset.width > 0, inset.height > 0 else { return }
+        let radius = min(4, min(inset.width, inset.height) / 2)
+        let path = NSBezierPath(roundedRect: inset, xRadius: radius, yRadius: radius)
+        warmKnobFill.setFill()
+        path.fill()
+    }
+
+    override func drawKnobSlot(in slotRect: NSRect, highlight flag: Bool) {
+        // Overlay: no track. Always-show: soft warm slot, not cool grey.
+        guard scrollerStyle == .legacy else { return }
+        let inset = slotRect.insetBy(dx: 4, dy: 4)
+        guard inset.width > 0, inset.height > 0 else { return }
+        let radius = min(4, min(inset.width, inset.height) / 2)
+        let path = NSBezierPath(roundedRect: inset, xRadius: radius, yRadius: radius)
+        warmKnobFill.withAlphaComponent(flag ? 0.22 : 0.14).setFill()
+        path.fill()
+    }
+
+    /// Lighten paper toward white — reads as light brown on dark brown paper.
+    private var warmKnobFill: NSColor {
+        guard let rgb = paperFill.usingColorSpace(.deviceRGB) else {
+            return NSColor(calibratedWhite: 0.55, alpha: 0.55)
+        }
+        let darkPaper = rgb.redComponent + rgb.greenComponent + rgb.blueComponent < 1.5
+        let lift: CGFloat = darkPaper ? 0.48 : 0.28
+        return NSColor(
+            calibratedRed: rgb.redComponent + (1 - rgb.redComponent) * lift,
+            green: rgb.greenComponent + (1 - rgb.greenComponent) * lift,
+            blue: rgb.blueComponent + (1 - rgb.blueComponent) * lift,
+            alpha: 0.58
+        )
     }
 }
 
