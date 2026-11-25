@@ -18,8 +18,9 @@ matrix.
 - [x] Icon-only chrome has speakable labels (Lock, Find, Settings, sidebar
   toggle, selection bar, Add)
 - [x] Section / page headers use header traits where drawn
-- [ ] `accessibilityInputLabels` on awkward spoken names (`When…`, chrome,
-  long titles) for Voice Control
+- [x] `accessibilityInputLabels` on awkward spoken names (`When…`, chrome,
+  selection bar, Add, sheet confirm) for Voice Control — `RowAction` /
+  `SheetAction` defaults + toolbar / selection bar
 - [ ] Custom Mac paper scrollers verified with VoiceOver scroll
   percentage / actions (`DayrulePaperScroller`)
 
@@ -75,13 +76,13 @@ matrix.
 | Reduced Motion | Likely | Manual common-task pass |
 | Sufficient Contrast | Likely | Increased Contrast mode still open |
 | Larger Text | Hold | Decision 66 / DT polish |
-| Voice Control | Hold | Input labels + manual Show Names/Numbers |
+| Voice Control | Lean | Manual Show Names/Numbers still open |
 | Captions / Audio Descriptions | N/A | No AV content |
 
 ## Open follow-ups (from 2026-11-25 review)
 
 1. ~~Restore VO focus when When / editor / Settings / Find / project-area sheets dismiss.~~
 2. Dynamic Type polish pass, then re-enable filtered audit types.
-3. `accessibilityInputLabels` on row actions + chrome.
+3. ~~`accessibilityInputLabels` on row actions + chrome.~~
 4. Wire Increase Contrast / Reduce Transparency into paper chrome.
 5. Manual VoiceOver pass to confirm restore after dismiss on iPhone + Mac.

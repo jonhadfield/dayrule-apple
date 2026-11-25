@@ -45,7 +45,51 @@ struct TodoRowModel: Equatable {
 /// Named VoiceOver action on a row (Move to Today, Trash, …).
 struct RowAction {
     var name: String
+    /// Shorter / alternate phrases for Voice Control (`accessibilityInputLabels`).
+    var inputLabels: [String]
     var action: () -> Void
+
+    init(name: String, inputLabels: [String]? = nil, action: @escaping () -> Void) {
+        self.name = name
+        self.inputLabels = inputLabels ?? Self.defaultInputLabels(for: name)
+        self.action = action
+    }
+
+    /// Strip ellipsis and add common spoken shortcuts for sheet-opening actions.
+    private static func defaultInputLabels(for name: String) -> [String] {
+        let stripped = name
+            .replacingOccurrences(of: "…", with: "")
+            .replacingOccurrences(of: "...", with: "")
+        var labels = [stripped]
+        switch stripped {
+        case "When":
+            labels.append("Schedule")
+        case "Deadline":
+            labels.append("Due date")
+        case "Tags":
+            labels.append("Tag")
+        case "Move":
+            labels.append(contentsOf: ["Move to", "Move to list"])
+        case "Repeat":
+            labels.append("Repeating")
+        case "Reminder":
+            labels.append(contentsOf: ["Remind me", "Remind"])
+        case "Trash", "Move to Trash":
+            labels.append(contentsOf: ["Trash", "Delete"])
+        case "Move up":
+            labels.append("Up")
+        case "Move down":
+            labels.append("Down")
+        case "Select":
+            labels.append(contentsOf: ["Select to-do", "Multi-select"])
+        case "Restore":
+            labels.append("Undelete")
+        default:
+            break
+        }
+        var seen = Set<String>()
+        return labels.filter { seen.insert($0).inserted }
+    }
 }
 
 /// Shared to-do row for list and project screens.
@@ -130,12 +174,21 @@ struct DayruleTodoRow: View {
         .modifier(OpenAccessibility(hint: model.openHint, onOpen: onOpen))
         .accessibilityActions {
             if let status = model.status {
-                Button(status == .open ? "Complete \(model.title)" : "Reopen \(model.title)", action: onToggle)
+                let completeName = status == .open
+                    ? "Complete \(model.title)"
+                    : "Reopen \(model.title)"
+                let shortVerb = status == .open ? "Complete" : "Reopen"
+                Button(completeName, action: onToggle)
+                    .accessibilityInputLabels([shortVerb, completeName, model.title])
             }
             ForEach(accessibilityActions.indices, id: \.self) { i in
-                Button(accessibilityActions[i].name, action: accessibilityActions[i].action)
+                let rowAction = accessibilityActions[i]
+                Button(rowAction.name, action: rowAction.action)
+                    .accessibilityInputLabels(rowAction.inputLabels)
             }
         }
+        // Voice Control: speak the title without Reminder / Repeats / notes fluff.
+        .accessibilityInputLabels([model.title])
         .accessibilityIdentifier(identifier)
         .modifier(TodoA11yFocusModifier(binding: a11yFocus, equals: todoFocus))
     }

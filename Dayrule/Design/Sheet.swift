@@ -8,7 +8,38 @@ struct SheetAction {
     var title: String
     var identifier: String?
     var isEnabled: Bool = true
+    /// Voice Control spoken alternatives; defaults strip awkward phrasing.
+    var inputLabels: [String]
     var action: () -> Void
+
+    init(
+        title: String,
+        identifier: String? = nil,
+        isEnabled: Bool = true,
+        inputLabels: [String]? = nil,
+        action: @escaping () -> Void
+    ) {
+        self.title = title
+        self.identifier = identifier
+        self.isEnabled = isEnabled
+        self.inputLabels = inputLabels ?? Self.defaultInputLabels(for: title)
+        self.action = action
+    }
+
+    private static func defaultInputLabels(for title: String) -> [String] {
+        switch title {
+        case "Use this date":
+            return ["Use this date", "Confirm date", "Done"]
+        case "Save":
+            return ["Save", "Done"]
+        case "Done":
+            return ["Done", "Close"]
+        case "Remind me":
+            return ["Remind me", "Reminder", "Save"]
+        default:
+            return [title]
+        }
+    }
 }
 
 /// macOS ideal sheet sizes; iOS uses detents instead.
@@ -190,6 +221,7 @@ struct DayruleSheet<Content: View>: View {
             .fontWeight(.semibold)
             .disabled(!confirm.isEnabled)
             .keyboardShortcut(.defaultAction)
+            .accessibilityInputLabels(confirm.inputLabels)
             .dayruleIdentifier(confirm.identifier)
     }
 }
