@@ -66,6 +66,11 @@ struct DayruleTodoRow: View {
     /// Closed over by list `onToggle` / `onOpen`; participates in `==`.
     var selecting: Bool = false
     var accessibilityActions: [RowAction] = []
+    /// Parent-owned VoiceOver focus; restore target after sheet dismiss.
+    var a11yFocus: AccessibilityFocusState<DayruleA11yFocus?>.Binding? = nil
+    /// Current focus value — participates in `==` so `.equatable()` refreshes
+    /// when VoiceOver focus returns to this row.
+    var a11yFocusValue: DayruleA11yFocus? = nil
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -75,6 +80,7 @@ struct DayruleTodoRow: View {
 
     private var leadingSlot: CGFloat { max(Tokens.rowLeadingSlot, checkboxDiameter + 8) }
     private var isClosed: Bool { model.status.map { $0 != .open } ?? false }
+    private var todoFocus: DayruleA11yFocus { .todo(model.id) }
 
     var body: some View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme)
@@ -131,6 +137,7 @@ struct DayruleTodoRow: View {
             }
         }
         .accessibilityIdentifier(identifier)
+        .modifier(TodoA11yFocusModifier(binding: a11yFocus, equals: todoFocus))
     }
 
     @ViewBuilder
@@ -228,6 +235,7 @@ extension DayruleTodoRow: Equatable {
             && lhs.identifier == rhs.identifier
             && lhs.isSelected == rhs.isSelected
             && lhs.selecting == rhs.selecting
+            && lhs.a11yFocusValue == rhs.a11yFocusValue
     }
 }
 
@@ -242,6 +250,19 @@ private struct OpenAccessibility: ViewModifier {
                 .accessibilityAddTraits(.isButton)
                 .accessibilityHint(hint)
                 .accessibilityAction(.default, onOpen)
+        } else {
+            content
+        }
+    }
+}
+
+private struct TodoA11yFocusModifier: ViewModifier {
+    var binding: AccessibilityFocusState<DayruleA11yFocus?>.Binding?
+    var equals: DayruleA11yFocus
+
+    func body(content: Content) -> some View {
+        if let binding {
+            content.accessibilityFocused(binding, equals: equals)
         } else {
             content
         }
