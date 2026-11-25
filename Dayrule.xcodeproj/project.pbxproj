@@ -39,6 +39,7 @@
 		2BF4C47D521435E78A947EF1 /* Order.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EDA6EB07F5EF2CD6EE40649 /* Order.swift */; };
 		2C3BF86E62AD938EF4E4B054 /* BiometricKeyStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B6A9F3E304118C6A55C4728 /* BiometricKeyStore.swift */; };
 		2CC31B890CE1BD8E39BAECC3 /* ButtonStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B3EFB30B8DEE3113910D329 /* ButtonStyles.swift */; };
+		2F2C55370B89BEDDAEF4FA50 /* AccessibilityFocusRestore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 57D42F2162EFC11D3B7DEE51 /* AccessibilityFocusRestore.swift */; };
 		2FC5F630FA85CEAEC637E306 /* FoldLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC97C4DD616C0DD3AC537AC8 /* FoldLayout.swift */; };
 		30EE47ECB6023D12E9BE6508 /* DayruleApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50B739D187E09BA80EF8304B /* DayruleApp.swift */; };
 		319567501AB1220DD50A5408 /* ReminderPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2323EB1F2A5E5CC0681F26CA /* ReminderPlan.swift */; };
@@ -311,6 +312,7 @@
 		54C3B327A357BE2D6FC2258A /* PrivacyCover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyCover.swift; sourceTree = "<group>"; };
 		5572ACDD49C4118EA04B01F6 /* TagSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSheetView.swift; sourceTree = "<group>"; };
 		57AF130657190E4861550019 /* BuildInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuildInfo.swift; sourceTree = "<group>"; };
+		57D42F2162EFC11D3B7DEE51 /* AccessibilityFocusRestore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityFocusRestore.swift; sourceTree = "<group>"; };
 		589AB90A15F6F5C305DFDA97 /* BIP39Wordlist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BIP39Wordlist.swift; sourceTree = "<group>"; };
 		58C9377E81FBB2D6C813497B /* Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Types.swift; sourceTree = "<group>"; };
 		59193C5EF23C22974DFBFDE3 /* ForgetDeviceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgetDeviceTests.swift; sourceTree = "<group>"; };
@@ -546,6 +548,7 @@
 		5E7073F5D227D1861F99DBB4 /* Design */ = {
 			isa = PBXGroup;
 			children = (
+				57D42F2162EFC11D3B7DEE51 /* AccessibilityFocusRestore.swift */,
 				3B3EFB30B8DEE3113910D329 /* ButtonStyles.swift */,
 				CB239E222FB3FCAF4FFFDDCD /* CountBadge.swift */,
 				B18EE7B5F2218B8AB2BD0C51 /* DateText.swift */,
@@ -1059,6 +1062,7 @@
 			files = (
 				08613D9715503FF6B42375F2 /* APIClient.swift in Sources */,
 				D39DC922D37ACD64C4737AE0 /* APIConfig.swift in Sources */,
+				2F2C55370B89BEDDAEF4FA50 /* AccessibilityFocusRestore.swift in Sources */,
 				CAC39A6B02E7553B11AD9A9D /* ActorRecordCipher.swift in Sources */,
 				96405F6F8F5444DEED7306FA /* AppDatabase.swift in Sources */,
 				9B910EC82E12D991A4D25439 /* AppModel.swift in Sources */,
