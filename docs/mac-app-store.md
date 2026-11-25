@@ -23,7 +23,9 @@ the **next** Mac submission (keep iOS and Mac on the same
 `MARKETING_VERSION` / a `CURRENT_PROJECT_VERSION` at least as new as the
 iPhone build you care about). **0.1.3 (32)** (wake remount + Mac Gate
 Passwords AutoFill) was archived, uploaded, and **submitted for review**
-2026-11-21 with iOS. (**0.1.2** train is closed / approved.)
+2026-11-21 with iOS. (**0.1.2** train is closed / approved.) Next cut:
+**0.1.4 (33)** — Today deadline “overdue” vs When “late” chips + `SHARED.lock`
+refresh.
 
 1. **Archive + upload** the next Mac build when cutting again. Organizer:
    **Distribute App → App Store Connect**. The local keychain may only have

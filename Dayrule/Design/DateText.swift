@@ -37,6 +37,26 @@ enum DayruleDateFormat {
         "Due " + relative(d, today: today, locale: locale, calendar: calendar)
     }
 
+    /// Day-granularity past-date chip (web `daysPastLabel`): `1d overdue` / `2d late`.
+    enum PastChipWord: String, Sendable {
+        case overdue
+        case late
+    }
+
+    static func daysPast(
+        _ anchor: LocalDate,
+        today: LocalDate,
+        word: PastChipWord,
+        calendar: Calendar = When.calendar
+    ) -> String {
+        guard let past = When.fromLocalDate(anchor, calendar: calendar),
+              let now = When.fromLocalDate(today, calendar: calendar)
+        else { return word == .overdue ? "Overdue" : "Late" }
+        let days = max(1, calendar.dateComponents([.day], from: past, to: now).day ?? 1)
+        let n = days == 1 ? "1d" : "\(days)d"
+        return "\(n) \(word.rawValue)"
+    }
+
     /// "YYYY-MM" → "October 2026".
     static func month(
         _ ym: String,

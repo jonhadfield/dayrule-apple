@@ -2027,11 +2027,21 @@ struct ListsBrowserView: View {
     }
 
     private func todayTrailing(for item: ListItem) -> TrailingChip? {
-        if Lists.isOverdue(item, ctx) {
-            return TrailingChip(systemImage: "clock", label: overdueLabel(deadline: item.deadline), isOverdue: true)
+        // Deadline past → flag + “overdue” (matches sidebar badge). Past When
+        // alone → clock + “late” (web TodoRow / 80c310b).
+        if Lists.isOverdue(item, ctx), let deadline = item.deadline {
+            return TrailingChip(
+                systemImage: "flag",
+                label: DayruleDateFormat.daysPast(deadline, today: ctx.today, word: .overdue),
+                isOverdue: true
+            )
         }
         if let start = item.startDate, start < ctx.today {
-            return TrailingChip(systemImage: "clock", label: overdueLabel(startDate: start), isOverdue: true)
+            return TrailingChip(
+                systemImage: "clock",
+                label: DayruleDateFormat.daysPast(start, today: ctx.today, word: .late),
+                isOverdue: true
+            )
         }
         if item.startDate == ctx.today || item.deadline == ctx.today {
             return TrailingChip(systemImage: "calendar", label: "Today", isOverdue: false)
@@ -2047,8 +2057,8 @@ struct ListsBrowserView: View {
         guard let deadline = todo.deadline else { return nil }
         if Lists.isOverdue(.todo(todo), ctx) {
             return TrailingChip(
-                systemImage: "clock",
-                label: overdueLabel(deadline: deadline),
+                systemImage: "flag",
+                label: DayruleDateFormat.daysPast(deadline, today: ctx.today, word: .overdue),
                 isOverdue: true
             )
         }
@@ -2057,15 +2067,6 @@ struct ListsBrowserView: View {
             label: DayruleDateFormat.due(deadline, today: ctx.today),
             isOverdue: false
         )
-    }
-
-    private func overdueLabel(deadline: LocalDate? = nil, startDate: LocalDate? = nil) -> String {
-        let anchor = deadline ?? startDate
-        guard let anchor, let past = When.fromLocalDate(anchor) else { return "Overdue" }
-        let hours = max(1, Int(Date().timeIntervalSince(past) / 3600))
-        if hours < 48 { return "\(hours)h overdue" }
-        let days = max(1, hours / 24)
-        return "\(days)d overdue"
     }
 
     private func todoRow(

@@ -320,6 +320,8 @@ enum Lists {
     struct SidebarCounts: Equatable, Sendable {
         var inbox: Int
         var today: Int
+        /// Open Today items with a deadline before today (red sidebar badge).
+        /// Past When alone is not counted — Today shows a clock “late” chip instead.
         var overdue: Int
     }
 
