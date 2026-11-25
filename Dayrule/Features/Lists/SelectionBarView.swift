@@ -58,5 +58,26 @@ struct SelectionBarView: View {
         .buttonStyle(.plain)
         .disabled(disabled)
         .accessibilityLabel(label)
+        .accessibilityInputLabels(Self.inputLabels(for: label))
+    }
+
+    /// Spoken shortcuts for Voice Control (primary label can be long).
+    private static func inputLabels(for label: String) -> [String] {
+        switch label {
+        case "Cancel selection":
+            return ["Cancel", "Deselect", "Cancel selection"]
+        case "When":
+            return ["When", "Schedule"]
+        case "Deadline":
+            return ["Deadline", "Due date"]
+        case "Move":
+            return ["Move", "Move to"]
+        case "Complete":
+            return ["Complete", "Done"]
+        case "Move to Trash":
+            return ["Trash", "Delete", "Move to Trash"]
+        default:
+            return [label]
+        }
     }
 }

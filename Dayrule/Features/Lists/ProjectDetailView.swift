@@ -237,6 +237,7 @@ struct ProjectDetailView: View {
                 .buttonStyle(.plain)
                 .help("Project actions")
                 .accessibilityLabel("Project actions")
+                .accessibilityInputLabels(["Project actions", "Actions", "More"])
                 .accessibilityIdentifier("project.actions")
                 .accessibilityFocused($a11yFocus, equals: .detailActions)
             }

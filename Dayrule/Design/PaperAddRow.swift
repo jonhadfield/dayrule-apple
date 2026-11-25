@@ -69,6 +69,11 @@ struct PaperAddRow: View {
                 .padding(.vertical, -hitInset)
                 .accessibilityIdentifier(buttonIdentifier)
                 .accessibilityLabel(canAdd ? "Add to-do" : "New to-do")
+                .accessibilityInputLabels(
+                    canAdd
+                        ? ["Add", "Add to-do", "New to-do"]
+                        : ["New to-do", "Add", "Add to-do"]
+                )
 
                 TextField("", text: $title, prompt: Text("Add").foregroundStyle(colors.textSecondary))
                     .dayruleBareField(colors: colors)
@@ -82,6 +87,7 @@ struct PaperAddRow: View {
                     #endif
                     .submitLabel(.done)
                     .accessibilityLabel("New to-do")
+                    .accessibilityInputLabels(["New to-do", "Add", "Title"])
                     .accessibilityIdentifier(fieldIdentifier)
                     .onSubmit(submitFromField)
             }

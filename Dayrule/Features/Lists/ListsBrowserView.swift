@@ -691,6 +691,7 @@ struct ListsBrowserView: View {
         .buttonStyle(.plain)
         .help("Toggle Sidebar")
         .accessibilityLabel("Toggle Sidebar")
+        .accessibilityInputLabels(["Toggle Sidebar", "Sidebar", "Hide Sidebar", "Show Sidebar"])
     }
 
     /// Lock · Find · Settings (Refresh lives under Settings → Sync now).
@@ -717,6 +718,7 @@ struct ListsBrowserView: View {
             .buttonStyle(.plain)
             .help("Lock (⇧⌘L)")
             .accessibilityLabel("Lock")
+            .accessibilityInputLabels(["Lock", "Lock Dayrule", "Lock app"])
         }
         .dayruleHideToolbarGlass()
         ToolbarItem(placement: .primaryAction) {
@@ -729,6 +731,7 @@ struct ListsBrowserView: View {
             .buttonStyle(.plain)
             .help("Find (⌘F)")
             .accessibilityLabel("Find")
+            .accessibilityInputLabels(["Find", "Search", "Quick Find"])
             .accessibilityIdentifier("sidebar.find")
             .accessibilityFocused($a11yFocus, equals: .find)
         }
@@ -743,6 +746,7 @@ struct ListsBrowserView: View {
             .buttonStyle(.plain)
             .help("Settings (⌘,)")
             .accessibilityLabel("Settings")
+            .accessibilityInputLabels(["Settings", "Preferences"])
             .accessibilityFocused($a11yFocus, equals: .settings)
         }
         .dayruleHideToolbarGlass()
@@ -1208,6 +1212,7 @@ struct ListsBrowserView: View {
         .buttonStyle(.plain)
         .controlSize(.regular)
         .accessibilityLabel("New List")
+        .accessibilityInputLabels(["New List", "Add List", "Create List"])
         .accessibilityIdentifier("browse.newList")
         .accessibilityFocused($a11yFocus, equals: .newList)
         .popover(isPresented: $showNewList, arrowEdge: style == .sidebarFooter ? .top : .bottom) {
@@ -1492,6 +1497,7 @@ struct ListsBrowserView: View {
         // Identifier predates the rename to List actions; UI tests may still use it.
         .accessibilityIdentifier("list.find")
         .accessibilityLabel("List actions")
+        .accessibilityInputLabels(["List actions", "Actions", "More"])
     }
 
     /// Empty list: a quiet glyph, or "Syncing…" only before the first sync has landed
