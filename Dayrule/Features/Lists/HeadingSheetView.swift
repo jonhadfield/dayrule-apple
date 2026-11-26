@@ -8,6 +8,8 @@ struct HeadingSheetView: View {
     var onOpenProject: ((ID) -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var title = ""
     @State private var loadedTitle = ""
     @State private var titleSelection: TextSelection?
@@ -15,7 +17,7 @@ struct HeadingSheetView: View {
     @FocusState private var titleFocused: Bool
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: "Heading",
             confirm: SheetAction(

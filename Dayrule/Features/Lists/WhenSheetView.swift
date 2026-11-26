@@ -6,6 +6,8 @@ struct WhenSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dayruleDenseLayout) private var denseLayout
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var freeText = ""
@@ -15,10 +17,11 @@ struct WhenSheetView: View {
     @State private var detent: PresentationDetent = .medium
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let selected = currentSelection
         DayruleSheet(
             title: "When",
+            dismissIdentifier: "when.cancel",
             confirm: showDatePicker
                 ? SheetAction(title: "Use this date") { apply(.date(When.toLocalDate(pickDate))) }
                 : nil,
@@ -78,6 +81,7 @@ struct WhenSheetView: View {
                 SheetClearSection(title: "Clear", isVisible: !ids.isEmpty) { apply(.clear) }
             }
             .listStyle(.plain)
+            .accessibilityIdentifier("sheet.when")
             .dayruleAnimation(Motion.quick, value: parseError)
             .onChange(of: freeText) { parseError = nil }
         }
@@ -152,7 +156,7 @@ struct WhenSheetView: View {
         selected: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return Button(action: action) {
             HStack {
                 Text(title)

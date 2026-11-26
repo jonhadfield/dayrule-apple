@@ -135,49 +135,108 @@ struct DayruleColors {
     let ready: Color
     let later: Color
     let done: Color
+    /// Increase Contrast — stronger secondary ink and hairlines.
+    let increasedContrast: Bool
+    /// Reduce Transparency — prefer more opaque washes over paper.
+    let reduceTransparency: Bool
 
-    var selectedRow: Color { accent.opacity(0.10) }
-    var pressed: Color { sidebar.opacity(0.6) }
-    var deadlineTint: Color { deadline.opacity(0.10) }
+    /// Selection wash stays at 10% so chip / accent ink still clear 4.5:1
+    /// (`DesignSystemTests`); Increase Contrast strengthens hairlines / secondary
+    /// ink / borders instead of deepening this wash.
+    var selectedRowAlpha: Double { 0.10 }
+    var selectedRow: Color { accent.opacity(selectedRowAlpha) }
+    var pressed: Color {
+        // Slightly denser under Reduce Transparency / Increase Contrast without
+        // swapping to opaque sidebar (that broke secondary ink ratios).
+        let alpha: Double = {
+            if reduceTransparency { return increasedContrast ? 0.78 : 0.72 }
+            return increasedContrast ? 0.68 : 0.6
+        }()
+        return sidebar.opacity(alpha)
+    }
+    var deadlineTint: Color {
+        deadline.opacity(increasedContrast || reduceTransparency ? 0.14 : 0.10)
+    }
     var ruleStrong: Color { text }
-    var checkboxBorder: Color { text.opacity(0.5) }
+    var checkboxBorder: Color { text.opacity(increasedContrast ? 0.72 : 0.5) }
     /// Unfocused text-field boundary: non-text contrast ≥3:1 on bg and sidebar.
     var fieldBorder: Color { textSecondary }
+    /// Soft sidebar wash for cards / tips; solid sidebar when Reduce Transparency.
+    var sidebarWash: Color {
+        reduceTransparency ? sidebar : sidebar.opacity(increasedContrast ? 0.75 : 0.4)
+    }
 
-    static func resolve(colorScheme: ColorScheme) -> DayruleColors {
+    private func washAlpha(standard: Double, increased: Double, solidFloor: Double) -> Double {
+        var alpha = increasedContrast ? increased : standard
+        if reduceTransparency { alpha = max(alpha, solidFloor) }
+        return alpha
+    }
+
+    static func resolve(
+        colorScheme: ColorScheme,
+        contrast: ColorSchemeContrast = .standard,
+        reduceTransparency: Bool = false
+    ) -> DayruleColors {
+        let increased = contrast == .increased
         switch colorScheme {
         case .dark:
-            DayruleColors(
+            return DayruleColors(
                 bg: Tokens.Dark.bg,
                 sidebar: Tokens.Dark.sidebar,
                 text: Tokens.Dark.text,
-                textSecondary: Tokens.Dark.textSecondary,
-                hairline: Tokens.Dark.hairline,
+                textSecondary: increased
+                    ? Color(hex: 0xC4BBAF)
+                    : Tokens.Dark.textSecondary,
+                hairline: increased
+                    ? Color(hex: 0x5A5248)
+                    : Tokens.Dark.hairline,
                 accent: Tokens.Dark.accent,
                 deadline: Tokens.Dark.deadline,
                 today: Tokens.Dark.today,
                 scheduled: Tokens.Dark.scheduled,
                 ready: Tokens.Dark.ready,
                 later: Tokens.Dark.later,
-                done: Tokens.Dark.done
+                done: Tokens.Dark.done,
+                increasedContrast: increased,
+                reduceTransparency: reduceTransparency
             )
-        case .light:
-            fallthrough
-        @unknown default:
-            DayruleColors(
+        default:
+            return DayruleColors(
                 bg: Tokens.Light.bg,
                 sidebar: Tokens.Light.sidebar,
                 text: Tokens.Light.text,
-                textSecondary: Tokens.Light.textSecondary,
-                hairline: Tokens.Light.hairline,
+                textSecondary: increased
+                    ? Color(hex: 0x4A433C)
+                    : Tokens.Light.textSecondary,
+                hairline: increased
+                    ? Color(hex: 0xC4B8A8)
+                    : Tokens.Light.hairline,
                 accent: Tokens.Light.accent,
                 deadline: Tokens.Light.deadline,
                 today: Tokens.Light.today,
                 scheduled: Tokens.Light.scheduled,
                 ready: Tokens.Light.ready,
                 later: Tokens.Light.later,
-                done: Tokens.Light.done
+                done: Tokens.Light.done,
+                increasedContrast: increased,
+                reduceTransparency: reduceTransparency
             )
         }
+    }
+}
+
+/// Resolves paper colours from the current scheme + accessibility display prefs.
+@propertyWrapper
+struct DayrulePalette: DynamicProperty {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    var wrappedValue: DayruleColors {
+        DayruleColors.resolve(
+            colorScheme: colorScheme,
+            contrast: contrast,
+            reduceTransparency: reduceTransparency
+        )
     }
 }

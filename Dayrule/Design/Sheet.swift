@@ -86,6 +86,8 @@ struct DayruleSheet<Content: View>: View {
     var content: () -> Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDiscard = false
 
@@ -114,7 +116,7 @@ struct DayruleSheet<Content: View>: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         NavigationStack {
             content()
                 .scrollContentBackground(.hidden)
@@ -246,9 +248,11 @@ private struct SheetDetents: ViewModifier {
 struct DayruleSheetHeader: View {
     let title: String
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         Text(title)
             .font(DayruleType.sheetTitle)
             .foregroundStyle(colors.text)
@@ -306,6 +310,8 @@ struct SheetClearSection: View {
     var action: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         if isVisible {
@@ -314,7 +320,7 @@ struct SheetClearSection: View {
                     .buttonStyle(.dayruleDestructive)
                     .dayruleIdentifier(identifier)
             }
-            .listRowBackground(DayruleColors.resolve(colorScheme: colorScheme).bg)
+            .listRowBackground(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).bg)
         }
     }
 }
@@ -322,11 +328,13 @@ struct SheetClearSection: View {
 /// Trailing checkmark on the selected option row.
 struct SelectionCheckmark: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         Image(systemName: "checkmark")
             .font(.body.weight(.semibold))
-            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme).accent)
+            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).accent)
             .accessibilityHidden(true)
     }
 }

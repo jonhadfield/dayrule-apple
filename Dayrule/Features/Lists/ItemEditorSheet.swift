@@ -8,6 +8,8 @@ struct ItemEditorSheet: View {
     let id: ID
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var title: String = ""
     @State private var notes: String = ""
     @State private var loadedTitle: String = ""
@@ -21,7 +23,7 @@ struct ItemEditorSheet: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: isTodo ? "To-do" : "Project",
             confirm: SheetAction(
@@ -95,7 +97,7 @@ struct ItemEditorSheet: View {
         }
         .padding(Tokens.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(colors.sidebar.opacity(0.4))
+        .background(colors.sidebarWash)
         .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)

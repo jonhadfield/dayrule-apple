@@ -20,6 +20,8 @@ struct LegalDocumentView: View {
     /// Pushed inside Settings' stack: no own NavigationStack or Done.
     var embedded = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.openURL) private var openURL
 
     /// Last material change to both documents (matches the web legal pages).
@@ -46,7 +48,7 @@ struct LegalDocumentView: View {
     }
 
     private var content: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Last updated \(Self.lastUpdated.formatted(.dateTime.day().month(.wide).year()))")
@@ -149,7 +151,7 @@ struct LegalDocumentView: View {
     private func heading(_ text: String) -> some View {
         Text(text)
             .font(DayruleType.sectionSerif)
-            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme).text)
+            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).text)
             .accessibilityAddTraits(.isHeader)
             .padding(.top, 8)
     }
@@ -157,7 +159,7 @@ struct LegalDocumentView: View {
     private func para(_ text: String) -> some View {
         Text(text)
             .font(.body)
-            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme).text)
+            .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).text)
             .fixedSize(horizontal: false, vertical: true)
     }
 
@@ -168,6 +170,6 @@ struct LegalDocumentView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .font(.body)
-        .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme).text)
+        .foregroundStyle(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).text)
     }
 }

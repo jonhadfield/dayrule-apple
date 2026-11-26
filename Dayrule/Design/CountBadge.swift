@@ -14,10 +14,12 @@ struct DayruleCountBadge: View {
     var style: Style = .ring
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .subheadline) private var badge: CGFloat = Tokens.badgeSize
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         HStack(spacing: Tokens.Space.xs) {
             if overdue > 0 {
                 Text("\(Image(systemName: "exclamationmark.circle.fill")) \(overdue)")

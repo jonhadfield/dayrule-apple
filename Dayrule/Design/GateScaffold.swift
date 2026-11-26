@@ -10,6 +10,8 @@ struct GateScaffold<Content: View>: View {
     var content: (ScrollViewProxy) -> Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     /// Visible scroll height; the column is at least this tall so short forms centre
     /// and long ones (signup, recovery words, keyboard up, large type) still scroll.
     @State private var viewportHeight: CGFloat = 0
@@ -37,7 +39,7 @@ struct GateScaffold<Content: View>: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         FoldSafeContainer {
             ScrollViewReader { proxy in
                 ScrollView {
@@ -91,9 +93,11 @@ struct GateInlineMessage: View {
     var identifier: String
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         Text(text)
             .font(kind == .error ? DayruleType.error : DayruleType.helper)
             .foregroundStyle(kind == .error ? colors.deadline : colors.textSecondary)

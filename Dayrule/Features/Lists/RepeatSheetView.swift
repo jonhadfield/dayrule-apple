@@ -6,6 +6,8 @@ struct RepeatSheetView: View {
     let todoId: ID
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var freq: RepeatRule.Freq = .week
     @State private var every = 1
@@ -16,7 +18,7 @@ struct RepeatSheetView: View {
     private static let dayLabels = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: "Repeat",
             confirm: SheetAction(title: "Save", identifier: "repeat.save") { save() },

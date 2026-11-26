@@ -40,9 +40,11 @@ struct DayruleSectionHeader: View {
     var surface: Surface = .page
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let row = HStack(alignment: .firstTextBaseline, spacing: Tokens.Space.s) {
             styledTitle
                 .foregroundStyle(toneColor(colors))

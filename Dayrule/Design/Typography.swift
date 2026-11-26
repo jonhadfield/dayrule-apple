@@ -129,36 +129,48 @@ enum DayruleType {
     /// Tightened tracking for brand and page titles.
     static let titleTracking: CGFloat = -0.5
 
-    /// Phone compact: Dynamic Type body. Dense (Mac / iPad regular): 15pt.
-    static func rowTitle(dense: Bool) -> Font {
+    /// Phone compact: Dynamic Type body. Dense (Mac / iPad regular): 15pt,
+    /// except accessibility text sizes which always use scalable body.
+    static func rowTitle(dense: Bool, accessibilitySize: Bool = false) -> Font {
+        if accessibilitySize { return Font.body }
         #if os(macOS)
         _ = dense
-        return .system(size: 15)
+        return Font.system(size: 15)
         #else
-        dense ? .system(size: 15) : .body
+        return dense ? Font.system(size: 15) : Font.body
         #endif
     }
 
-    static func link(dense: Bool) -> Font {
-        rowTitle(dense: dense)
+    static func link(dense: Bool, accessibilitySize: Bool = false) -> Font {
+        rowTitle(dense: dense, accessibilitySize: accessibilitySize)
     }
 }
 
 private struct DayruleRowTitleModifier: ViewModifier {
     @Environment(\.dayruleDenseLayout) private var dense
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var weight: Font.Weight?
 
     func body(content: Content) -> some View {
-        let base = DayruleType.rowTitle(dense: dense)
+        let base = DayruleType.rowTitle(
+            dense: dense,
+            accessibilitySize: dynamicTypeSize.isAccessibilitySize
+        )
         content.font(weight.map { base.weight($0) } ?? base)
     }
 }
 
 private struct DayruleLinkModifier: ViewModifier {
     @Environment(\.dayruleDenseLayout) private var dense
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     func body(content: Content) -> some View {
-        content.font(DayruleType.link(dense: dense))
+        content.font(
+            DayruleType.link(
+                dense: dense,
+                accessibilitySize: dynamicTypeSize.isAccessibilitySize
+            )
+        )
     }
 }
 
@@ -174,11 +186,13 @@ extension View {
 }
 
 /// Default `Text` / control font for dense chrome (Mac DayruleApp parity).
+/// Accessibility Dynamic Type sizes keep the system body scale instead of 15pt.
 struct DayruleDenseBodyFont: ViewModifier {
     var dense: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     func body(content: Content) -> some View {
-        if dense {
+        if dense, !dynamicTypeSize.isAccessibilitySize {
             content.environment(\.font, Font.system(size: 15))
         } else {
             content

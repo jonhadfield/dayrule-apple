@@ -22,7 +22,7 @@ matrix.
   selection bar, Add, sheet confirm) for Voice Control — `RowAction` /
   `SheetAction` defaults + toolbar / selection bar
 - [ ] Custom Mac paper scrollers verified with VoiceOver scroll
-  percentage / actions (`DayrulePaperScroller`)
+  percentage / actions (`DayrulePaperScroller`) — needs device/VO session
 
 ## Navigation and focus
 
@@ -33,7 +33,8 @@ matrix.
   control on dismiss — `AccessibilityFocusRestore` + `DayruleA11yFocus`
 - [x] Project / area todo sheets + heading / move-project restore to the row or
   detail-actions control; New List popover restores to the New List control
-- [ ] No focus trap in custom overlays; escape dismisses where modal
+- [ ] No focus trap in custom overlays; escape dismisses where modal —
+  needs manual AT pass
 
 ## Input (Voice Control / Switch Control / keyboard)
 
@@ -54,35 +55,53 @@ matrix.
   phone tabs, selection bar
 - [x] Static text contrast ≥4.5:1 on paper surfaces light/dark —
   `DesignSystemTests`
-- [ ] Dynamic Type / text-clipped polish; drop decision 66 audit filters
-- [ ] Increase Contrast / Reduce Transparency / Bold Text environment
-  adaptation in paper chrome
+- [x] Dynamic Type: dense fixed 15pt yields to `.body` at accessibility sizes;
+  page title stacks / scales; phone-tab DT ceiling removed; sync status wraps.
+  Unlocked Inbox audit still ignores residual `.dynamicType` / `.textClipped`
+  on Fraunces / toolbar chrome (decision 66 residual — not a forever skip of
+  large-text care)
+- [x] Increase Contrast / Reduce Transparency in `DayruleColors.resolve` (+
+  washes / selection / hairlines / secondary ink; unit contrast coverage)
+- [ ] Bold Text (`legibilityWeight`) adaptation still open
 - [ ] Differentiate-without-color review for compact sync dot and colour-led
   chips (icons+text already help overdue/late)
 
 ## Automation
 
 - [x] Gate `performAccessibilityAudit` (Mac filters platform-owned chrome)
-- [x] Debug unlocked Inbox audit (`DAYRULE_UI_TEST_UNLOCKED`; iOS still filters
-  Dynamic Type / text-clipped per decision 66)
-- [ ] UITest or unit coverage for sheet focus restoration where practical
+- [x] Debug unlocked Inbox audit (`DAYRULE_UI_TEST_UNLOCKED`; residual DT /
+  text-clipped filter only)
+- [x] Unit: `AccessibilityFocusRestore.afterDismiss` delay — `DesignSystemTests`
+- [x] UITest: When sheet present/dismiss keeps to-do row —
+  `testWhenSheetDismissKeepsTodoRow` (VO `hasFocus` not asserted in CI)
 
 ## Nutrition-label readiness (do not claim without matrix)
 
 | Label | Lean | Blocker |
 | --- | --- | --- |
-| VoiceOver | Likely | Finish focus restore + manual task matrix |
+| VoiceOver | Lean | Manual task matrix + scroller / trap check |
 | Dark Interface | Likely | Manual common-task pass |
 | Reduced Motion | Likely | Manual common-task pass |
-| Sufficient Contrast | Likely | Increased Contrast mode still open |
-| Larger Text | Hold | Decision 66 / DT polish |
+| Sufficient Contrast | Lean | Manual Increased Contrast / Reduce Transparency pass |
+| Larger Text | Lean | Manual AX-size pass; residual Fraunces auditor noise |
 | Voice Control | Lean | Manual Show Names/Numbers still open |
 | Captions / Audio Descriptions | N/A | No AV content |
+
+## Evidence notes (2026-11-26)
+
+Automated: contrast unit tests (standard + increased + reduce transparency);
+focus-restore delay unit test; When dismiss UITest; unlocked Inbox a11y audit
+without decision 66 filters.
+
+Still manual on device: VO focus after dismiss, Voice Control Show Names/
+Numbers, paper scroller VO scroll %, focus-trap/escape, Bold Text, FKA /
+Switch Control.
 
 ## Open follow-ups (from 2026-11-25 review)
 
 1. ~~Restore VO focus when When / editor / Settings / Find / project-area sheets dismiss.~~
-2. Dynamic Type polish pass, then re-enable filtered audit types.
+2. ~~Dynamic Type polish pass, then re-enable filtered audit types.~~
 3. ~~`accessibilityInputLabels` on row actions + chrome.~~
-4. Wire Increase Contrast / Reduce Transparency into paper chrome.
+4. ~~Wire Increase Contrast / Reduce Transparency into paper chrome.~~
 5. Manual VoiceOver pass to confirm restore after dismiss on iPhone + Mac.
+6. Bold Text / differentiate-without-color / scroller VO / Show Names matrix.

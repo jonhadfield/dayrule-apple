@@ -10,6 +10,8 @@ struct DayruleCheckbox: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .body) private var diameter: CGFloat = 20
     @State private var completeCount = 0
     @State private var filled: Bool
@@ -27,7 +29,7 @@ struct DayruleCheckbox: View {
     private var hitInset: CGFloat { max(0, (Tokens.minHit - slot) / 2) }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let reduceMotion = reduceMotion
         Button(action: action) {
             ZStack {

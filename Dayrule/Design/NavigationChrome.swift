@@ -85,6 +85,10 @@ struct DayrulePageTitle: View {
     var systemImage: String? = nil
     var iconTint: Color? = nil
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .title) private var listIconSize: CGFloat = 26
 
     init(_ title: String, systemImage: String? = nil, iconTint: Color? = nil) {
         self.title = title
@@ -93,22 +97,42 @@ struct DayrulePageTitle: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayrulePageTitleChrome {
-            HStack(alignment: .center, spacing: Tokens.Space.m) {
-                if let systemImage {
-                    Image(systemName: systemImage)
-                        .font(.system(size: 26))
-                        .foregroundStyle(iconTint ?? colors.text)
-                        .accessibilityHidden(true)
+            Group {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                        pageTitleIcon(colors)
+                        pageTitleLabel(colors)
+                    }
+                } else {
+                    HStack(alignment: .center, spacing: Tokens.Space.m) {
+                        pageTitleIcon(colors)
+                        pageTitleLabel(colors)
+                    }
                 }
-                Text(title)
-                    .font(DayruleType.pageTitle)
-                    .tracking(DayruleType.titleTracking)
-                    .foregroundStyle(colors.text)
-                    .accessibilityAddTraits(.isHeader)
             }
         }
+    }
+
+    @ViewBuilder
+    private func pageTitleIcon(_ colors: DayruleColors) -> some View {
+        if let systemImage {
+            Image(systemName: systemImage)
+                .font(.system(size: listIconSize))
+                .foregroundStyle(iconTint ?? colors.text)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func pageTitleLabel(_ colors: DayruleColors) -> some View {
+        Text(title)
+            .font(DayruleType.pageTitle)
+            .tracking(DayruleType.titleTracking)
+            .foregroundStyle(colors.text)
+            .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 2)
+            .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 0.85 : 1)
+            .accessibilityAddTraits(.isHeader)
     }
 }
 
@@ -120,9 +144,11 @@ struct DayruleEditablePageTitle: View {
     var identifier: String
     var focused: FocusState<Bool>.Binding
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayrulePageTitleChrome {
             TextField(
                 "",
@@ -144,9 +170,11 @@ struct DayruleEditablePageTitle: View {
 private struct DayrulePageTitleChrome<Content: View>: View {
     @ViewBuilder var content: Content
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         // One paper hairline under the title. Hosted via overlay (not
         // `safeAreaInset`) so AppKit does not paint a second rule under the
         // chrome — that stack was the Mac double underline.
@@ -180,9 +208,11 @@ private struct DayrulePageTitleChrome<Content: View>: View {
 private struct DayruleMacPageTitleOverlay<Title: View>: ViewModifier {
     @ViewBuilder var title: () -> Title
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var titleHeight: CGFloat = 56
     func body(content: Content) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         content
             // No lift into the toolbar — cap-height should match sidebar *label*
             // ink (Inbox), not the row wash / window chrome above it.
@@ -207,9 +237,11 @@ private struct DayruleMacPageTitleOverlay<Title: View>: ViewModifier {
 struct DayruleToolbarGlyph: View {
     let systemImage: String
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         Image(systemName: systemImage)
             .font(.body.weight(.medium))
             .foregroundStyle(colors.text)

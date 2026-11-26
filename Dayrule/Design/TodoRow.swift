@@ -117,6 +117,8 @@ struct DayruleTodoRow: View {
     var a11yFocusValue: DayruleA11yFocus? = nil
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var checkboxDiameter: CGFloat = 20
     /// Distance from the checkbox centre down to the first line's baseline.
@@ -127,7 +129,7 @@ struct DayruleTodoRow: View {
     private var todoFocus: DayruleA11yFocus { .todo(model.id) }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let baselineDrop = baselineDrop
         RuledRow {
             HStack(alignment: .firstTextBaseline, spacing: Tokens.rowGlyphSpacing) {

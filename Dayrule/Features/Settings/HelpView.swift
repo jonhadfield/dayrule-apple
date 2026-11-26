@@ -5,6 +5,8 @@ struct HelpView: View {
     /// Pushed inside Settings' stack: no own NavigationStack or Done.
     var embedded = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         if embedded {
@@ -23,7 +25,7 @@ struct HelpView: View {
     }
 
     private var content: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return List {
             Section {
                 Text("Dayrule keeps your lists encrypted on your devices. The server stores ciphertext only. These articles work offline.")
@@ -88,9 +90,11 @@ extension View {
 private struct SettingsPushedPage: ViewModifier {
     let title: String
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func body(content: Content) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         content
             .scrollContentBackground(.hidden)
             .background(colors.bg)

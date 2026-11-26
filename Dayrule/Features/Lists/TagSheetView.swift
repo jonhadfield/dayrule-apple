@@ -8,6 +8,8 @@ struct TagSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dayruleDenseLayout) private var denseLayout
     @State private var selected: Set<ID> = []
     @State private var initialSelected: Set<ID> = []
@@ -30,7 +32,7 @@ struct TagSheetView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let tags = model.entities.tags.values.sorted {
             Order.compareKeys($0.order, $1.order) < 0
         }
@@ -158,7 +160,7 @@ struct TagSheetView: View {
     }
 
     private func tagRow(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return Button(action: action) {
             HStack {
                 Text(title)

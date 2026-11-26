@@ -9,6 +9,8 @@ struct SettingsView: View {
     @Bindable var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var importError: String?
     @State private var importSummary: String?
     @State private var showImporter = false
@@ -45,7 +47,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: "Settings",
             dismissTitle: "Done",
@@ -603,11 +605,16 @@ private struct AppearanceChips: View {
                         .padding(.vertical, Tokens.Space.s)
                         .background(
                             RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
-                                .fill(selected ? colors.selectedRow : colors.sidebar.opacity(0.6))
+                                .fill(selected ? colors.selectedRow : colors.sidebarWash)
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
-                                .strokeBorder(selected ? colors.accent.opacity(0.45) : colors.hairline, lineWidth: 1)
+                                .strokeBorder(
+                                    selected
+                                        ? colors.accent.opacity(colors.increasedContrast ? 0.7 : 0.45)
+                                        : colors.hairline,
+                                    lineWidth: colors.increasedContrast ? 1.5 : 1
+                                )
                         )
                 }
                 .buttonStyle(.plain)
@@ -623,13 +630,15 @@ private struct DeleteAccountView: View {
     @Bindable var model: AppModel
     var onDeleted: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var password = ""
     @State private var confirm = ""
     @State private var busy = false
     @State private var error: String?
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         List {
             DayruleFormSection {
                 SecureField(

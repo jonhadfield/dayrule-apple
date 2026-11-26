@@ -281,10 +281,12 @@ private struct DayruleWindowRoot: View {
 /// toggles, pickers, carets and selection never fall back to system blue.
 private struct RootTint<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ViewBuilder var content: Content
 
     var body: some View {
-        content.tint(DayruleColors.resolve(colorScheme: colorScheme).accent)
+        content.tint(DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency).accent)
     }
 }
 

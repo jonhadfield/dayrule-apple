@@ -11,6 +11,8 @@ struct RecoveryPhraseView: View {
     var busy: Bool = false
     let onConfirmed: () -> Void
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var indexWidth: CGFloat = 28
     @State private var confirmed = false
@@ -25,7 +27,7 @@ struct RecoveryPhraseView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         GateScaffold { _ in
             Text("Recovery phrase")
                 .font(DayruleType.pageTitle)

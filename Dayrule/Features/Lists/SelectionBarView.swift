@@ -11,9 +11,11 @@ struct SelectionBarView: View {
     var onTrash: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         HStack(spacing: Tokens.Space.xs) {
             barButton("Cancel selection", systemImage: "xmark", colors: colors, action: onCancel)
             Text(count == 0 ? "Tap to-dos" : "\(count) selected")

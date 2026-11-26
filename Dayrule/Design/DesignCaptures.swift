@@ -7,8 +7,10 @@ import SwiftUI
 enum DesignCaptures {
     struct EditorCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             VStack(alignment: .leading, spacing: 0) {
                 Text("To-do")
                     .font(DayruleType.sheetTitle)
@@ -29,7 +31,7 @@ enum DesignCaptures {
                 }
                 .padding(Tokens.Space.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(colors.sidebar.opacity(0.4))
+                .background(colors.sidebarWash)
                 .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)
@@ -58,8 +60,10 @@ enum DesignCaptures {
 
     struct SidebarCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             let names: [(String, String, Bool)] = [
                 ("tray", "Inbox", true),
                 ("circle.circle", "Today", false),
@@ -104,8 +108,10 @@ enum DesignCaptures {
 
     struct MoveCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             VStack(alignment: .leading, spacing: 0) {
                 Text("Move")
                     .font(DayruleType.sheetTitle)
@@ -182,9 +188,11 @@ enum DesignCaptures {
 
     struct PaperAddCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         @ScaledMetric(relativeTo: .body) private var checkboxDiameter: CGFloat = 20
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             let disc = checkboxDiameter + 4
             let slot = max(Tokens.rowLeadingSlot, checkboxDiameter + 8)
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
@@ -230,8 +238,10 @@ enum DesignCaptures {
 
     struct TokensCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             let swatches: [(String, Color, String)] = [
                 ("paper", colors.bg, "#F7F3EC / #1B1814"),
                 ("sidebar", colors.sidebar, "#EFE8DC / #221E19"),
@@ -275,8 +285,10 @@ enum DesignCaptures {
 
     struct MenuCapture: View {
         @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
         var body: some View {
-            let colors = DayruleColors.resolve(colorScheme: colorScheme)
+            let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: Tokens.Space.l) {
                     Text("Dayrule").fontWeight(.semibold)
