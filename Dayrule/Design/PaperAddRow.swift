@@ -14,6 +14,8 @@ struct PaperAddRow: View {
     var onSubmit: () -> Void
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .body) private var checkboxDiameter: CGFloat = 20
     @FocusState private var ownFocus: Bool
 
@@ -43,7 +45,7 @@ struct PaperAddRow: View {
     private var hitInset: CGFloat { max(0, (Tokens.minHit - slot) / 2) }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         RuledRow(style: ruled ? .ruled : .note) {
             HStack(spacing: Tokens.rowGlyphSpacing) {
                 Button {

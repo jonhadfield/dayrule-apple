@@ -36,6 +36,8 @@ struct RuledRow<Content: View>: View {
     var content: () -> Content
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dayruleDenseLayout) private var denseLayout
 
     init(style: Style = .ruled, @ViewBuilder content: @escaping () -> Content) {
@@ -44,7 +46,7 @@ struct RuledRow<Content: View>: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         // Padding sits inside the min height, so a single-line row is exactly `rowHeight`.
         // Reading-column margin is applied outside the List on Mac (padding) /
         // via `contentMargins` on iOS — keep row insets at `rowInset` only.
@@ -119,9 +121,11 @@ struct DayruleNoteRow: View {
     var showsProgress: Bool = false
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         RuledRow(style: .ruled) {
             HStack(spacing: Tokens.Space.s) {
                 if showsProgress {
@@ -142,14 +146,18 @@ struct DayruleEmptyState: View {
     var accessibilityLabel: String
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @ScaledMetric(relativeTo: .largeTitle) private var glyphSize: CGFloat = 96
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         RuledRow(style: .note) {
             Image(systemName: systemImage)
                 .font(.system(size: glyphSize))
-                .foregroundStyle(colors.textSecondary.opacity(0.15))
+                .foregroundStyle(
+                    colors.textSecondary.opacity(colors.increasedContrast ? 0.28 : 0.15)
+                )
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Tokens.Space.xxl)
                 .accessibilityElement()

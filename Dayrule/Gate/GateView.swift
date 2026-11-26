@@ -3,6 +3,8 @@ import SwiftUI
 struct GateView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     /// Sign-in email stays in local `@State` (not `model.email`) so Password
     /// AutoFill writing the username does not rebuild this view via Observation
     /// and remount `SecureField` before the password is inserted (Mac Passwords).
@@ -50,7 +52,7 @@ struct GateView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         Group {
             switch model.phase {
             case .locked, .unlocking:

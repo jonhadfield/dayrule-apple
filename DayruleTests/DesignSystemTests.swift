@@ -64,16 +64,50 @@ struct DesignSystemTests {
         #expect(Tokens.rowHeightPhone == 42)
     }
 
-    @Test("text colours reach 4.5:1 on every background", arguments: [ColorScheme.light, .dark])
+    @Test(
+        "text colours reach 4.5:1 on every background",
+        arguments: [ColorScheme.light, .dark]
+    )
     func textContrast(scheme: ColorScheme) {
-        let c = DayruleColors.resolve(colorScheme: scheme)
+        assertTextContrast(scheme: scheme, contrast: .standard, reduceTransparency: false)
+    }
+
+    @Test(
+        "Increase Contrast text colours reach 4.5:1 on every background",
+        arguments: [ColorScheme.light, .dark]
+    )
+    func textContrastIncreased(scheme: ColorScheme) {
+        assertTextContrast(scheme: scheme, contrast: .increased, reduceTransparency: false)
+    }
+
+    @Test(
+        "Reduce Transparency washes keep text at 4.5:1",
+        arguments: [ColorScheme.light, .dark]
+    )
+    func textContrastReduceTransparency(scheme: ColorScheme) {
+        assertTextContrast(scheme: scheme, contrast: .standard, reduceTransparency: true)
+    }
+
+    private func assertTextContrast(
+        scheme: ColorScheme,
+        contrast contrastPref: ColorSchemeContrast,
+        reduceTransparency: Bool
+    ) {
+        let c = DayruleColors.resolve(
+            colorScheme: scheme,
+            contrast: contrastPref,
+            reduceTransparency: reduceTransparency
+        )
         let bg = RGB(c.bg)
-        // Paper, sidebar, a selected row (accent at 10%) and a pressed row (sidebar at 60%).
+        let pressedAlpha: Double = {
+            if reduceTransparency { return contrastPref == .increased ? 0.78 : 0.72 }
+            return contrastPref == .increased ? 0.68 : 0.6
+        }()
         let backgrounds: [(String, RGB)] = [
             ("bg", bg),
             ("sidebar", RGB(c.sidebar)),
-            ("selected", bg.under(RGB(c.accent), alpha: 0.10)),
-            ("pressed", bg.under(RGB(c.sidebar), alpha: 0.6)),
+            ("selected", bg.under(RGB(c.accent), alpha: c.selectedRowAlpha)),
+            ("pressed", bg.under(RGB(c.sidebar), alpha: pressedAlpha)),
         ]
         let text: [(String, Color)] = [
             ("text", c.text),
@@ -88,7 +122,10 @@ struct DesignSystemTests {
         for (name, fg) in text {
             for (where_, back) in backgrounds {
                 let ratio = contrast(RGB(fg), back)
-                #expect(ratio >= 4.5, "\(scheme) \(name) on \(where_): \(ratio)")
+                #expect(
+                    ratio >= 4.5,
+                    "\(scheme) contrast=\(contrastPref) reduceTransparency=\(reduceTransparency) \(name) on \(where_): \(ratio)"
+                )
             }
         }
     }
@@ -222,6 +259,20 @@ struct DesignSystemTests {
                 "2026-10-10", today: "2026-10-13", word: .late, calendar: cal
             ) == "3d late"
         )
+    }
+
+    // MARK: Accessibility focus restore
+
+    @Test("sheet dismiss restore applies after the teardown delay")
+    @MainActor
+    func a11yFocusRestoreAfterDismiss() async throws {
+        var applied = false
+        AccessibilityFocusRestore.afterDismiss { applied = true }
+        #expect(!applied)
+        try await Task.sleep(for: AccessibilityFocusRestore.dismissDelay / 2)
+        #expect(!applied)
+        try await Task.sleep(for: AccessibilityFocusRestore.dismissDelay)
+        #expect(applied)
     }
 
     // MARK: Completion linger

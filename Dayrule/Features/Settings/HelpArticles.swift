@@ -6,6 +6,8 @@ struct HelpArticleView: View {
     let topic: HelpTopic
     var embedded = false
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         if embedded {
@@ -24,7 +26,7 @@ struct HelpArticleView: View {
     }
 
     private var article: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return ScrollView {
             VStack(alignment: .leading, spacing: Tokens.Space.l) {
                 switch topic {
@@ -437,7 +439,7 @@ struct HelpArticleView: View {
             .foregroundStyle(colors.text)
             .padding(Tokens.Space.m)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(colors.sidebar.opacity(0.6))
+            .background(colors.sidebarWash)
             .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
             .overlay(alignment: .leading) {
                 colors.accent.frame(width: 3)
@@ -506,7 +508,7 @@ struct HelpArticleView: View {
             content()
                 .padding(Tokens.Space.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(colors.sidebar.opacity(0.4))
+                .background(colors.sidebarWash)
                 .clipShape(RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: Tokens.radiusCard, style: .continuous)

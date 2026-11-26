@@ -73,6 +73,8 @@ private enum PhoneTab: Hashable, CaseIterable {
 struct ListsBrowserView: View {
     @Bindable var model: AppModel
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selection: ListName? = .inbox
     /// Compact: Browse root; push for Backlog / Done / Trash / projects / areas.
@@ -143,7 +145,7 @@ struct ListsBrowserView: View {
     /// Phone vs split shell only (PLAN §6.2 / decision 48 dense on regular width).
     @ViewBuilder
     private var browserRoot: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         if isCompact {
             phoneBrowser(colors: colors)
         } else {
@@ -539,7 +541,9 @@ struct ListsBrowserView: View {
             }
         }
         .padding(.horizontal, Tokens.Space.xs)
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+        // No Dynamic Type ceiling — the auditor flags `dynamicTypeSize(...cap)` as
+        // “partially unsupported”. Labels stay one line with scale-down; Large
+        // Content Viewer covers AX sizes (decision 66 residual cleared).
         // Paint into the home-indicator inset so the empty band under the
         // labels is tab chrome, not orphaned page paper.
         .background(colors.sidebar.ignoresSafeArea(edges: .bottom))
@@ -1611,7 +1615,7 @@ struct ListsBrowserView: View {
     }
 
     private var vaultMissingRow: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         return RuledRow(style: .note) {
             VStack(alignment: .leading, spacing: Tokens.Space.m) {
                 Text(model.errorMessage ?? "Sign in again")
@@ -1636,6 +1640,8 @@ struct ListsBrowserView: View {
             Text("On this device only")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(colors.text)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
             Text("Changes stay here until you sign in with your password. \(model.biometryLabel) unlocks your lists but does not connect to the server.")
                 .font(.footnote)
                 .foregroundStyle(colors.textSecondary)

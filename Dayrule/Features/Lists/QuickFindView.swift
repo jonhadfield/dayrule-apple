@@ -6,6 +6,8 @@ struct QuickFindView: View {
     var onSelect: (Find.Result) -> Void
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var query = ""
     @State private var searchPresented = false
     @FocusState private var focused: Bool
@@ -16,7 +18,7 @@ struct QuickFindView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         // Cancel sits in .cancellationAction (Esc), so Return stays free to pick the top result.
         DayruleSheet(title: "Find", dismissTitle: "Cancel", dismissIdentifier: "find.close", size: .tall) {
             List {

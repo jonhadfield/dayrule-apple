@@ -81,9 +81,11 @@ struct NoticeBar: View {
     var center: NoticeCenter
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         ZStack {
             if let notice = center.current {
                 bar(notice, colors: colors)

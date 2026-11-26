@@ -5,11 +5,13 @@ import SwiftUI
 
 struct DayrulePrimaryButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.isEnabled) private var isEnabled
     @ScaledMetric(relativeTo: .headline) private var vPad: CGFloat = 14
 
     func makeBody(configuration: Configuration) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let shape = RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous)
         configuration.label
             .font(DayruleType.button)
@@ -31,11 +33,13 @@ struct DayrulePrimaryButtonStyle: ButtonStyle {
 
 struct DayruleSecondaryButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.isEnabled) private var isEnabled
     @ScaledMetric(relativeTo: .headline) private var vPad: CGFloat = 14
 
     func makeBody(configuration: Configuration) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let shape = RoundedRectangle(cornerRadius: Tokens.radiusPopover, style: .continuous)
         configuration.label
             .font(DayruleType.button)
@@ -69,11 +73,13 @@ struct DayruleStepButtonStyle: ButtonStyle {
 
 struct DayruleLinkButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.dayruleDenseLayout) private var denseLayout
 
     func makeBody(configuration: Configuration) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         configuration.label
             .font(DayruleType.link(dense: denseLayout))
             .foregroundStyle(isEnabled ? colors.accent : colors.textSecondary)
@@ -87,11 +93,13 @@ struct DayruleLinkButtonStyle: ButtonStyle {
 /// Destructive text button in the deadline ink. Callers keep `role: .destructive`.
 struct DayruleDestructiveButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.isEnabled) private var isEnabled
     @Environment(\.dayruleDenseLayout) private var denseLayout
 
     func makeBody(configuration: Configuration) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         configuration.label
             .font(DayruleType.link(dense: denseLayout))
             .foregroundStyle(isEnabled ? colors.deadline : colors.textSecondary)
@@ -105,9 +113,11 @@ struct DayruleDestructiveButtonStyle: ButtonStyle {
 /// Full-width tappable row; only the background reacts to a press, never the label tint.
 struct DayruleRowButtonStyle: ButtonStyle {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     func makeBody(configuration: Configuration) -> some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         configuration.label
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())

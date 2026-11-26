@@ -6,12 +6,14 @@ struct DeadlineSheetView: View {
     let ids: [ID]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var freeText = ""
     @State private var parseError: String?
     @State private var pickedDate = Date()
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: "Deadline",
             confirm: SheetAction(title: "Save", identifier: "deadline.useCalendar") {

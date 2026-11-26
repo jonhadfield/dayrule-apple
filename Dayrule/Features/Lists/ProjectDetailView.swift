@@ -9,6 +9,8 @@ struct ProjectDetailView: View {
     /// Owned by the list shell so Mac wake remount does not clear Add drafts.
     @Bindable var orgDrafts: OrgDetailDrafts
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.dismiss) private var dismiss
     #if os(iOS)
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -49,7 +51,7 @@ struct ProjectDetailView: View {
     }
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         let ctx = ctx
         let view = Lists.projectView(model.entities, projectId, ctx)
         let title = displayTitle(view?.project.title)

@@ -10,6 +10,8 @@ struct ReminderSheetView: View {
     let todoId: ID
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var colorSchemeContrast
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.openURL) private var openURL
 
     @State private var date = Date()
@@ -18,7 +20,7 @@ struct ReminderSheetView: View {
     @State private var turningOn = false
 
     var body: some View {
-        let colors = DayruleColors.resolve(colorScheme: colorScheme)
+        let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         DayruleSheet(
             title: "Reminder",
             confirm: SheetAction(title: "Remind me", identifier: "reminder.apply") { apply() },

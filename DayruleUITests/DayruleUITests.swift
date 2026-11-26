@@ -52,13 +52,76 @@ final class DayruleUITests: XCTestCase {
             Self.isPlatformOwned(issue, window: window, touchBarFrames: touchBarFrames)
         }
         #else
-        // PLAN decision 66: ignore Dynamic Type / text-clipped false positives
-        // from Fraunces + dense chrome until a dedicated large-text polish pass.
-        // Smoke still catches contrast, hit region, traits, etc.
+        // Residual decision 66: after accessibility-size row/title polish, phone-tab
+        // DT ceiling removal, and sync-label wrapping, Apple’s auditor still flags
+        // some paper chrome (Fraunces titles / toolbar glyphs / compact status) as
+        // Dynamic Type or text-clipped. Ignore only those two types so contrast,
+        // hit region, and traits still fail the build.
         try app.performAccessibilityAudit { issue in
             issue.auditType == .dynamicType || issue.auditType == .textClipped
         }
         #endif
+        #endif
+    }
+
+    /// When sheet dismisses without losing the triggering to-do (focus restore
+    /// wiring). VoiceOver `hasFocus` is not reliable in XCTest without VO on.
+    @MainActor
+    func testWhenSheetDismissKeepsTodoRow() throws {
+        #if !DEBUG
+        throw XCTSkip("DAYRULE_UI_TEST_UNLOCKED is Debug-only")
+        #else
+        let app = XCUIApplication()
+        app.launchEnvironment["DAYRULE_MEMORY_KEYCHAIN"] = "1"
+        app.launchEnvironment["DAYRULE_UI_TEST_UNLOCKED"] = "1"
+        app.launch()
+
+        let addField = app.textFields["list.addField"]
+        XCTAssertTrue(addField.waitForExistence(timeout: 30), "empty unlocked Inbox should appear")
+
+        let title = "When restore probe"
+        addField.tap()
+        addField.typeText(title)
+        let addBtn = app.buttons["list.addButton"]
+        XCTAssertTrue(addBtn.waitForExistence(timeout: 5))
+        if addBtn.isEnabled {
+            addBtn.tap()
+        } else {
+            addField.typeText("\n")
+        }
+
+        let row = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", title)
+        ).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "added to-do should appear")
+
+        row.press(forDuration: 1.0)
+        let whenAction = app.buttons["When…"].firstMatch
+        let whenMenu = app.menuItems["When…"].firstMatch
+        if whenAction.waitForExistence(timeout: 3) {
+            whenAction.tap()
+        } else if whenMenu.waitForExistence(timeout: 2) {
+            whenMenu.tap()
+        } else {
+            throw XCTSkip("context menu When… not exposed in this destination")
+        }
+
+        let cancel = app.buttons["when.cancel"].firstMatch
+        let cancelTitle = app.buttons["Cancel"].firstMatch
+        XCTAssertTrue(
+            cancel.waitForExistence(timeout: 5) || cancelTitle.waitForExistence(timeout: 5),
+            "When sheet should present"
+        )
+        if cancel.exists {
+            cancel.tap()
+        } else {
+            cancelTitle.tap()
+        }
+
+        XCTAssertTrue(
+            row.waitForExistence(timeout: 5),
+            "to-do row should remain after When dismiss (restore target)"
+        )
         #endif
     }
 
