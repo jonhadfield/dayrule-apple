@@ -60,8 +60,9 @@ struct DesignSystemTests {
     func denseRowMinHeight() {
         #expect(Tokens.rowMinHeight(dense: true) == Tokens.rowHeightDesktop)
         #expect(Tokens.rowMinHeight(dense: false) == Tokens.rowHeightPhone)
-        #expect(Tokens.rowHeightDesktop == 36)
-        #expect(Tokens.rowHeightPhone == 42)
+        #expect(Tokens.rowHeightDesktop == 30)
+        #expect(Tokens.rowHeightPhone == 28)
+        #expect(Tokens.rowVerticalPadding == 0)
     }
 
     @Test(

@@ -137,7 +137,7 @@ struct DayruleTodoRow: View {
                     .alignmentGuide(.firstTextBaseline) { d in
                         d[VerticalAlignment.center] + baselineDrop
                     }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     titleText(colors)
                     if let subtitle = model.subtitle {
                         subtitleText(subtitle, colors: colors)
