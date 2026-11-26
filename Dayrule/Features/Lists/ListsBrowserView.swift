@@ -764,8 +764,8 @@ struct ListsBrowserView: View {
             }
             .listStyle(.plain)
             .dayrulePaperList(macScrollFill: colors.bg)
-            // Dense 36 felt tight; +4pt between Browse links.
-            .environment(\.defaultMinListRowHeight, Tokens.rowHeightDesktop + Tokens.Space.xs)
+            // Browse links stay a touch taller than to-do rows.
+            .environment(\.defaultMinListRowHeight, Tokens.rowHeightPhone + Tokens.Space.xs)
             .scrollContentBackground(.hidden)
             .background(colors.bg)
             .modifier(SyncNeedsUpdateAnimationModifier(model: model))

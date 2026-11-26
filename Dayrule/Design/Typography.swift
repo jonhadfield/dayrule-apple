@@ -98,8 +98,8 @@ extension EnvironmentValues {
     }
 }
 
-/// Type roles (PLAN §6.2). Every role is Dynamic Type relative except dense
-/// row/link (fixed 15pt, matching web ≥900px).
+/// Type roles (PLAN §6.2). List row/link titles use 15pt (web desktop density)
+/// except at accessibility Dynamic Type sizes, which use scalable body.
 ///
 /// Glyphs inside meta text (bell, repeat, notes) use the same font as the text
 /// plus `.imageScale(.small)`, never a fixed point size.
@@ -110,15 +110,9 @@ enum DayruleType {
     static var sectionSerif: Font { DayruleFont.serif(.headline) }
 
     static let sectionHeader: Font = .footnote.weight(.semibold)
-    /// Prefer `View.dayruleRowTitle()` so iPad regular width picks dense 15pt.
-    /// Static value is the phone / non-dense default (Mac: always 15pt).
-    #if os(macOS)
+    /// Prefer `View.dayruleRowTitle()`. Static default is the 15pt list size.
     static let rowTitle: Font = .system(size: 15)
     static let link: Font = .system(size: 15)
-    #else
-    static let rowTitle: Font = .body
-    static let link: Font = .body
-    #endif
     static let meta: Font = .footnote
     static let helper: Font = .footnote
     static let error: Font = .footnote
@@ -129,16 +123,13 @@ enum DayruleType {
     /// Tightened tracking for brand and page titles.
     static let titleTracking: CGFloat = -0.5
 
-    /// Phone compact: Dynamic Type body. Dense (Mac / iPad regular): 15pt,
-    /// except accessibility text sizes which always use scalable body.
+    /// List titles: 15pt for default sizes (phone + dense); body when the
+    /// system accessibility text size is on. `dense` is kept for call-site
+    /// clarity; both layouts share the same list size now.
     static func rowTitle(dense: Bool, accessibilitySize: Bool = false) -> Font {
-        if accessibilitySize { return Font.body }
-        #if os(macOS)
         _ = dense
+        if accessibilitySize { return Font.body }
         return Font.system(size: 15)
-        #else
-        return dense ? Font.system(size: 15) : Font.body
-        #endif
     }
 
     static func link(dense: Bool, accessibilitySize: Bool = false) -> Font {

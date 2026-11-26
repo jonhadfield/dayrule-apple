@@ -51,8 +51,7 @@ struct RuledRow<Content: View>: View {
         // Reading-column margin is applied outside the List on Mac (padding) /
         // via `contentMargins` on iOS — keep row insets at `rowInset` only.
         content()
-            // A few points tighter to the paper hairlines (was `Space.xs`).
-            .padding(.vertical, Tokens.Space.xxs)
+            .padding(.vertical, Tokens.rowVerticalPadding)
             .frame(
                 maxWidth: .infinity,
                 minHeight: Tokens.rowMinHeight(dense: denseLayout),
@@ -104,9 +103,13 @@ extension View {
 
 private struct DayrulePaperListModifier: ViewModifier {
     var macScrollFill: Color?
+    @Environment(\.dayruleDenseLayout) private var denseLayout
 
     func body(content: Content) -> some View {
+        // iOS List defaults to ~44pt min rows; without this, RuledRow’s shorter
+        // minHeight still looks airy (empty space above/below the title).
         content
+            .environment(\.defaultMinListRowHeight, Tokens.rowMinHeight(dense: denseLayout))
             .listSectionSeparator(.hidden)
             .listRowSeparator(.hidden)
             #if os(macOS)
