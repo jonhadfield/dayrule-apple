@@ -21,11 +21,10 @@ TestFlight upload (after the iPhone critical path).
 The 0.1.x Mac App Store release already cleared review. Use this list for
 the **next** Mac submission (keep iOS and Mac on the same
 `MARKETING_VERSION` / a `CURRENT_PROJECT_VERSION` at least as new as the
-iPhone build you care about). **0.1.3 (32)** (wake remount + Mac Gate
-Passwords AutoFill) was archived, uploaded, and **submitted for review**
-2026-11-21 with iOS. (**0.1.2** train is closed / approved.) Next cut:
-**0.1.4 (33)** — Today deadline “overdue” vs When “late” chips + `SHARED.lock`
-refresh.
+iPhone build you care about). **0.1.4** Mac build **35** is in review with
+iOS build **37** Ready for Distribution (2026-11-27). (**0.1.3** / earlier
+trains are closed / approved.) Next cut: **0.1.5** from build **38+** —
+list type / PrivacyCover (`#32`) and later main polish.
 
 1. **Archive + upload** the next Mac build when cutting again. Organizer:
    **Distribute App → App Store Connect**. The local keychain may only have

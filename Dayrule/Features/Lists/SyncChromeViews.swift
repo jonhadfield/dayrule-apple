@@ -26,7 +26,7 @@ struct SyncNeedsUpdateBanner: View {
     var body: some View {
         if model.syncStatus == .needsUpdate {
             Text("\(Image(systemName: "exclamationmark.circle.fill")) \(model.syncStatus.label)")
-                .font(DayruleType.meta)
+                .dayruleMeta()
                 .foregroundStyle(colors.deadline)
                 .padding(.vertical, 6)
                 .transition(.dayruleBanner)

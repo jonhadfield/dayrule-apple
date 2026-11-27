@@ -1578,7 +1578,7 @@ struct ListsBrowserView: View {
             }
             if let secondary = header.secondary {
                 Text(secondary)
-                    .font(DayruleType.meta)
+                    .dayruleMeta()
                     .foregroundStyle(colors.textSecondary)
             }
             Spacer(minLength: 0)

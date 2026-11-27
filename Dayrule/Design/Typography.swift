@@ -99,7 +99,8 @@ extension EnvironmentValues {
 }
 
 /// Type roles (PLAN §6.2). List row/link titles use 16pt except at
-/// accessibility Dynamic Type sizes, which use scalable body.
+/// accessibility Dynamic Type sizes, which use scalable body. Fixed-size roles
+/// also honour system Bold Text via `legibilityWeight` in the view modifiers.
 ///
 /// Glyphs inside meta text (bell, repeat, notes) use the same font as the text
 /// plus `.imageScale(.small)`, never a fixed point size.
@@ -114,6 +115,7 @@ enum DayruleType {
     static let rowTitle: Font = .system(size: 16)
     static let link: Font = .system(size: 16)
     /// Chip / subtitle / overdue (“1d overdue”) — 14pt (was footnote ≈13).
+    /// Prefer `View.dayruleMeta()` so Bold Text is applied.
     static let meta: Font = .system(size: 14)
     static let helper: Font = .footnote
     static let error: Font = .footnote
@@ -136,11 +138,23 @@ enum DayruleType {
     static func link(dense: Bool, accessibilitySize: Bool = false) -> Font {
         rowTitle(dense: dense, accessibilitySize: accessibilitySize)
     }
+
+    /// Meta / chip size; `bold` mirrors system Bold Text.
+    static func meta(bold: Bool = false) -> Font {
+        Font.system(size: 14).weight(bold ? .bold : .regular)
+    }
+
+    /// Resolved weight when the caller passes an optional role weight and Bold Text is on.
+    static func resolvedWeight(_ preferred: Font.Weight?, boldText: Bool) -> Font.Weight? {
+        if boldText { return .bold }
+        return preferred
+    }
 }
 
 private struct DayruleRowTitleModifier: ViewModifier {
     @Environment(\.dayruleDenseLayout) private var dense
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.legibilityWeight) private var legibilityWeight
     var weight: Font.Weight?
 
     func body(content: Content) -> some View {
@@ -148,26 +162,48 @@ private struct DayruleRowTitleModifier: ViewModifier {
             dense: dense,
             accessibilitySize: dynamicTypeSize.isAccessibilitySize
         )
-        content.font(weight.map { base.weight($0) } ?? base)
+        let resolved = DayruleType.resolvedWeight(
+            weight,
+            boldText: legibilityWeight == .bold
+        )
+        content.font(resolved.map { base.weight($0) } ?? base)
     }
 }
 
 private struct DayruleLinkModifier: ViewModifier {
     @Environment(\.dayruleDenseLayout) private var dense
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.legibilityWeight) private var legibilityWeight
 
     func body(content: Content) -> some View {
+        let base = DayruleType.link(
+            dense: dense,
+            accessibilitySize: dynamicTypeSize.isAccessibilitySize
+        )
         content.font(
-            DayruleType.link(
-                dense: dense,
-                accessibilitySize: dynamicTypeSize.isAccessibilitySize
-            )
+            legibilityWeight == .bold ? base.weight(.bold) : base
         )
     }
 }
 
+private struct DayruleMetaModifier: ViewModifier {
+    @Environment(\.legibilityWeight) private var legibilityWeight
+    var weight: Font.Weight?
+
+    func body(content: Content) -> some View {
+        if legibilityWeight == .bold {
+            content.font(DayruleType.meta(bold: true))
+        } else if let weight {
+            content.font(Font.system(size: 14).weight(weight))
+        } else {
+            content.font(DayruleType.meta(bold: false))
+        }
+    }
+}
+
 extension View {
-    /// Row title that follows `dayruleDenseLayout` (16pt default / body at AX).
+    /// Row title that follows `dayruleDenseLayout` (16pt default / body at AX)
+    /// and system Bold Text.
     func dayruleRowTitle(_ weight: Font.Weight? = nil) -> some View {
         modifier(DayruleRowTitleModifier(weight: weight))
     }
@@ -175,17 +211,26 @@ extension View {
     func dayruleLink() -> some View {
         modifier(DayruleLinkModifier())
     }
+
+    /// Meta / chip / overdue type (14pt) that follows system Bold Text.
+    func dayruleMeta(_ weight: Font.Weight? = nil) -> some View {
+        modifier(DayruleMetaModifier(weight: weight))
+    }
 }
 
 /// Default `Text` / control font for dense chrome (Mac DayruleApp parity).
 /// Accessibility Dynamic Type sizes keep the system body scale instead of 15pt.
+/// Honours system Bold Text when pinning the dense size.
 struct DayruleDenseBodyFont: ViewModifier {
     var dense: Bool
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(\.legibilityWeight) private var legibilityWeight
 
     func body(content: Content) -> some View {
         if dense, !dynamicTypeSize.isAccessibilitySize {
-            content.environment(\.font, Font.system(size: 15))
+            let font = Font.system(size: 15)
+                .weight(legibilityWeight == .bold ? .bold : .regular)
+            content.environment(\.font, font)
         } else {
             content
         }
