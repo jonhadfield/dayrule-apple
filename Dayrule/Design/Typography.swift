@@ -98,8 +98,8 @@ extension EnvironmentValues {
     }
 }
 
-/// Type roles (PLAN §6.2). List row/link titles use 15pt (web desktop density)
-/// except at accessibility Dynamic Type sizes, which use scalable body.
+/// Type roles (PLAN §6.2). List row/link titles use 16pt except at
+/// accessibility Dynamic Type sizes, which use scalable body.
 ///
 /// Glyphs inside meta text (bell, repeat, notes) use the same font as the text
 /// plus `.imageScale(.small)`, never a fixed point size.
@@ -110,10 +110,11 @@ enum DayruleType {
     static var sectionSerif: Font { DayruleFont.serif(.headline) }
 
     static let sectionHeader: Font = .footnote.weight(.semibold)
-    /// Prefer `View.dayruleRowTitle()`. Static default is the 15pt list size.
-    static let rowTitle: Font = .system(size: 15)
-    static let link: Font = .system(size: 15)
-    static let meta: Font = .footnote
+    /// Prefer `View.dayruleRowTitle()`. Static default is the list item size.
+    static let rowTitle: Font = .system(size: 16)
+    static let link: Font = .system(size: 16)
+    /// Chip / subtitle / overdue (“1d overdue”) — 14pt (was footnote ≈13).
+    static let meta: Font = .system(size: 14)
     static let helper: Font = .footnote
     static let error: Font = .footnote
     static let button: Font = .headline
@@ -123,13 +124,13 @@ enum DayruleType {
     /// Tightened tracking for brand and page titles.
     static let titleTracking: CGFloat = -0.5
 
-    /// List titles: 15pt for default sizes (phone + dense); body when the
+    /// List item titles: 16pt for default sizes (phone + dense); body when the
     /// system accessibility text size is on. `dense` is kept for call-site
     /// clarity; both layouts share the same list size now.
     static func rowTitle(dense: Bool, accessibilitySize: Bool = false) -> Font {
         _ = dense
         if accessibilitySize { return Font.body }
-        return Font.system(size: 15)
+        return Font.system(size: 16)
     }
 
     static func link(dense: Bool, accessibilitySize: Bool = false) -> Font {
@@ -166,7 +167,7 @@ private struct DayruleLinkModifier: ViewModifier {
 }
 
 extension View {
-    /// Row title that follows `dayruleDenseLayout` (15pt dense / body phone).
+    /// Row title that follows `dayruleDenseLayout` (16pt default / body at AX).
     func dayruleRowTitle(_ weight: Font.Weight? = nil) -> some View {
         modifier(DayruleRowTitleModifier(weight: weight))
     }

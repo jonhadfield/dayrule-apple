@@ -124,7 +124,7 @@ struct DayruleTodoRow: View {
     /// Distance from the checkbox centre down to the first line's baseline.
     @ScaledMetric(relativeTo: .body) private var baselineDrop: CGFloat = 5
 
-    private var leadingSlot: CGFloat { max(Tokens.rowLeadingSlot, checkboxDiameter + 8) }
+    private var leadingSlot: CGFloat { max(Tokens.rowLeadingSlot, checkboxDiameter + 4) }
     private var isClosed: Bool { model.status.map { $0 != .open } ?? false }
     private var todoFocus: DayruleA11yFocus { .todo(model.id) }
 

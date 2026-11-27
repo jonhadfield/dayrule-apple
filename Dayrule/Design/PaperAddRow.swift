@@ -41,7 +41,8 @@ struct PaperAddRow: View {
 
     private var focusBinding: FocusState<Bool>.Binding { focus ?? $ownFocus }
     private var disc: CGFloat { checkboxDiameter + 4 }
-    private var slot: CGFloat { max(Tokens.rowLeadingSlot, checkboxDiameter + 8) }
+    /// Match to-do checkbox column; hit target still expands to `minHit`.
+    private var slot: CGFloat { max(Tokens.rowLeadingSlot, checkboxDiameter + 4) }
     private var hitInset: CGFloat { max(0, (Tokens.minHit - slot) / 2) }
 
     var body: some View {
@@ -93,6 +94,9 @@ struct PaperAddRow: View {
                     .accessibilityIdentifier(fieldIdentifier)
                     .onSubmit(submitFromField)
             }
+            // Add stays roomier than dense to-do rows so the plus disc isn’t
+            // tight to the shelf / hairline (list rows use 0 vertical pad).
+            .padding(.vertical, Tokens.Space.s)
         }
         #if os(iOS)
         // Phone hides the tab bar while the keyboard is up (§6.5); Done is how

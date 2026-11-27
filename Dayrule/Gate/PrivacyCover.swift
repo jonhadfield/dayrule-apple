@@ -16,21 +16,25 @@ struct PrivacyCover: View {
         let colors = DayruleColors.resolve(colorScheme: colorScheme, contrast: colorSchemeContrast, reduceTransparency: reduceTransparency)
         ZStack {
             colors.bg.ignoresSafeArea()
-            Text("Dayrule")
-                .font(DayruleType.brand)
-                .tracking(DayruleType.titleTracking)
-                .foregroundStyle(colors.text)
-                // Below the brand without moving it, so both covers match.
-                .overlay(alignment: .bottom) {
-                    if showsProgress {
-                        ProgressView()
-                            .tint(colors.textSecondary)
-                            .opacity(progressVisible ? 1 : 0)
-                            .alignmentGuide(.bottom) { d in d[.top] - Tokens.Space.l }
-                            .accessibilityLabel("Opening")
-                            .accessibilityHidden(!progressVisible)
-                    }
+            // Full-width centred column — the old overlay + alignmentGuide put the
+            // spinner on the wordmark and let Fraunces look shifted.
+            VStack(spacing: Tokens.Space.l) {
+                Text("Dayrule")
+                    .font(DayruleType.brand)
+                    .tracking(DayruleType.titleTracking)
+                    .foregroundStyle(colors.text)
+                    .multilineTextAlignment(.center)
+                if showsProgress {
+                    // Reserved even while invisible so the brand doesn’t jump
+                    // when the spinner fades in after the delay.
+                    ProgressView()
+                        .tint(colors.textSecondary)
+                        .opacity(progressVisible ? 1 : 0)
+                        .accessibilityLabel("Opening")
+                        .accessibilityHidden(!progressVisible)
                 }
+            }
+            .frame(maxWidth: .infinity)
         }
         .task(id: showsProgress) {
             guard showsProgress else { return }

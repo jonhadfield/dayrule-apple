@@ -25,7 +25,7 @@ struct DayruleCheckbox: View {
         _tickProgress = State(initialValue: status == .completed ? 1 : 0)
     }
 
-    private var slot: CGFloat { max(Tokens.rowLeadingSlot, diameter + 8) }
+    private var slot: CGFloat { max(Tokens.rowLeadingSlot, diameter + 4) }
     private var hitInset: CGFloat { max(0, (Tokens.minHit - slot) / 2) }
 
     var body: some View {

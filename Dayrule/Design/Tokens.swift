@@ -38,7 +38,8 @@ enum Tokens {
     /// Phone to-do rows — hug the paper hairlines for more visible items.
     /// Pair with `defaultMinListRowHeight` on `dayrulePaperList` or iOS List
     /// still pads toward ~44. Accessibility Dynamic Type still grows the row.
-    static let rowHeightPhone: CGFloat = 28
+    /// Keep in sync with `rowLeadingSlot` (checkbox column layout height).
+    static let rowHeightPhone: CGFloat = 24
     /// Vertical inset inside a ruled row (inside `rowMinHeight`).
     static let rowVerticalPadding: CGFloat = 0
 
@@ -88,10 +89,11 @@ enum Tokens {
     #endif
     /// Checkbox-to-title gap; a touch tighter so more title fits on phone.
     static let rowGlyphSpacing: CGFloat = 8
-    static let rowLeadingSlot: CGFloat = 28
-    /// Web desktop / Mac / iPad regular — slightly under the old 36 so ink
-    /// sits closer to hairlines once List min-height is overridden.
-    static let rowHeightDesktop: CGFloat = 30
+    /// Leading mark column — was 28; tightened so the checkbox no longer
+    /// forces ~2pt of air above/below a single-line title.
+    static let rowLeadingSlot: CGFloat = 24
+    /// Web desktop / Mac / iPad regular — matches the phone tighten.
+    static let rowHeightDesktop: CGFloat = 26
     /// Prefer `rowMinHeight(dense:)` / `RuledRow` (reads `dayruleDenseLayout`).
     /// Static default is phone on iOS so compact call sites stay correct.
     #if os(macOS)
