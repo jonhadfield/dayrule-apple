@@ -56,6 +56,18 @@ extension SyncStatus {
         case .blocked, .needsUpdate: .deadline
         }
     }
+
+    /// Compact chrome glyph — shape differs by state so colour is not the only cue
+    /// (sidebar sync indicator). Spinner replaces this while `.syncing` after delay.
+    var compactSymbol: String {
+        switch self {
+        case .synced: "checkmark.circle.fill"
+        case .syncing: "arrow.triangle.2.circlepath"
+        case .idle: "circle"
+        case .offline: "icloud.slash"
+        case .blocked, .needsUpdate: "exclamationmark.circle.fill"
+        }
+    }
 }
 
 /// Dot + short label for sync state. The spinner only appears after 600ms of syncing,
@@ -69,6 +81,7 @@ struct SyncStatusView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.colorSchemeContrast) private var colorSchemeContrast
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @Environment(\.legibilityWeight) private var legibilityWeight
     @State private var showSpinner = false
 
     var body: some View {
@@ -78,14 +91,18 @@ struct SyncStatusView: View {
                 if showSpinner, status == .syncing {
                     ProgressView().controlSize(.mini)
                 } else {
-                    Circle()
-                        .fill(toneColor(colors))
-                        .frame(width: 8, height: 8)
+                    // Shape + colour: compact used to be an 8pt tinted dot only.
+                    Image(systemName: status.compactSymbol)
+                        .font(.system(size: compact ? 12 : 8))
+                        .foregroundStyle(toneColor(colors))
+                        .symbolRenderingMode(.hierarchical)
                 }
             }
+            .frame(width: compact ? 14 : 10, height: compact ? 14 : 10)
             if !compact {
                 Text(needsServerSignIn ? "On this device only" : status.shortLabel)
                     .font(.footnote)
+                    .fontWeight(legibilityWeight == .bold ? .bold : .regular)
                     .foregroundStyle(colors.textSecondary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.85)
@@ -102,9 +119,9 @@ struct SyncStatusView: View {
             guard !Task.isCancelled else { return }
             showSpinner = true
         }
-        // Compact Mac sidebar is colour-only. SwiftUI `.help` on a non-control in
-        // a `safeAreaInset` often never shows — use a plain Button (hover target)
-        // plus an AppKit `toolTip` backing view.
+        // Compact Mac sidebar: glyph + tooltip (not colour alone). SwiftUI `.help`
+        // on a non-control in a `safeAreaInset` often never shows — use a plain
+        // Button (hover target) plus an AppKit `toolTip` backing view.
         if compact {
             let tip = needsServerSignIn ? "On this device only" : status.label
             Button {} label: {

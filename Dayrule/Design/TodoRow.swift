@@ -144,7 +144,7 @@ struct DayruleTodoRow: View {
                     }
                     if let checklist = model.checklist {
                         Text("\(checklist.done) of \(checklist.total)")
-                            .font(DayruleType.meta)
+                            .dayruleMeta()
                             .monospacedDigit()
                             .foregroundStyle(colors.textSecondary)
                             .contentTransition(.numericText(value: Double(checklist.done)))
@@ -228,11 +228,11 @@ struct DayruleTodoRow: View {
     private func subtitleText(_ subtitle: String, colors: DayruleColors) -> some View {
         if model.subtitleIsOverdue {
             Text("\(Image(systemName: "exclamationmark.circle.fill")) \(subtitle)")
-                .font(DayruleType.meta)
+                .dayruleMeta()
                 .foregroundStyle(colors.deadline)
         } else {
             Text(subtitle)
-                .font(DayruleType.meta)
+                .dayruleMeta()
                 .foregroundStyle(colors.textSecondary)
         }
     }
@@ -243,12 +243,13 @@ struct DayruleTodoRow: View {
         let chipHitInset = max(0, (Tokens.minHit - 28) / 2)
         return Button(action: { onChip?() }) {
             // Explicit icon + text: a `Label` in a row button can collapse to its icon.
+            // Icon + label already differ overdue (exclamation) vs late (clock) without colour.
             HStack(spacing: Tokens.Space.xs) {
                 Image(systemName: chip.systemImage)
                     .imageScale(.small)
                 Text(chip.label)
             }
-            .font(DayruleType.meta)
+            .dayruleMeta()
             .foregroundStyle(chip.isOverdue ? colors.deadline : colors.textSecondary)
             .lineLimit(1)
             .fixedSize()

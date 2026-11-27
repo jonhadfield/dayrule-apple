@@ -55,16 +55,19 @@ matrix.
   phone tabs, selection bar
 - [x] Static text contrast ≥4.5:1 on paper surfaces light/dark —
   `DesignSystemTests`
-- [x] Dynamic Type: dense fixed 15pt yields to `.body` at accessibility sizes;
+- [x] Dynamic Type: dense fixed 16pt yields to `.body` at accessibility sizes;
   page title stacks / scales; phone-tab DT ceiling removed; sync status wraps.
   Unlocked Inbox audit still ignores residual `.dynamicType` / `.textClipped`
   on Fraunces / toolbar chrome (decision 66 residual — not a forever skip of
   large-text care)
 - [x] Increase Contrast / Reduce Transparency in `DayruleColors.resolve` (+
   washes / selection / hairlines / secondary ink; unit contrast coverage)
-- [ ] Bold Text (`legibilityWeight`) adaptation still open
-- [ ] Differentiate-without-color review for compact sync dot and colour-led
-  chips (icons+text already help overdue/late)
+- [x] Bold Text (`legibilityWeight`) on row titles, links, meta/chips, dense
+  body, and sync short-label — `dayruleRowTitle` / `dayruleMeta` /
+  `DayruleDenseBodyFont` (+ unit weight helper)
+- [x] Compact sync uses distinct SF Symbols per state (not colour-only dot);
+  overdue/late chips keep icon + text (`exclamationmark` vs clock) —
+  `SyncStatus.compactSymbol` / `DayruleTodoRow`
 
 ## Automation
 
@@ -94,8 +97,8 @@ focus-restore delay unit test; When dismiss UITest; unlocked Inbox a11y audit
 without decision 66 filters.
 
 Still manual on device: VO focus after dismiss, Voice Control Show Names/
-Numbers, paper scroller VO scroll %, focus-trap/escape, Bold Text, FKA /
-Switch Control.
+Numbers, paper scroller VO scroll %, focus-trap/escape, FKA / Switch Control.
+Spot-check Bold Text + compact sync glyphs on device when convenient.
 
 ## Open follow-ups (from 2026-11-25 review)
 
@@ -104,4 +107,5 @@ Switch Control.
 3. ~~`accessibilityInputLabels` on row actions + chrome.~~
 4. ~~Wire Increase Contrast / Reduce Transparency into paper chrome.~~
 5. Manual VoiceOver pass to confirm restore after dismiss on iPhone + Mac.
-6. Bold Text / differentiate-without-color / scroller VO / Show Names matrix.
+6. ~~Bold Text / differentiate-without-color (compact sync + chips).~~
+7. Scroller VO / Show Names / FKA matrix (manual).

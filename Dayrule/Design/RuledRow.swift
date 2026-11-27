@@ -135,7 +135,7 @@ struct DayruleNoteRow: View {
                     ProgressView().controlSize(.small)
                 }
                 Text(text)
-                    .font(DayruleType.meta)
+                    .dayruleMeta()
                     .foregroundStyle(colors.textSecondary)
             }
             .accessibilityElement(children: .combine)

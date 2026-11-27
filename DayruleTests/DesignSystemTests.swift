@@ -66,6 +66,32 @@ struct DesignSystemTests {
         #expect(Tokens.rowVerticalPadding == 0)
     }
 
+    @Test("Bold Text resolves preferred weight to bold")
+    func boldTextResolvedWeight() {
+        #expect(DayruleType.resolvedWeight(nil, boldText: true) == .bold)
+        #expect(DayruleType.resolvedWeight(.semibold, boldText: true) == .bold)
+        #expect(DayruleType.resolvedWeight(.semibold, boldText: false) == .semibold)
+        #expect(DayruleType.resolvedWeight(nil, boldText: false) == nil)
+    }
+
+    @Test("compact sync glyphs differ by state (not colour alone)")
+    func compactSyncSymbolsDiffer() {
+        let symbols = [
+            SyncStatus.synced.compactSymbol,
+            SyncStatus.idle.compactSymbol,
+            SyncStatus.syncing.compactSymbol,
+            SyncStatus.offline("").compactSymbol,
+            SyncStatus.blocked("").compactSymbol,
+            SyncStatus.needsUpdate.compactSymbol,
+        ]
+        #expect(Set(symbols).count >= 5)
+        #expect(SyncStatus.synced.compactSymbol == "checkmark.circle.fill")
+        #expect(SyncStatus.idle.compactSymbol == "circle")
+        #expect(SyncStatus.offline("").compactSymbol == "icloud.slash")
+        #expect(SyncStatus.needsUpdate.compactSymbol == "exclamationmark.circle.fill")
+        #expect(SyncStatus.blocked("").compactSymbol == SyncStatus.needsUpdate.compactSymbol)
+    }
+
     @Test(
         "text colours reach 4.5:1 on every background",
         arguments: [ColorScheme.light, .dark]
