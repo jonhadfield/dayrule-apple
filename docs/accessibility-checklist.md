@@ -21,8 +21,10 @@ matrix.
 - [x] `accessibilityInputLabels` on awkward spoken names (`When…`, chrome,
   selection bar, Add, sheet confirm) for Voice Control — `RowAction` /
   `SheetAction` defaults + toolbar / selection bar
-- [ ] Custom Mac paper scrollers verified with VoiceOver scroll
-  percentage / actions (`DayrulePaperScroller`) — needs device/VO session
+- [x] Custom Mac paper scrollers keep scroll-bar AX role after custom draw
+  (`DayrulePaperScroller.isAccessibilityElement` / `accessibilityRole` +
+  `DesignSystemTests.paperScrollerKeepsScrollBarRole`). Live VoiceOver scroll
+  % / rotor actions still worth a spot-check on device.
 
 ## Navigation and focus
 
@@ -33,8 +35,10 @@ matrix.
   control on dismiss — `AccessibilityFocusRestore` + `DayruleA11yFocus`
 - [x] Project / area todo sheets + heading / move-project restore to the row or
   detail-actions control; New List popover restores to the New List control
-- [ ] No focus trap in custom overlays; escape dismisses where modal —
-  needs manual AT pass
+- [x] Sheet Escape / Cancel dismiss without a focus trap — `DayruleSheet`
+  Cancel + `.keyboardShortcut(.cancelAction)`; Mac also `.onExitCommand`
+  (dirty → discard dialog). iOS: Cancel / interactive dismiss. Mac UITest
+  `testWhenSheetDismissesWithEscape` (local; CI skips UITests)
 
 ## Input (Voice Control / Switch Control / keyboard)
 
@@ -43,9 +47,9 @@ matrix.
 - [x] Mac menu commands cover New To-Do / Project / Area, Lock, Find, Settings,
   Help, Undo
 - [ ] Voice Control “Show Names” / “Show Numbers” pass on Gate, Today, When
-  sheet, Settings (manual)
+  sheet, Settings (manual device — not automatable here)
 - [ ] Full Keyboard Access / Switch Control scan pass on the same tasks
-  (manual)
+  (manual device — not automatable here)
 
 ## Adaptation
 
@@ -77,12 +81,16 @@ matrix.
 - [x] Unit: `AccessibilityFocusRestore.afterDismiss` delay — `DesignSystemTests`
 - [x] UITest: When sheet present/dismiss keeps to-do row —
   `testWhenSheetDismissKeepsTodoRow` (VO `hasFocus` not asserted in CI)
+- [x] UITest: Escape dismisses When sheet —
+  `testWhenSheetDismissesWithEscape`
+- [x] Unit: paper scroller keeps `.scrollBar` role —
+  `paperScrollerKeepsScrollBarRole` (macOS)
 
 ## Nutrition-label readiness (do not claim without matrix)
 
 | Label | Lean | Blocker |
 | --- | --- | --- |
-| VoiceOver | Lean | Manual task matrix + scroller / trap check |
+| VoiceOver | Lean | Live VO task matrix (restore + scroller %) still open |
 | Dark Interface | Likely | Manual common-task pass |
 | Reduced Motion | Likely | Manual common-task pass |
 | Sufficient Contrast | Lean | Manual Increased Contrast / Reduce Transparency pass |
@@ -90,15 +98,25 @@ matrix.
 | Voice Control | Lean | Manual Show Names/Numbers still open |
 | Captions / Audio Descriptions | N/A | No AV content |
 
-## Evidence notes (2026-11-26)
+## Evidence notes (2026-11-28)
 
-Automated: contrast unit tests (standard + increased + reduce transparency);
-focus-restore delay unit test; When dismiss UITest; unlocked Inbox a11y audit
-without decision 66 filters.
+Automated: contrast unit tests; focus-restore delay; When dismiss + Escape
+UITests; paper scroller AX role unit test; unlocked Inbox a11y audit
+(residual DT / text-clipped filter only); Bold Text weight helper + compact
+sync symbol tests (`#33`).
 
-Still manual on device: VO focus after dismiss, Voice Control Show Names/
-Numbers, paper scroller VO scroll %, focus-trap/escape, FKA / Switch Control.
-Spot-check Bold Text + compact sync glyphs on device when convenient.
+Still manual on device: live VoiceOver restore + scroller %, Voice Control
+Show Names/Numbers, Full Keyboard Access / Switch Control common-task scan.
+
+### Device script (remaining)
+
+1. **VoiceOver (iPhone + Mac):** unlock → Today → open When on a row → dismiss;
+   confirm focus returns to the row. Mac: VO interact with list scroll bar;
+   confirm percentage / scroll actions.
+2. **Voice Control:** Show Names / Show Numbers on Gate, Today, When sheet,
+   Settings — every control reachable; awkward names covered by input labels.
+3. **Full Keyboard Access / Switch Control:** same tasks; no trap; Escape /
+   Cancel exits sheets.
 
 ## Open follow-ups (from 2026-11-25 review)
 
@@ -108,4 +126,5 @@ Spot-check Bold Text + compact sync glyphs on device when convenient.
 4. ~~Wire Increase Contrast / Reduce Transparency into paper chrome.~~
 5. Manual VoiceOver pass to confirm restore after dismiss on iPhone + Mac.
 6. ~~Bold Text / differentiate-without-color (compact sync + chips).~~
-7. Scroller VO / Show Names / FKA matrix (manual).
+7. ~~Paper scroller AX role + Escape dismiss (automated).~~
+8. Show Names / FKA / Switch + live VO scroller % (manual device script above).

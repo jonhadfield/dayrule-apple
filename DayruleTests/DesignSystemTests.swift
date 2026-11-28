@@ -303,6 +303,22 @@ struct DesignSystemTests {
         #expect(applied)
     }
 
+    #if os(macOS)
+    @Test("paper scroller keeps scroll-bar accessibility role after custom draw")
+    @MainActor
+    func paperScrollerKeepsScrollBarRole() {
+        let scroller = DayrulePaperScroller(
+            frame: NSRect(x: 0, y: 0, width: 15, height: 120)
+        )
+        #expect(scroller.isAccessibilityElement())
+        #expect(scroller.accessibilityRole() == .scrollBar)
+        // AppKit still owns value % / increment; custom draw must not clear the role.
+        scroller.doubleValue = 0.25
+        scroller.knobProportion = 0.2
+        #expect(scroller.doubleValue == 0.25)
+    }
+    #endif
+
     // MARK: Completion linger
 
     /// Short injected linger so the suite stays fast; sleeps are fractions of it.

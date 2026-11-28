@@ -160,10 +160,24 @@ struct DayruleSheet<Content: View>: View {
         #endif
         .interactiveDismissDisabled(isDirty)
         .presentationBackground(colors.bg)
+        #if os(macOS)
+        // Escape — same path as Cancel (incl. dirty discard guard). Cancel also
+        // uses `.keyboardShortcut(.cancelAction)`; this covers focus inside the
+        // sheet body where the toolbar button may not be the target.
+        .onExitCommand(perform: requestDismiss)
+        #endif
         #if os(iOS)
         .modifier(SheetDetents(detents: detents, selection: detentSelection))
         .presentationDragIndicator(detents.count > 1 ? .visible : .automatic)
         #endif
+    }
+
+    private func requestDismiss() {
+        if isDirty {
+            confirmingDiscard = true
+        } else {
+            dismiss()
+        }
     }
 
     #if os(iOS)
@@ -207,15 +221,9 @@ struct DayruleSheet<Content: View>: View {
     #endif
 
     private var dismissButton: some View {
-        Button(dismissTitle) {
-            if isDirty {
-                confirmingDiscard = true
-            } else {
-                dismiss()
-            }
-        }
-        .keyboardShortcut(.cancelAction)
-        .dayruleIdentifier(dismissIdentifier)
+        Button(dismissTitle, action: requestDismiss)
+            .keyboardShortcut(.cancelAction)
+            .dayruleIdentifier(dismissIdentifier)
     }
 
     private func confirmButton(_ confirm: SheetAction) -> some View {
