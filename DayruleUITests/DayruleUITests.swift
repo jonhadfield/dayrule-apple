@@ -125,6 +125,71 @@ final class DayruleUITests: XCTestCase {
         #endif
     }
 
+    #if os(macOS)
+    /// Escape dismisses a DayruleSheet (`cancelAction` / `onExitCommand`).
+    /// iOS uses Cancel / swipe; CI skips UITests, so this is a local Mac check.
+    @MainActor
+    func testWhenSheetDismissesWithEscape() throws {
+        #if !DEBUG
+        throw XCTSkip("DAYRULE_UI_TEST_UNLOCKED is Debug-only")
+        #else
+        let app = XCUIApplication()
+        app.launchEnvironment["DAYRULE_MEMORY_KEYCHAIN"] = "1"
+        app.launchEnvironment["DAYRULE_UI_TEST_UNLOCKED"] = "1"
+        app.launch()
+
+        let addField = app.textFields["list.addField"]
+        let inbox = app.descendants(matching: .any)["list.sidebar.inbox"]
+        XCTAssertTrue(
+            addField.waitForExistence(timeout: 45) || inbox.waitForExistence(timeout: 45),
+            "empty unlocked Inbox should appear"
+        )
+        if inbox.exists { inbox.tap() }
+        XCTAssertTrue(addField.waitForExistence(timeout: 10), "Add field on Inbox")
+
+        let title = "Escape dismiss probe"
+        Self.focusAndType(addField, title)
+        let addBtn = app.buttons["list.addButton"]
+        XCTAssertTrue(addBtn.waitForExistence(timeout: 5))
+        if addBtn.isEnabled {
+            addBtn.tap()
+        } else {
+            addField.typeText("\n")
+        }
+
+        let row = app.descendants(matching: .any).matching(
+            NSPredicate(format: "label CONTAINS %@", title)
+        ).firstMatch
+        XCTAssertTrue(row.waitForExistence(timeout: 10), "added to-do should appear")
+
+        row.press(forDuration: 1.0)
+        let whenAction = app.buttons["When…"].firstMatch
+        let whenMenu = app.menuItems["When…"].firstMatch
+        if whenAction.waitForExistence(timeout: 3) {
+            whenAction.tap()
+        } else if whenMenu.waitForExistence(timeout: 2) {
+            whenMenu.tap()
+        } else {
+            throw XCTSkip("context menu When… not exposed in this destination")
+        }
+
+        let cancel = app.buttons["when.cancel"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5), "When sheet should present")
+
+        app.typeKey(.escape, modifierFlags: [])
+
+        XCTAssertTrue(
+            row.waitForExistence(timeout: 5),
+            "Escape should dismiss When and leave the to-do row"
+        )
+        XCTAssertFalse(
+            cancel.waitForExistence(timeout: 2),
+            "When Cancel must go away after Escape"
+        )
+        #endif
+    }
+    #endif
+
     /// Phone tabs: Fraunces page title stays pinned; no second system title on pull.
     @MainActor
     func testPhoneTabTitleChromeNoDuplicateSystemTitle() throws {
@@ -171,6 +236,14 @@ final class DayruleUITests: XCTestCase {
         throw XCTSkip("phone tabs are iOS-only")
         #endif
         #endif
+    }
+
+    /// Brief settle after `tap` so `typeText` does not race focus on Mac.
+    @MainActor
+    private static func focusAndType(_ field: XCUIElement, _ text: String) {
+        field.tap()
+        RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        field.typeText(text)
     }
 
     #if os(macOS)

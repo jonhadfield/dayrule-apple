@@ -90,7 +90,10 @@ struct MacListHideSystemSeparators: NSViewRepresentable {
 
 /// Overlay / Always-show knobs tinted from Dayrule paper (light brown on dark
 /// brown), matching the sidebar rail instead of system cool grey.
-private final class DayrulePaperScroller: NSScroller {
+///
+/// Drawing only — keep AppKit’s scroll-bar accessibility (role, value %,
+/// increment / decrement) so VoiceOver can still scroll the list.
+final class DayrulePaperScroller: NSScroller {
     var paperFill: NSColor = .windowBackgroundColor
 
     static func install(on scroll: NSScrollView, paperFill: NSColor) {
@@ -121,6 +124,11 @@ private final class DayrulePaperScroller: NSScroller {
             scroll.horizontalScroller = horizontal
         }
     }
+
+    /// Custom `drawKnob` must not drop the scroll-bar AX element.
+    override func isAccessibilityElement() -> Bool { true }
+
+    override func accessibilityRole() -> NSAccessibility.Role? { .scrollBar }
 
     override func drawKnob() {
         let knobRect = rect(for: .knob)
