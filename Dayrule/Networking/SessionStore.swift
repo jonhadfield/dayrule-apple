@@ -6,6 +6,10 @@ import Security
 /// Token and cached account share **one** SecItem (`account: "session"`) so a
 /// Mac code-signature change prompts once at launch, not twice (legacy split
 /// `token` + `cached` items each asked separately).
+///
+/// Process-local blob cache: unlock / gate paths call `loadAccount` /
+/// `loadToken` many times; without a hit they would re-prompt macOS Keychain
+/// for the same item after the coalesced launch read.
 struct SessionStore: Sendable {
     private let service = "uk.co.lessknown.dayrule.session"
     /// Combined blob (current).
@@ -13,6 +17,7 @@ struct SessionStore: Sendable {
     /// Pre-coalesce Keychain account keys — migrated away on first read/write.
     private let legacyTokenAccount = "token"
     private let legacyCachedAccount = "cached"
+    private let cache = BlobCache()
 
     struct CachedAccount: Codable, Sendable {
         var userId: String
@@ -80,11 +85,24 @@ struct SessionStore: Sendable {
         try deleteRaw(account: sessionAccount)
         try deleteRaw(account: legacyTokenAccount)
         try deleteRaw(account: legacyCachedAccount)
+        cache.invalidate()
     }
 
     // MARK: - Combined blob + legacy migration
 
     private func loadBlob() throws -> SessionBlob {
+        switch cache.slot() {
+        case .hit(let blob):
+            return blob
+        case .miss:
+            break
+        }
+        let blob = try loadBlobFromKeychain()
+        cache.set(blob)
+        return blob
+    }
+
+    private func loadBlobFromKeychain() throws -> SessionBlob {
         if let data = try loadRaw(account: sessionAccount) {
             return try JSONDecoder().decode(SessionBlob.self, from: data)
         }
@@ -108,6 +126,7 @@ struct SessionStore: Sendable {
             do {
                 try saveBlob(blob)
             } catch {
+                // saveBlob already warmed the cache; keep the in-memory blob.
                 return blob
             }
         }
@@ -120,6 +139,7 @@ struct SessionStore: Sendable {
             try deleteRaw(account: sessionAccount)
             try deleteRaw(account: legacyTokenAccount)
             try deleteRaw(account: legacyCachedAccount)
+            cache.set(blob)
             return
         }
         let data = try JSONEncoder().encode(blob)
@@ -127,6 +147,7 @@ struct SessionStore: Sendable {
         // Only drop legacy keys after the combined item is persisted.
         try deleteRaw(account: legacyTokenAccount)
         try deleteRaw(account: legacyCachedAccount)
+        cache.set(blob)
     }
 
     private func saveRaw(account: String, data: Data) throws {
@@ -188,6 +209,35 @@ struct SessionStore: Sendable {
         let status = SecItemDelete(query as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw CryptoError.keychain("delete \(status)")
+        }
+    }
+
+    private enum Slot {
+        case miss
+        case hit(SessionBlob)
+    }
+
+    /// In-memory hit for the coalesced session blob (avoids repeat Keychain prompts).
+    private final class BlobCache: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: Slot = .miss
+
+        func slot() -> Slot {
+            lock.lock()
+            defer { lock.unlock() }
+            return value
+        }
+
+        func set(_ blob: SessionBlob) {
+            lock.lock()
+            defer { lock.unlock() }
+            value = .hit(blob)
+        }
+
+        func invalidate() {
+            lock.lock()
+            defer { lock.unlock() }
+            value = .miss
         }
     }
 }
