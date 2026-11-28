@@ -260,7 +260,7 @@ struct ListsBrowserView: View {
                 handleMacChromeAction(action)
             }
             .onChange(of: model.pendingFocusAdd) { _, pending in
-                if pending { consumeFocusAddIfReady() }
+                if pending != nil { consumeFocusAddIfReady() }
             }
             .onChange(of: model.phase) { _, phase in
                 if phase == .unlocked { consumeFocusAddIfReady() }
@@ -379,6 +379,10 @@ struct ListsBrowserView: View {
         switch action {
         case .trashSelection:
             trashSelection()
+        case .whenToday:
+            applyWhenToSelection(.today)
+        case .whenTomorrow:
+            applyWhenToSelection(.tomorrowDate)
         case .newProject:
             addProject(areaId: areaIdForNewProject)
         case .newArea:
@@ -386,21 +390,65 @@ struct ListsBrowserView: View {
         }
     }
 
-    /// Home Screen "New to-do" / menu New To-Do: Inbox Add after unlock (PLAN §1).
+    /// Home Screen / menu New To-Do: focus Add on the chosen list after unlock (PLAN §1 / §6.6).
     private func consumeFocusAddIfReady() {
-        guard model.pendingFocusAdd, model.phase == .unlocked, !model.vaultLoading else { return }
-        model.pendingFocusAdd = false
+        guard let target = model.pendingFocusAdd, model.phase == .unlocked, !model.vaultLoading else { return }
+        model.pendingFocusAdd = nil
         model.showSettings = false
         model.showFind = false
         model.showHelp = false
         exitSelecting()
         phonePath = []
         orgPath = []
-        phoneTab = .inbox
-        selection = .inbox
-        // Wait a turn so the Inbox Add row is on screen before focusing.
+        switch target {
+        case .inbox:
+            phoneTab = .inbox
+            selection = .inbox
+        case .today:
+            phoneTab = .today
+            selection = .today
+        case .scheduled:
+            phoneTab = .scheduled
+            selection = .scheduled
+        }
+        // Wait a turn so the Add row is on screen before focusing.
         Task { @MainActor in
             addFocusNonce &+= 1
+        }
+    }
+
+    private enum SelectionWhen {
+        case today
+        case tomorrowDate
+    }
+
+    private func applyWhenToSelection(_ when: SelectionWhen) {
+        let ids = Array(selectedIds)
+        guard !ids.isEmpty else { return }
+        do {
+            try model.store.run("When") { d, env in
+                let cmd: Commands.When = {
+                    switch when {
+                    case .today: return .today
+                    case .tomorrowDate: return .date(When.addLocalDays(env.today, 1))
+                    }
+                }()
+                try Commands.setWhen(d, env, ids: ids, when: cmd)
+            }
+            model.noteEntitiesChanged()
+            model.bumpHaptic(\.chip)
+            let label: String = {
+                switch when {
+                case .today:
+                    return ids.count == 1 ? "Moved 1 to-do to Today" : "Moved \(ids.count) to-dos to Today"
+                case .tomorrowDate:
+                    return ids.count == 1 ? "Moved 1 to-do to Tomorrow" : "Moved \(ids.count) to-dos to Tomorrow"
+                }
+            }()
+            model.undoNotice(label)
+            exitSelecting()
+        } catch {
+            model.notices.post(Notice(kind: .error, message: error.localizedDescription))
         }
     }
 
@@ -1531,9 +1579,13 @@ struct ListsBrowserView: View {
             // stacked a system top rule on the page-title hairline (double
             // underline). Day number + “Tomorrow”/weekday still read as headers.
             ForEach(dayGroups, id: \.date) { day in
-                scheduledDayHeader(day.date, colors: colors)
+                scheduledDayHeader(day.date, itemCount: day.items.count, colors: colors)
                 ForEach(day.items, id: \.id) { item in
-                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
+                    listRow(
+                        scheduledRow(item, showDayChip: false, progress: progress),
+                        list: .scheduled,
+                        colors: colors
+                    )
                 }
             }
             ForEach(monthGroups, id: \.month) { month in
@@ -1543,13 +1595,21 @@ struct ListsBrowserView: View {
                     style: .caps
                 )
                 ForEach(month.items, id: \.id) { item in
-                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
+                    listRow(
+                        scheduledRow(item, showDayChip: true, progress: progress),
+                        list: .scheduled,
+                        colors: colors
+                    )
                 }
             }
             if !scheduled.waiting.isEmpty {
                 DayruleSectionHeader(title: "Waiting", tone: .accent, style: .caps)
                 ForEach(scheduled.waiting, id: \.id) { item in
-                    listRow(scheduledRow(item, progress: progress), list: .scheduled, colors: colors)
+                    listRow(
+                        scheduledRow(item, showDayChip: false, progress: progress),
+                        list: .scheduled,
+                        colors: colors
+                    )
                 }
             }
         }
@@ -1559,8 +1619,9 @@ struct ListsBrowserView: View {
     /// `pages.tsx` Scheduled (`text-[17px] font-bold` + secondary). Mac plain
     /// Lists ignore `listRowInsets` on these flat headers, so a figure-space
     /// spacer pushes the digit to the circle / title edge.
-    private func scheduledDayHeader(_ date: LocalDate, colors: DayruleColors) -> some View {
+    private func scheduledDayHeader(_ date: LocalDate, itemCount: Int, colors: DayruleColors) -> some View {
         let header = DayruleDateFormat.dayHeader(date, today: ctx.today)
+        let countLabel = itemCount == 1 ? "1 item" : "\(itemCount) items"
         return HStack(alignment: .firstTextBaseline, spacing: Tokens.Space.s) {
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 // Mac plain List ignores `listRowInsets` / padding / `Color.clear`
@@ -1582,6 +1643,10 @@ struct ListsBrowserView: View {
                     .foregroundStyle(colors.textSecondary)
             }
             Spacer(minLength: 0)
+            Text(countLabel)
+                .dayruleMeta()
+                .foregroundStyle(colors.textSecondary)
+                .accessibilityHidden(true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, Tokens.Space.m)
@@ -1596,22 +1661,60 @@ struct ListsBrowserView: View {
             )
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            header.secondary.map { "\(header.primary) \($0)" } ?? header.primary
-        )
+        .accessibilityLabel({
+            let day = header.secondary.map { "\(header.primary) \($0)" } ?? header.primary
+            return "\(day), \(countLabel)"
+        }())
     }
 
-    private func scheduledRow(_ item: ListItem, progress: [ID: (done: Int, total: Int)]) -> Row {
+    private func scheduledRow(
+        _ item: ListItem,
+        showDayChip: Bool,
+        progress: [ID: (done: Int, total: Int)]
+    ) -> Row {
+        let trailing = scheduledTrailing(for: item, showDayChip: showDayChip)
         if item.isTodo, let t = model.entities.todos[item.id] {
-            return todoRow(t, subtitle: nil, trailing: nil, overdue: false, progress: progress)
+            return todoRow(t, subtitle: nil, trailing: trailing, overdue: false, progress: progress)
         }
         return Row(
             id: item.id,
             title: item.title,
             subtitle: nil,
             isTodo: false,
-            status: item.status
+            status: item.status,
+            trailing: trailing
         )
+    }
+
+    /// Month-bucket day chip, Tonight, reminder clock, or deadline — Scheduled clarity.
+    private func scheduledTrailing(for item: ListItem, showDayChip: Bool) -> TrailingChip? {
+        if showDayChip, let day = Lists.scheduledDate(item) {
+            let header = DayruleDateFormat.dayHeader(day, today: ctx.today)
+            let label = header.secondary == "Tomorrow" ? "Tomorrow" : header.primary
+            return TrailingChip(systemImage: "calendar", label: label, isOverdue: false)
+        }
+        if item.isTodo, let t = model.entities.todos[item.id], t.tonight {
+            return TrailingChip(systemImage: "moon", label: "Tonight", isOverdue: false)
+        }
+        if item.isTodo, let t = model.entities.todos[item.id], let at = t.reminderAt,
+           let clock = DayruleDateFormat.clock(at) {
+            return TrailingChip(systemImage: "clock", label: clock, isOverdue: false)
+        }
+        if let deadline = item.deadline {
+            if Lists.isOverdue(item, ctx) {
+                return TrailingChip(
+                    systemImage: "flag",
+                    label: DayruleDateFormat.daysPast(deadline, today: ctx.today, word: .overdue),
+                    isOverdue: true
+                )
+            }
+            return TrailingChip(
+                systemImage: "flag",
+                label: DayruleDateFormat.due(deadline, today: ctx.today),
+                isOverdue: false
+            )
+        }
+        return nil
     }
 
     private var vaultMissingRow: some View {
@@ -2077,7 +2180,7 @@ struct ListsBrowserView: View {
         case .scheduled:
             // Prefer `scheduledSections`; this path is unused for phone listDetail.
             return Lists.scheduled(model.entities, ctx).days.flatMap { day in
-                day.items.map { scheduledRow($0, progress: progress) }
+                day.items.map { scheduledRow($0, showDayChip: false, progress: progress) }
             }
         case .backlog:
             return Lists.backlog(model.entities, ctx).flatMap { g in

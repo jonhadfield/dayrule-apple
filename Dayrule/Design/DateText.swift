@@ -85,6 +85,27 @@ enum DayruleDateFormat {
         return (primary, secondary)
     }
 
+    /// Clock from a local `YYYY-MM-DDTHH:mm` reminder (Scheduled “has a time” chip).
+    static func clock(
+        _ reminderAt: String,
+        locale: Locale = .current,
+        calendar: Calendar = When.calendar
+    ) -> String? {
+        guard reminderAt.count >= 16 else { return nil }
+        let day = String(reminderAt.prefix(10))
+        let hm = String(reminderAt.dropFirst(11).prefix(5))
+        guard hm.count == 5, hm[hm.index(hm.startIndex, offsetBy: 2)] == ":",
+              let date = When.fromLocalDate(day, calendar: calendar)
+        else { return nil }
+        let parts = hm.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]), let minute = Int(parts[1]),
+              (0...23).contains(hour), (0...59).contains(minute),
+              let stamped = calendar.date(bySettingHour: hour, minute: minute, second: 0, of: date)
+        else { return nil }
+        return stamped.formatted(style(locale, calendar).hour().minute())
+    }
+
     private static func style(_ locale: Locale, _ calendar: Calendar) -> Date.FormatStyle {
         Date.FormatStyle(locale: locale, calendar: calendar, timeZone: calendar.timeZone)
     }

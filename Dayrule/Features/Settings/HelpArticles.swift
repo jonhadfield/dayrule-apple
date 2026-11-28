@@ -366,13 +366,17 @@ struct HelpArticleView: View {
             ("Lock", "⇧⌘L"),
             ("Find…", "⌘F"),
             ("Undo / Redo", "⌘Z / ⇧⌘Z"),
-            ("Move to Trash", "⌫"),
+            ("Move to Today", "⇧⌘T"),
+            ("Move to Tomorrow", "⌥⌘T"),
+            ("Move to Trash", "⌘⌫"),
             ("New To-Do", "⌘N"),
+            ("New To-Do for Today", "⇧⌘N"),
+            ("New To-Do for Tomorrow", "⇧⌘Y"),
             ("New Project", "⌥⌘N"),
             ("New Area", "⌥⌘A"),
         ], colors)
         tip(
-            "Select one or more to-dos first for Move to Trash. New Project opens under the area you’re viewing when you’re in one. New To-Do focuses Add on Inbox.",
+            "Select to-dos first for Move to Today / Tomorrow / Trash. New Project opens under the area you’re viewing when you’re in one. New To-Do focuses Add — end a title with tomorrow or Friday to set When as you add.",
             colors
         )
     }
