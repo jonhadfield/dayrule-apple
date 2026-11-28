@@ -81,8 +81,8 @@ matrix.
 - [x] Unit: `AccessibilityFocusRestore.afterDismiss` delay — `DesignSystemTests`
 - [x] UITest: When sheet present/dismiss keeps to-do row —
   `testWhenSheetDismissKeepsTodoRow` (VO `hasFocus` not asserted in CI)
-- [x] UITest: Escape dismisses When sheet —
-  `testWhenSheetDismissesWithEscape`
+- [x] UITest (macOS local): Escape dismisses When sheet —
+  `testWhenSheetDismissesWithEscape` (CI skips DayruleUITests)
 - [x] Unit: paper scroller keeps `.scrollBar` role —
   `paperScrollerKeepsScrollBarRole` (macOS)
 
