@@ -57,13 +57,8 @@ struct ProjectDetailView: View {
         let title = displayTitle(view?.project.title)
         List {
             if let view {
-                if !view.project.notes.isEmpty {
-                    RuledRow(style: .note) {
-                        Text(view.project.notes)
-                            .font(.subheadline)
-                            .foregroundStyle(colors.textSecondary)
-                    }
-                }
+                projectOverview(project: view.project, colors: colors)
+
                 let progress = Lists.projectProgress(model.entities, projectId)
                 if progress.total > 0 {
                     RuledRow(style: .note) {
@@ -351,6 +346,104 @@ struct ProjectDetailView: View {
                 model.noteEntitiesChanged()
             }
         )
+    }
+
+    /// Inline notes — same live Edit path as web `ProjectPage` textarea.
+    private var projectNotesBinding: Binding<String> {
+        Binding(
+            get: { model.entities.projects[projectId]?.notes ?? "" },
+            set: { newValue in
+                model.store.run("Edit") { d, env in
+                    Commands.updateProject(d, env, id: projectId, title: nil, notes: newValue)
+                }
+                model.noteEntitiesChanged()
+            }
+        )
+    }
+
+    /// Notes + When / Deadline chips under the title (web ProjectPage overview).
+    @ViewBuilder
+    private func projectOverview(project: Project, colors: DayruleColors) -> some View {
+        RuledRow(style: .note) {
+            VStack(alignment: .leading, spacing: Tokens.Space.s) {
+                TextField(
+                    "Notes",
+                    text: projectNotesBinding,
+                    prompt: Text("Notes").foregroundStyle(colors.textSecondary),
+                    axis: .vertical
+                )
+                .font(.subheadline)
+                .foregroundStyle(colors.textSecondary)
+                .lineLimit(1...12)
+                .textFieldStyle(.plain)
+                .accessibilityLabel("Project notes")
+                .accessibilityIdentifier("project.notes")
+
+                HStack(spacing: Tokens.Space.s) {
+                    overviewChip(
+                        label: whenOverviewLabel(project),
+                        systemImage: "calendar",
+                        isOverdue: false,
+                        colors: colors
+                    ) {
+                        noteA11yRestore(.detailActions)
+                        presentWhen(ids: [projectId])
+                    }
+                    overviewChip(
+                        label: deadlineOverviewLabel(project),
+                        systemImage: "flag",
+                        isOverdue: Lists.isOverdue(.project(project), ctx),
+                        colors: colors
+                    ) {
+                        noteA11yRestore(.detailActions)
+                        presentDeadline(ids: [projectId])
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+    }
+
+    private func whenOverviewLabel(_ project: Project) -> String {
+        if project.start == .later { return "Not now" }
+        if let date = project.startDate {
+            return "When: \(DayruleDateFormat.relative(date, today: ctx.today))"
+        }
+        return "When"
+    }
+
+    private func deadlineOverviewLabel(_ project: Project) -> String {
+        guard let deadline = project.deadline else { return "Deadline" }
+        return "Deadline: \(DayruleDateFormat.relative(deadline, today: ctx.today))"
+    }
+
+    private func overviewChip(
+        label: String,
+        systemImage: String,
+        isOverdue: Bool,
+        colors: DayruleColors,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: Tokens.Space.xs) {
+                Image(systemName: systemImage)
+                    .imageScale(.small)
+                Text(label)
+            }
+            .dayruleMeta()
+            .foregroundStyle(isOverdue ? colors.deadline : colors.textSecondary)
+            .lineLimit(1)
+            .padding(.vertical, Tokens.Space.xs)
+            .padding(.horizontal, Tokens.Space.s)
+            .frame(minHeight: Tokens.minHit)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+        .accessibilityInputLabels({
+            let short = label.split(separator: ":").first.map(String.init) ?? label
+            return [label, short]
+        }())
     }
 
     // MARK: - Editor presentation (PLAN §6.5: full screen on iPhone, sheet elsewhere)
