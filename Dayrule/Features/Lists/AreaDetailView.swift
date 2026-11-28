@@ -396,7 +396,11 @@ struct AreaDetailView: View {
         guard !title.isEmpty else { return }
         do {
             _ = try model.store.run("Add") { d, env in
-                try Commands.createTodo(d, env, .init(title: title, placement: .area(areaId: areaId)))
+                try Commands.createTodoFromCapture(
+                    d, env,
+                    rawTitle: title,
+                    placement: .area(areaId: areaId)
+                )
             }
             draft.wrappedValue = ""
             model.noteEntitiesChanged()

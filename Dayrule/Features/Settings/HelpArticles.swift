@@ -78,7 +78,10 @@ struct HelpArticleView: View {
             "Type what needs doing. Add notes underneath if you like.",
             "Press Return or leave the field. An empty new to-do is thrown away.",
         ], colors)
-        para("A to-do lands in the list you added it from: add it in Today and it’s for today. On Scheduled, Add files for tomorrow.", colors)
+        para(
+            "A to-do lands in the list you added it from: add it in Today and it’s for today. On Scheduled, Add files for tomorrow. Tip: end the title with a When — “milk tomorrow”, “call Friday”, “report next week” — and Dayrule sets the date without opening When.",
+            colors
+        )
         heading("Sort your Inbox", colors)
         para(
             "To-dos you add in the Inbox wait there until you decide. Open one and choose When: Today, a date, Backlog or Not now. Or Move it into a project.",

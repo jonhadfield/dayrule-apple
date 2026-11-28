@@ -120,6 +120,38 @@ enum When {
         return nil
     }
 
+    /// Title capture: strip a trailing When phrase (“milk tomorrow”) so Add can
+    /// set When without opening the sheet. Uses `parseWhen` on the longest
+    /// trailing 1…4 words; needs a non-empty title left over.
+    ///
+    /// On-device only — same parser as the When field (web `domain/dates.ts`).
+    static func parseTitleWhen(
+        _ raw: String,
+        today: Date,
+        calendar: Calendar = calendar
+    ) -> (title: String, when: WhenResult?) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        guard !trimmed.isEmpty else { return ("", nil) }
+
+        let words = trimmed.split(separator: " ").map(String.init)
+        // Need at least “title + when”.
+        guard words.count >= 2 else { return (trimmed, nil) }
+
+        let maxSuffix = min(4, words.count - 1)
+        for n in stride(from: maxSuffix, through: 1, by: -1) {
+            let suffix = words.suffix(n).joined(separator: " ")
+            // Bare “some” matches parseWhen(.later) but is common English (“buy some”).
+            if suffix.lowercased() == "some" { continue }
+            guard let when = parseWhen(suffix, today: today, calendar: calendar) else { continue }
+            let title = words.dropLast(n).joined(separator: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { continue }
+            return (title, when)
+        }
+        return (trimmed, nil)
+    }
+
     // MARK: - helpers
 
     private static func matchPrefix(_ word: String, _ candidates: [String], min: Int = 3) -> Int {
