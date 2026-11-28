@@ -260,11 +260,16 @@ final class AppModel {
     }
 
     #if os(iOS)
-    /// Count-only Home Screen widget — no titles (decision 76).
+    /// Count-only Home Screen / Lock Screen widgets — no titles (decision 76).
     private func publishWidgetCounts(entities: Entities) {
         let ctx = Lists.Context(today: When.toLocalDate(Date()), keepVisible: nil)
         let counts = Lists.sidebarCounts(entities, ctx)
-        WidgetCountsStore.publish(inboxOpen: counts.inbox, todayOpen: counts.today)
+        WidgetCountsStore.publish(
+            inboxOpen: counts.inbox,
+            todayOpen: counts.today,
+            overdueOpen: counts.overdue,
+            scheduledOpen: Lists.scheduledOpenCount(entities, ctx)
+        )
     }
     #endif
 

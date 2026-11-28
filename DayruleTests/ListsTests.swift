@@ -165,6 +165,15 @@ struct ListsTests {
         #expect(c.overdue == 1)
     }
 
+    @Test("scheduledOpenCount sums day, month, and waiting buckets")
+    func scheduledOpenCount() {
+        let w = World()
+        w.todo(start: .ready, startDate: "2026-10-05")
+        w.todo(start: .ready, startDate: "2026-10-12")
+        w.todo(start: .ready, startDate: "2026-10-04") // Today — not Scheduled
+        #expect(Lists.scheduledOpenCount(w.e, ctx) == 2)
+    }
+
     @Test("projectView groups to-dos under headings")
     func projectViewGroups() {
         let w = World()

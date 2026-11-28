@@ -5,5 +5,7 @@ import WidgetKit
 struct DayruleWidgetBundle: WidgetBundle {
     var body: some Widget {
         CountsWidget()
+        TodayCountWidget()
+        InboxCountWidget()
     }
 }
