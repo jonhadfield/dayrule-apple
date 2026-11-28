@@ -125,4 +125,46 @@ struct SessionStoreTests {
         #expect(!SessionBinding.canReuseBearer(unlockedUserId: userA, cachedUserId: nil))
         #expect(!SessionBinding.canReuseBearer(unlockedUserId: userA, cachedUserId: ""))
     }
+
+    @Test("loadSession / loadAccount reuse process cache after the first Keychain read")
+    func processCacheSkipsRepeatKeychainReads() throws {
+        let prev = ProcessInfo.processInfo.environment["DAYRULE_MEMORY_KEYCHAIN"]
+        setenv("DAYRULE_MEMORY_KEYCHAIN", "1", 1)
+        defer {
+            if let prev {
+                setenv("DAYRULE_MEMORY_KEYCHAIN", prev, 1)
+            } else {
+                unsetenv("DAYRULE_MEMORY_KEYCHAIN")
+            }
+            MemoryKeychain.reset()
+        }
+        MemoryKeychain.reset()
+
+        let sessions = SessionStore()
+        try sessions.saveToken("bearer-cache")
+        try sessions.saveAccount(
+            SessionStore.CachedAccount(
+                userId: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                email: "cache@example.com",
+                saltB64: "AA==",
+                kdf: KdfDTO(v: 1, ops: 3, mem: 67_108_864),
+                wrappedPassword: WrappedB64(nonce: "n", ciphertext: "c"),
+                deviceWrappedAK: nil,
+                biometricWrappedAK: nil,
+                passkey: nil
+            )
+        )
+        #expect(try sessions.loadToken() == "bearer-cache")
+        #expect(try sessions.loadAccount()?.email == "cache@example.com")
+
+        // Wipe the backing store; cached loads must still succeed.
+        MemoryKeychain.reset()
+        #expect(try sessions.loadToken() == "bearer-cache")
+        #expect(try sessions.loadAccount()?.email == "cache@example.com")
+        #expect(try sessions.loadSession().token == "bearer-cache")
+
+        try sessions.clear()
+        #expect(try sessions.loadToken() == nil)
+        #expect(try sessions.loadAccount() == nil)
+    }
 }
