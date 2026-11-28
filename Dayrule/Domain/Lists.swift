@@ -335,6 +335,15 @@ enum Lists {
         )
     }
 
+    /// Open items on Scheduled (day buckets + later months + waiting repeats).
+    /// Used by count-only widgets — never titles.
+    static func scheduledOpenCount(_ e: Entities, _ ctx: Context) -> Int {
+        let s = scheduled(e, ctx)
+        let days = s.days.reduce(0) { $0 + $1.items.count }
+        let months = s.months.reduce(0) { $0 + $1.items.count }
+        return days + months + s.waiting.count
+    }
+
     // MARK: - Project / area views
 
     struct HeadingGroup: Equatable, Sendable {

@@ -41,7 +41,7 @@ in code or by a named manual step — not by assumption.
 - [x] iOS privacy cover shows only while the vault is unlocked (or recovery words are on screen), is inserted with **no animation** so the app-switcher snapshot never catches a half-faded frame, and fades only on reveal (`DayruleApp.privacyCoverNeeded` / `setPrivacyCover`)
 - [x] Auto-lock after 15 min idle (unless stay-unlocked): the idle timer resets on unlock, on return to the foreground and on real user activity only (edits; on macOS key, click and scroll), throttled to once every 10s; sync, polls and merges never reset it (`AppModel.noteUserActivity` / `bumpIdle`)
 - [x] No Spotlight / Siri / Handoff / content widgets donations in code
-- [x] Count-only Home Screen widget (decision 76): App Group publishes Inbox/Today open counts only; cleared on lock, sign-out, and account deletion (`WidgetCountsStore`; never titles)
+- [x] Count-only Home Screen / Lock Screen widgets (decision 76): App Group publishes Inbox/Today/overdue/Scheduled open counts only; cleared on lock, sign-out, and account deletion (`WidgetCountsStore`; never titles)
 - [x] Notification titles opt-in; default body is time-only
 - [x] No third-party analytics / crash / ad SDKs
 - [x] iOS refuses third-party keyboard extensions (`DayruleAppDelegate` / PLAN §8.7) so recovery words are not delivered to a Full Access keyboard
