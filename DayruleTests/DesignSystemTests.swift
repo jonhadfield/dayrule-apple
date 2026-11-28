@@ -289,6 +289,16 @@ struct DesignSystemTests {
         )
     }
 
+    @Test("reminder clock chips parse local YYYY-MM-DDTHH:mm")
+    func reminderClock() {
+        let clock = DayruleDateFormat.clock(
+            "2026-10-14T14:30", locale: Self.locale, calendar: Self.calendar
+        )
+        #expect(clock == "14:30" || clock == "2:30 pm" || clock == "2:30 PM")
+        #expect(DayruleDateFormat.clock("nope") == nil)
+        #expect(DayruleDateFormat.clock("2026-10-14T99:99") == nil)
+    }
+
     // MARK: Accessibility focus restore
 
     @Test("sheet dismiss restore applies after the teardown delay")

@@ -189,8 +189,18 @@ final class AppModel {
     /// Mac menu bar → list shell (PLAN §6.6). Consumed by `ListsBrowserView`.
     enum MacChromeAction: Equatable {
         case trashSelection
+        case whenToday
+        case whenTomorrow
         case newProject
         case newArea
+    }
+
+    /// Where ⌘N / Home Screen Add should land after unlock.
+    enum FocusAddTarget: Equatable {
+        case inbox
+        case today
+        /// Scheduled list — Add defaults to tomorrow when the title has no When.
+        case scheduled
     }
 
     var pendingMacChromeAction: MacChromeAction?
@@ -214,12 +224,12 @@ final class AppModel {
         return had
     }
 
-    /// Focus the Inbox Add field after unlock (Home Screen quick action / ⌘N).
+    /// Focus Add after unlock (Home Screen quick action / New To-Do menus).
     /// Survives the lock screen — never creates content while locked.
-    var pendingFocusAdd = false
+    var pendingFocusAdd: FocusAddTarget?
 
-    func requestFocusAdd() {
-        pendingFocusAdd = true
+    func requestFocusAdd(_ target: FocusAddTarget = .inbox) {
+        pendingFocusAdd = target
     }
 
     /// iOS haptic pulses beyond completion / tab selection (PLAN §6.4 / decision 38).
@@ -1281,7 +1291,7 @@ final class AppModel {
         signupToken = nil
         pendingRecoveryWords = []
         pendingSignup = nil
-        pendingFocusAdd = false
+        pendingFocusAdd = nil
         clearPendingSecondStep()
         gateResetEpoch += 1
 

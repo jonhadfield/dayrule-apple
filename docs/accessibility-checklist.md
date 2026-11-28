@@ -107,6 +107,7 @@ sync symbol tests (`#33`).
 
 Still manual on device: live VoiceOver restore + scroller %, Voice Control
 Show Names/Numbers, Full Keyboard Access / Switch Control common-task scan.
+Do not check those boxes without a dated pass below.
 
 ### Device script (remaining)
 
@@ -117,6 +118,12 @@ Show Names/Numbers, Full Keyboard Access / Switch Control common-task scan.
    Settings — every control reachable; awkward names covered by input labels.
 3. **Full Keyboard Access / Switch Control:** same tasks; no trap; Escape /
    Cancel exits sheets.
+
+### Device pass log
+
+| Date | Device | VO restore + scroller | Voice Control | FKA / Switch | Notes |
+| --- | --- | --- | --- | --- | --- |
+| _pending_ | | | | | Run the three steps above; tick Input rows when green. |
 
 ## Open follow-ups (from 2026-11-25 review)
 

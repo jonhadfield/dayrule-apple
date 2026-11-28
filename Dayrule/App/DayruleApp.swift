@@ -100,9 +100,19 @@ struct DayruleApp: App {
             }
             CommandGroup(replacing: .newItem) {
                 Button("New To-Do") {
-                    model.requestFocusAdd()
+                    model.requestFocusAdd(.inbox)
                 }
                 .keyboardShortcut("n", modifiers: .command)
+                .disabled(model.phase != .unlocked)
+                Button("New To-Do for Today") {
+                    model.requestFocusAdd(.today)
+                }
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+                .disabled(model.phase != .unlocked)
+                Button("New To-Do for Tomorrow") {
+                    model.requestFocusAdd(.scheduled)
+                }
+                .keyboardShortcut("y", modifiers: [.command, .shift])
                 .disabled(model.phase != .unlocked)
                 Button("New Project") {
                     model.requestMacChromeAction(.newProject)
@@ -133,6 +143,16 @@ struct DayruleApp: App {
                 }
                 .keyboardShortcut("f", modifiers: .command)
                 .disabled(model.phase != .unlocked)
+                Button("Move to Today") {
+                    model.requestMacChromeAction(.whenToday)
+                }
+                .keyboardShortcut("t", modifiers: [.command, .shift])
+                .disabled(model.phase != .unlocked || !model.hasMacListSelection)
+                Button("Move to Tomorrow") {
+                    model.requestMacChromeAction(.whenTomorrow)
+                }
+                .keyboardShortcut("t", modifiers: [.command, .option])
+                .disabled(model.phase != .unlocked || !model.hasMacListSelection)
                 Button("Move to Trash") {
                     model.requestMacChromeAction(.trashSelection)
                 }
