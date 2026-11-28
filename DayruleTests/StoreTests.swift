@@ -48,6 +48,23 @@ struct StoreTests {
         #expect(store.entities.todos[todo.id]?.title == "Milk")
     }
 
+    @Test func createTodoFromCaptureAppliesTrailingWhen() throws {
+        let store = EntityStore(clock: fixedClock())
+        var expectedDate: LocalDate?
+        let outcome = try store.run("Add") { d, env in
+            expectedDate = When.addLocalDays(env.today, 1)
+            return try Commands.createTodoFromCapture(
+                d, env, rawTitle: "milk tomorrow", placement: .inbox
+            )
+        }
+        #expect(outcome.appliedWhen)
+        let todo = store.entities.todos[outcome.todo.id]
+        #expect(todo?.title == "milk")
+        #expect(todo?.startDate == expectedDate)
+        // Left Inbox for a dated When.
+        #expect(todo?.start != .inbox)
+    }
+
     @Test func setWhenCompleteAndTrash() throws {
         let store = EntityStore(clock: fixedClock())
         let todo = try store.run("Add") { d, env in

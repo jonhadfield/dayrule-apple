@@ -593,9 +593,10 @@ struct ProjectDetailView: View {
         guard !title.isEmpty else { return }
         do {
             _ = try model.store.run("Add") { d, env in
-                try Commands.createTodo(
+                try Commands.createTodoFromCapture(
                     d, env,
-                    .init(title: title, placement: .project(projectId: projectId, headingId: headingId))
+                    rawTitle: title,
+                    placement: .project(projectId: projectId, headingId: headingId)
                 )
             }
             draft.wrappedValue = ""

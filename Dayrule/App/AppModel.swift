@@ -1467,7 +1467,9 @@ final class AppModel {
             guard !titles.isEmpty else { return }
             for title in titles {
                 _ = try store.run("Share Add") { d, env in
-                    try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
+                    try Commands.createTodoFromCapture(
+                        d, env, rawTitle: title, placement: .inbox
+                    )
                 }
             }
             noteEntitiesChanged()

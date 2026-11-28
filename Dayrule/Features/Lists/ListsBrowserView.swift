@@ -2205,28 +2205,40 @@ struct ListsBrowserView: View {
         guard !title.isEmpty else { return }
         // Use the list on screen, not `selection` — on phone those can diverge.
         do {
-            let todo = try model.store.run("Add") { d, env in
+            let outcome = try model.store.run("Add") { d, env -> (todo: Todo, appliedWhen: Bool) in
                 switch list {
                 case .today:
-                    return try Commands.createTodo(d, env, .init(title: title, placement: .today))
+                    return try Commands.createTodoFromCapture(
+                        d, env, rawTitle: title, placement: .today
+                    )
                 case .backlog:
-                    return try Commands.createTodo(d, env, .init(title: title, placement: .ready))
+                    return try Commands.createTodoFromCapture(
+                        d, env, rawTitle: title, placement: .ready
+                    )
                 case .scheduled:
-                    let todo = try Commands.createTodo(d, env, .init(title: title, placement: .ready))
+                    let captured = try Commands.createTodoFromCapture(
+                        d, env, rawTitle: title, placement: .ready
+                    )
+                    if captured.appliedWhen {
+                        return captured
+                    }
+                    // No trailing When — default tomorrow and open the sheet.
                     let tomorrow = When.addLocalDays(env.today, 1)
-                    try Commands.setWhen(d, env, ids: [todo.id], when: .date(tomorrow))
-                    return todo
+                    try Commands.setWhen(d, env, ids: [captured.todo.id], when: .date(tomorrow))
+                    return (todo: captured.todo, appliedWhen: false)
                 default:
-                    return try Commands.createTodo(d, env, .init(title: title, placement: .inbox))
+                    return try Commands.createTodoFromCapture(
+                        d, env, rawTitle: title, placement: .inbox
+                    )
                 }
             }
             addDrafts.clear(list)
             model.noteEntitiesChanged()
             model.bumpHaptic(\.add)
-            // Scheduled defaults to tomorrow; open When so the date is choosable. Wait a
-            // runloop so the Add field resigns before the sheet takes focus.
-            if list == .scheduled {
-                let id = todo.id
+            // Scheduled without a typed When still opens the sheet (default tomorrow).
+            // Wait a runloop so the Add field resigns before the sheet takes focus.
+            if list == .scheduled, !outcome.appliedWhen {
+                let id = outcome.todo.id
                 Task { @MainActor in
                     presentWhen(ids: [id])
                 }

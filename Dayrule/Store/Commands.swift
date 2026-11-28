@@ -102,6 +102,30 @@ enum Commands {
         return todo
     }
 
+    /// Add from the paper field: strip a trailing When (“milk tomorrow”) and
+    /// apply it. `appliedWhen` is true when a When was parsed and set.
+    @discardableResult
+    static func createTodoFromCapture(
+        _ d: Draft,
+        _ env: EntityStore.Env,
+        rawTitle: String,
+        notes: String = "",
+        placement: Placement
+    ) throws -> (todo: Todo, appliedWhen: Bool) {
+        // Domain `When` — not `Commands.When`.
+        let todayDate = Dayrule.When.fromLocalDate(env.today) ?? env.now
+        let parsed = Dayrule.When.parseTitleWhen(rawTitle, today: todayDate)
+        let todo = try createTodo(
+            d, env,
+            .init(title: parsed.title, notes: notes, placement: placement)
+        )
+        guard let when = parsed.when else {
+            return (todo, false)
+        }
+        try setWhen(d, env, ids: [todo.id], when: Commands.When(when))
+        return (todo, true)
+    }
+
     static func updateTodo(_ d: Draft, _ env: EntityStore.Env, id: ID, title: String?, notes: String?) {
         guard var t = d.getTodo(id) else { return }
         if let title { t.title = title }

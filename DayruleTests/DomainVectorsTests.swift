@@ -508,6 +508,36 @@ struct DomainVectorsTests {
         }
     }
 
+    @Test("parseTitleWhen strips a trailing When from the capture title")
+    func parseTitleWhenCapture() {
+        let today = localDay("2026-11-28") // Saturday
+        let milk = When.parseTitleWhen("milk tomorrow", today: today)
+        #expect(milk.title == "milk")
+        #expect(milk.when == .date("2026-11-29"))
+
+        let call = When.parseTitleWhen("Call Friday", today: today)
+        #expect(call.title == "Call")
+        // Next Friday from Sat 28 Nov → 4 Dec
+        #expect(call.when == .date("2026-12-04"))
+
+        let later = When.parseTitleWhen("park not now", today: today)
+        #expect(later.title == "park")
+        #expect(later.when == .later)
+
+        // Bare “some” must not strip (“buy some”).
+        let some = When.parseTitleWhen("buy some", today: today)
+        #expect(some.title == "buy some")
+        #expect(some.when == nil)
+
+        let plain = When.parseTitleWhen("Buy oat milk", today: today)
+        #expect(plain.title == "Buy oat milk")
+        #expect(plain.when == nil)
+
+        let onlyWhen = When.parseTitleWhen("tomorrow", today: today)
+        #expect(onlyWhen.title == "tomorrow")
+        #expect(onlyWhen.when == nil)
+    }
+
     @Test("order keys match shared vectors")
     func orderVectors() throws {
         let file = try load()
